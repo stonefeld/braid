@@ -69,8 +69,12 @@ slice_validate() {
     done < <(slice_block "$body")
 }
 
+# The key is normalised on both sides — spaces stripped, lowercased — so "wave 2" in a
+# plan's fence is found by asking for "wave 2", and "Setup :" in a slice is found by
+# asking for "setup".
 slice_field() {
     local body="${1?body}" want="${2:?key}" line key value
+    want=$(printf '%s' "$want" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
     while IFS= read -r line; do
         [[ "$line" == *:* ]] || continue
         key=$(printf '%s' "${line%%:*}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
