@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Launch one worker on one slice, in its own worktree.
 #
-#   braid spawn <path/to/slice.md> [options]
+#   braid spawn <slice> [options]
+#
+# A slice is a path, or an id the configured source understands — a filename in the
+# feature's folder, or an issue number.
 #
 #     --complexity low|standard|high   how much judgement the work needs
 #     --model NAME                     override the model the adapter would pick
@@ -23,8 +26,8 @@ source "$BRAID_HOME/lib/agent.sh"
 source "$BRAID_HOME/lib/env.sh"
 # shellcheck source=launcher.sh
 source "$BRAID_HOME/lib/launcher.sh"
-# shellcheck source=slice.sh
-source "$BRAID_HOME/lib/slice.sh"
+# shellcheck source=source.sh
+source "$BRAID_HOME/lib/source.sh"
 
 usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' >&2; }
 
@@ -90,7 +93,6 @@ done
     usage
     die "which slice?"
 }
-[[ -f "$SLICE" ]] || die "no such slice: $SLICE"
 
 braid_config
 refuse_worker_seat
@@ -103,9 +105,25 @@ PARENT_WORKTREE=$(current_worktree)
 BASE="${BASE:-$(current_branch)}"
 [[ "$BASE_EXPLICIT" -eq 1 ]] || refuse_trunk_base "$BASE"
 
-BODY=$(cat "$SLICE")
-[[ -n "$BODY" ]] || die "$SLICE is empty"
-SLICE_ID=$(basename "$SLICE" .md)
+# The feature is the branch, which is how a bare id resolves without being told where
+# to look.
+export BRAID_FEATURE="${BRAID_FEATURE:-$(branch_slug "$BASE")}"
+BODY=$(fetch_slice "$SLICE")
+[[ -n "$BODY" ]] || die "slice '$SLICE' is empty"
+# Two names, and they are not the same thing. The **id** is what the plan calls this
+# slice — a filename, or an issue number — and it is what every later command looks it up
+# by. The **slug** is what the branch and worktree are called, which for an issue takes
+# the title too, because `agent/2` names nothing a person can read.
+#
+# Recording the slug as the id made reap file the landed marker under a name next could
+# not find, so a wave that had integrated and been reaped read as never started.
+if [[ -f "$SLICE" ]]; then
+    SLICE_ID=$(basename "$SLICE" .md)
+    SLUG=$(slugify "$SLICE_ID")
+else
+    SLICE_ID="$SLICE"
+    SLUG=$(slugify "$(slice_display_id "$SLICE")")
+fi
 
 # The braid block is the source; the flags override it. Validated whole rather than read
 # key by key, so a typo is reported as a typo instead of silently reading as an absence.
@@ -120,7 +138,6 @@ if [[ -z "$MODEL" ]]; then
 fi
 agent_check_model "$MODEL"
 
-SLUG=$(slugify "$SLICE_ID")
 BRANCH=$(worker_branch "$SLUG")
 WORKTREE=$(worker_worktree_path "$SLUG")
 

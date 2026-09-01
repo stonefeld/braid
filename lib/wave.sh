@@ -20,8 +20,8 @@ set -uo pipefail
 
 # shellcheck source=worker.sh
 source "$BRAID_HOME/lib/worker.sh"
-# shellcheck source=slice.sh
-source "$BRAID_HOME/lib/slice.sh"
+# shellcheck source=source.sh
+source "$BRAID_HOME/lib/source.sh"
 
 CAPACITY=""
 TIMEOUT=900
@@ -80,8 +80,10 @@ else
     SLICES=("${ARGS[@]}")
 fi
 
-# Resolved before anything launches. Half a wave in flight and then "no such slice" is
-# the worst moment to find out a name was wrong.
+# Resolved before anything launches — every one of them fetched, not merely named. Half
+# a wave in flight and then "no such slice" is the worst moment to find out a name was
+# wrong, and with a tracker it is also the worst moment to find out the network is down.
+export BRAID_FEATURE="$FEATURE"
 PATHS=()
 for slice in "${SLICES[@]}"; do
     [[ -n "$slice" ]] || continue
@@ -89,8 +91,10 @@ for slice in "${SLICES[@]}"; do
         PATHS+=("$slice")
     elif [[ -f "$DIR/$slice.md" ]]; then
         PATHS+=("$DIR/$slice.md")
+    elif fetch_slice "$slice" >/dev/null 2>&1; then
+        PATHS+=("$slice")
     else
-        die "no slice '$slice' (looked for $slice and $DIR/$slice.md)"
+        die "no slice '$slice' (source: $BRAID_SLICE_SOURCE)"
     fi
 done
 [[ "${#PATHS[@]}" -gt 0 ]] || die "nothing to launch"

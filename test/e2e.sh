@@ -286,6 +286,25 @@ check "--force says so and does it" "$BRAID" reap 05-bad --force
 "$BRAID" reap --merged >/dev/null 2>&1
 is "reap --merged clears the wave" "0" "$(git worktree list | grep -c 'agent-')"
 
+# --- an id that is not its own slug -------------------------------------------
+
+phase "a slice whose id and branch name differ"
+# With files the two are the same string, so nothing here ever exercised them being
+# different. With a tracker they are not: the plan says `2`, the branch is
+# `agent/2-add-a-licence`. Two bugs lived in that gap — spawn recorded the branch slug as
+# the id, and reap read the id after deleting the worktree it lived in — and between them
+# a wave that had been built, integrated and reaped read as never started.
+slice 42 low no "" "An id that is not a filename."
+mv "$D/42.md" "$D/42-with-a-long-title.md"
+"$BRAID" spawn "$D/42-with-a-long-title.md" --no-launch >/dev/null 2>&1
+is "the branch takes the readable name" "agent/42-with-a-long-title" \
+    "$(git -C "$(W 42-with-a-long-title)" rev-parse --abbrev-ref HEAD)"
+work 42-with-a-long-title done.txt "done" "Did it."
+"$BRAID" integrate 42-with-a-long-title >/dev/null 2>&1
+"$BRAID" reap 42-with-a-long-title >/dev/null 2>&1
+check "and the landed marker uses the id the plan knows" \
+    git show-ref --verify --quiet "refs/braid/landed/42-with-a-long-title"
+
 # --- what next ----------------------------------------------------------------
 
 phase "what next"

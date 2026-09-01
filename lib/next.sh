@@ -17,8 +17,8 @@ set -uo pipefail
 
 # shellcheck source=worker.sh
 source "$BRAID_HOME/lib/worker.sh"
-# shellcheck source=slice.sh
-source "$BRAID_HOME/lib/slice.sh"
+# shellcheck source=source.sh
+source "$BRAID_HOME/lib/source.sh"
 
 braid_config
 CHECKOUT=$(primary_checkout)
@@ -62,17 +62,18 @@ AHEAD=0
 # --- design -------------------------------------------------------------------
 
 SLICES=()
-if [[ -d "$DIR" ]]; then
-    for file in "$DIR"/*.md; do
-        [[ -f "$file" ]] || continue
-        id=$(basename "$file" .md)
-        case "$id" in prd | plan | README) continue ;; esac
-        SLICES+=("$id")
-    done
-fi
+while read -r id; do
+    [[ -n "$id" ]] || continue
+    SLICES+=("$id")
+done < <(BRAID_FEATURE="$FEATURE" list_slices "$FEATURE" 2>/dev/null || true)
 
 if [[ "${#SLICES[@]}" -eq 0 ]]; then
-    why "no slices in $BRAID_FEATURES_DIR/$FEATURE/."
+    if [[ "$BRAID_SLICE_SOURCE" == github ]]; then
+        why "no slices for '$FEATURE' in the tracker."
+        why "a feature is a PRD issue and its sub-issues:  braid plan --prd <number>"
+    else
+        why "no slices in $BRAID_FEATURES_DIR/$FEATURE/."
+    fi
     why "settle what you are building first. braid has no opinion about how — but it"
     why "will open the seat for you at the tier this repository calls 'design'."
     step "braid design      (then, in that session: /braid-plan)"
@@ -120,13 +121,31 @@ done
 # worker whose branch is already in the feature branch is done whether or not its
 # worktree is still sitting there — and the earlier version, which looked at the
 # worktree first, told you to integrate slices it had already integrated.
+# The branch a plan id produced. In files mode the id is the slug; with a tracker the
+# slug is the issue number plus its title, so the id is a prefix rather than the whole
+# name. Matched against what exists rather than recomputed, which needs no network.
+branch_for_id() {
+    local id="${1:?id}" ref
+    while read -r ref; do
+        [[ -n "$ref" ]] || continue
+        case "${ref#"$BRAID_BRANCH_PREFIX"/}" in
+            "$id" | "$id"-*)
+                printf '%s' "$ref"
+                return 0
+                ;;
+        esac
+    done < <(git -C "$CHECKOUT" for-each-ref --format='%(refname:short)' \
+        "refs/heads/$BRAID_BRANCH_PREFIX/")
+    printf '%s' "$(worker_branch "$(slugify "$id")")"
+}
+
 slice_state() {
     local id="${1:?id}" slug branch worktree
-    slug=$(slugify "$id")
-    branch=$(worker_branch "$slug")
+    branch=$(branch_for_id "$id")
+    slug="${branch#"$BRAID_BRANCH_PREFIX"/}"
     worktree=$(worker_worktree_path "$slug")
 
-    git -C "$CHECKOUT" show-ref --verify --quiet "refs/braid/landed/$slug" && {
+    git -C "$CHECKOUT" show-ref --verify --quiet "refs/braid/landed/$id" && {
         printf 'done'
         return 0
     }

@@ -16,14 +16,13 @@
 
 set -uo pipefail
 
-# shellcheck source=slice.sh
-source "$BRAID_HOME/lib/slice.sh"
-# shellcheck source=config.sh
-source "$BRAID_HOME/lib/config.sh"
+# shellcheck source=source.sh
+source "$BRAID_HOME/lib/source.sh"
 
 FEATURE=""
 DRY=0
 CAPACITY=""
+PRD=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -33,6 +32,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --capacity)
             CAPACITY="${2:?--capacity needs a number}"
+            shift 2
+            ;;
+        --prd)
+            PRD="${2:?--prd needs an issue number}"
+            PRD="${PRD#\#}"
             shift 2
             ;;
         -h | --help)
@@ -53,33 +57,39 @@ refuse_worker_seat
 # The feature is the branch you are on, because that is the branch its workers will be
 # cut from. Naming one explicitly is for planning a feature you are not standing in.
 [[ -n "$FEATURE" ]] || FEATURE=$(branch_slug "$(current_branch)")
-DIR="$(primary_checkout)/$BRAID_FEATURES_DIR/$FEATURE"
-[[ -d "$DIR" ]] || die "$(printf '%s\n' \
-    "no feature at $DIR" \
-    "  a feature is a folder: its slices are the files in it, and the folder is their parent." \
-    "  mkdir -p $DIR and write the slices, or pass a different name.")"
-
-CAPACITY="${CAPACITY:-$BRAID_MAX_WORKERS}"
+DIR="$(slice_dir "$FEATURE")"
 PLAN="$DIR/plan.md"
+CAPACITY="${CAPACITY:-$BRAID_MAX_WORKERS}"
 
-# Every .md in the folder except the two braid owns. The id is the filename, which is
-# also what spawn takes and what the branch is named after — one identifier, derivable
-# from any of the others.
+# A PRD given once is remembered, in the plan's own braid block, so every later command
+# finds the feature's slices without being told again.
+if [[ -z "$PRD" && "$BRAID_SLICE_SOURCE" == github ]]; then
+    PRD=$(feature_prd "$FEATURE" 2>/dev/null || true)
+fi
+if [[ "$BRAID_SLICE_SOURCE" == files && ! -d "$DIR" ]]; then
+    die "$(printf '%s\n' \
+        "no feature at $DIR" \
+        "  a feature is a folder: its slices are the files in it, and the folder is their parent." \
+        "  mkdir -p $DIR and write the slices, or pass a different name.")"
+fi
+mkdir -p "$DIR"
+
+# The braid block is parsed the same from a file and from an issue body, which is the
+# whole point of putting it in the markdown rather than in a tracker's own fields.
 TABLE=""
 COUNT=0
-for file in "$DIR"/*.md; do
-    [[ -f "$file" ]] || continue
-    id=$(basename "$file" .md)
-    case "$id" in prd | plan | README) continue ;; esac
-    body=$(cat "$file")
+while read -r id; do
+    [[ -n "$id" ]] || continue
+    body=$(BRAID_FEATURE="$FEATURE" fetch_slice "$id")
     slice_validate "$body"
     TABLE+="$id	$(slice_complexity "$body")	$(slice_setup "$body")	$(slice_blocked_by "$body")
 "
     COUNT=$((COUNT + 1))
-done
-[[ "$COUNT" -gt 0 ]] || die "no slices in $DIR (a slice is any .md that is not prd.md or plan.md)"
+done < <(BRAID_FEATURE="$FEATURE" BRAID_PRD="$PRD" list_slices "$FEATURE")
+[[ "$COUNT" -gt 0 ]] ||
+    die "no slices found for '$FEATURE' (source: $BRAID_SLICE_SOURCE)"
 
-note "$COUNT slices, capacity $CAPACITY"
+note "$COUNT slices from $BRAID_SLICE_SOURCE${PRD:+ (PRD #$PRD)}, capacity $CAPACITY"
 WAVES=$(printf '%s' "$TABLE" | python3 "$BRAID_HOME/lib/schedule.py" "$CAPACITY") ||
     die "could not schedule these slices"
 
@@ -96,13 +106,15 @@ fi
 
 # Rewrite only the fence. Everything else in the file is human-written and is the
 # reason the file is worth committing at all.
-python3 - "$PLAN" "$FEATURE" "$WAVES" <<'PY'
+python3 - "$PLAN" "$FEATURE" "$WAVES" "${PRD:-}" <<'PY'
 import pathlib
 import re
 import sys
 
 path, feature, waves = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
-fence = "```braid\n" + waves.strip() + "\n```"
+prd = sys.argv[4] if len(sys.argv) > 4 else ""
+body = (f"prd: #{prd}\n" if prd else "") + waves.strip()
+fence = "```braid\n" + body + "\n```"
 
 if path.exists():
     original = path.read_text(encoding="utf-8")

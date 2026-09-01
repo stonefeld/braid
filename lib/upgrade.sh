@@ -80,7 +80,7 @@ if [[ -n "$FROM" ]]; then
 else
     require_cmd curl
     TMP=$(mktemp -d)
-    progress "fetching stonefeld/braid@$REF…"
+    progress "fetching stonefeld/braid@${REF}…"
     curl -fsSL "https://github.com/stonefeld/braid/archive/$REF.tar.gz" |
         tar -xzf - -C "$TMP" || die "could not download stonefeld/braid@$REF"
     progress_done

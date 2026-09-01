@@ -63,7 +63,7 @@ is_integrated() {
 }
 
 reap_one() {
-    local worktree="${1:?worktree}" branch base slug unmerged launcher
+    local worktree="${1:?worktree}" branch base slug unmerged launcher recorded
 
     branch=$(git -C "$worktree" rev-parse --abbrev-ref HEAD 2>/dev/null) ||
         die "$worktree is not a git worktree"
@@ -85,6 +85,11 @@ reap_one() {
         fi
         warn "$branch: losing $unmerged commits that are not in $base (--force)"
     fi
+
+    # Read before anything is removed. Everything below destroys the worktree, and the
+    # id the plan uses lives inside it — reading it afterwards silently fell back to the
+    # branch slug, which is a different string as soon as a tracker is involved.
+    recorded=$(worker_field "$worktree" slice-id)
 
     # Outside the worktree first, while everything that names it still exists.
     braid_teardown "$worktree" "$slug" >/dev/null 2>&1 || true
@@ -110,7 +115,10 @@ reap_one() {
     # A ref rather than a branch, so it stays out of `git branch`, out of the way, and
     # still answers "what commit did this slice land as" months later.
     if [[ "$FORCE" -eq 0 ]]; then
-        git -C "$CHECKOUT" update-ref "refs/braid/landed/$slug" "$branch" ||
+        # Keyed on the id the plan uses — the filename in files mode, the issue number
+        # with a tracker — not on the branch slug, which also carries the issue's title.
+        # Keying on the slug made `next` report integrated work as never started.
+        git -C "$CHECKOUT" update-ref "refs/braid/landed/${recorded:-$slug}" "$branch" ||
             warn "could not record that $slug landed — braid next will call it unstarted"
     fi
     # -D, not -d: the ancestry check above already answered the question -d asks, and

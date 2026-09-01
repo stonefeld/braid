@@ -93,6 +93,11 @@ braid_config() {
     # sub-issue relation without needing a tracker to have the primitive.
     : "${BRAID_FEATURES_DIR:=braid/features}"
 
+    # Where slices are read from. `files` needs nothing; `github` needs the gh CLI and a
+    # PRD issue whose sub-issues are the slices. The braid block is parsed identically
+    # from either, which is what lets a slice move between them unchanged.
+    : "${BRAID_SLICE_SOURCE:=files}"
+
     : "${BRAID_PORT_BASE:=8100}"
     : "${BRAID_PORT_RANGE:=400}"
     : "${BRAID_STALE_SECONDS:=1200}"
@@ -105,5 +110,5 @@ braid_config() {
 
     export BRAID_PROJECT_FILE
     export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
-    export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS BRAID_FEATURES_DIR
+    export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS BRAID_FEATURES_DIR BRAID_SLICE_SOURCE
 }
