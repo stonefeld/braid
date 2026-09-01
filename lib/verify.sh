@@ -32,7 +32,13 @@ verify_one() {
         ok "$label"
         return 0
     fi
-    bad "$label — do not integrate this branch"
+    # A red gate means different things on either side of an integration, and saying
+    # "do not integrate" about a branch that already is one reads as a bug in braid.
+    if is_worker_branch "$label"; then
+        bad "$label — do not integrate this branch"
+    else
+        bad "$label"
+    fi
     return 1
 }
 
