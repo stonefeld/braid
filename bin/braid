@@ -43,6 +43,7 @@ COMMANDS=(
     "setup:teach braid about this repository"
     "doctor:check this machine can run a wave"
     "hook:run an agent hook (registered in .claude/settings.json)"
+    "upgrade:update the engine, keeping what you changed"
     "version:print the engine version"
     "help:print this"
 )
