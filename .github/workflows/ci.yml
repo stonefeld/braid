@@ -35,6 +35,8 @@ jobs:
       - name: a whole feature, end to end
         run: bash test/e2e.sh
 
+  # The shellcheck compat.sh finds is whatever the runner ships, which is not the pinned
+  # one, so it reports the mismatch and leaves the verdict to the job below.
   shellcheck:
     runs-on: ubuntu-latest
     env:

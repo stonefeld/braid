@@ -186,18 +186,21 @@ fi
 # --- unbraced expansions before multibyte text --------------------------------
 
 # bash 3.2 reads the bytes of a following multibyte character as part of the variable
-# name, so `"…$prd…"` fails with `prd?: unbound variable` — on macOS only, and only on the
-# line that happens to have an ellipsis after a variable.
-loose=$(grep -rnP '\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7F]' bin lib test install.sh 2>/dev/null |
-    grep -v 'compat-ignore' || true) # compat-ignore
-if [[ -z "$loose" ]]; then
+# name, so an ellipsis straight after an expansion fails with "unbound variable" — on
+# macOS only, and only on the one line that happens to have one.
+#
+# Checked in python rather than with grep. The GNU form (-P) does not exist on BSD, so it
+# errored on macOS and this passed vacuously; the portable byte-range forms match tabs
+# too, which are fine. A check that cannot fail is worse than none, because it is also a
+# claim.
+if loose=$(python3 "$(dirname "${BASH_SOURCE[0]}")/multibyte.py"); then
     ok "no unbraced expansion runs into multibyte text"
 else
     bad "unbraced expansions before a multibyte character:"
     printf '%s\n' "$loose" | sed 's/^/          /'
 fi
 
-# --- the guard'"'"'s own cases ----------------------------------------------------
+# --- the guard's own cases ----------------------------------------------------
 
 # Every case exists because the obvious version of a rule had a hole. They are the one
 # part of braid where a regression is silent and expensive.
