@@ -193,7 +193,7 @@ agent_check_model() {
 agent_skill_prompt() {
     local name="${1:?skill}" file="$BRAID_HOME/lib/skills/$1/SKILL.md"
     if declare -F agent_loads_skills >/dev/null && agent_loads_skills; then
-        printf '/%s' "$name"
+        printf '%s%s' "$(agent_skill_prefix)" "$name"
     elif [[ -f "$file" ]]; then
         # The frontmatter is addressed to a skill loader, not to a reader. awk rather
         # than sed: the compact sed form for this is a GNU extension, and macOS ships BSD.

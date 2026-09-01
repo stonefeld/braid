@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 # Adapter — OpenAI Codex CLI.
 #
-# No hook system, so two things move, and braid handles both:
+# Codex has hooks — ~/.codex/hooks.json, and the schema is the same shape as Claude
+# Code's. braid does not install into it yet, and the reason is not effort:
+#
+#   - it is registered per machine, not per repository. Claude's live in a committed
+#     .claude/settings.json, which is what makes "this repository is set up for braid" a
+#     reviewable fact. A global hook is a fact about a laptop.
+#   - hooks are gated by a trust model, with hashes recorded in config.toml. What braid
+#     would have to do to register one honestly has not been verified here, and
+#     --dangerously-bypass-hook-trust is not something a tool should pass on your behalf.
+#
+# So for now two things arrive by other means, and braid handles both:
 #
 #   the contract   goes into the prompt instead of arriving at session start
-#   status         written by .braid/finish.sh on exit, not by a Stop hook
+#   status         written by .braid/finish.sh on exit, not by a stop hook
 #
 # What does not carry over is the PreToolUse guard: nothing can deny a `git push`
 # mid-session. The per-worktree pre-push hook replaces it — narrower, but it is the
@@ -45,13 +55,12 @@ agent_models() { :; }
 
 agent_injects_contract() { return 1; }
 
-# Codex does keep skills — ~/.codex/skills, linking into the shared ~/.agents/skills that
-# the agents use between them, and the installer puts braid's there. What has not been
-# verified here is whether a skill *name* works as an opening prompt the way `/name` does
-# for Claude Code, so braid keeps handing Codex the markdown, which always does.
-#
-# Flip this to `return 0` once that is confirmed and the prompt becomes the name instead.
-agent_loads_skills() { return 1; }
+# Codex keeps skills in ~/.codex/skills, which links into the shared ~/.agents/skills the
+# agents use between them, and the installer puts braid's there. It invokes them with `$`
+# rather than `/` — which is the whole reason the prefix belongs to the adapter and not to
+# the caller.
+agent_loads_skills() { return 0; }
+agent_skill_prefix() { printf '$'; }
 
 # workspace-write rather than --dangerously-bypass-approvals-and-sandbox. A worker is
 # already confined to its own worktree, and its dependencies were installed by

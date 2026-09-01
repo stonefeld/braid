@@ -40,7 +40,9 @@ docker, no task tracker, no packages.
 > feature here end to end. The rest is reasoned from the same three mechanisms and has not
 > been run by anyone.
 >
-> Each will get a proper integration as the agents grow the hooks to support one.
+> Codex does have hooks of its own, and braid does not use them yet — they are registered
+> per machine rather than per repository, which is a design question rather than a missing
+> feature. It is the first thing on the list.
 
 ---
 
@@ -251,6 +253,11 @@ What a worker needs is delivered either way:
 | the contract | injected at `SessionStart` | at the top of the prompt, and on disk |
 | status | the `Stop` hook, which can push back on a dirty tree | `.braid/finish.sh` on exit |
 | the remote | `PreToolUse` denies `gh` and `git push` | a per-worktree `pre-push` hook |
+
+Codex has a hook system too, with the same schema. braid does not register into it yet:
+Claude's hooks live in a committed `.claude/settings.json`, which is what makes "this
+repository is set up for braid" something a team can review, while Codex's are global to
+a machine — and which of those braid should write into is a decision, not an oversight.
 
 Status is written *for* the agent, not by it, so it happens whether the agent cooperated,
 crashed, or was never installed.

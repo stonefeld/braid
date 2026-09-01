@@ -42,6 +42,7 @@ agent_injects_contract() { return 0; }
 
 # Skills are loaded from ~/.claude/skills, so naming one is enough.
 agent_loads_skills() { return 0; }
+agent_skill_prefix() { printf '/'; }
 
 # The flag that lets a worker run unattended. Probed, not assumed: if it is renamed,
 # every worker in a wave dies at launch, and the cause is one line inside a session log

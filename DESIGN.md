@@ -437,6 +437,11 @@ What must be forbidden is forbidden separately, so it survives that:
 
 - **Windows outside WSL2.** See §4.
 - **Per-slice agent selection.** See §5. Complexity is per slice; the agent is not.
+- **Codex's hooks.** It has them, with the same schema as Claude Code's, so the contract
+  and status could arrive the same way. They are registered per machine rather than per
+  repository, and gated by a trust model — so using them would make "this repository is
+  set up for braid" a fact about a laptop instead of something a team reviewed. That
+  tension is worth resolving deliberately rather than at a release boundary.
 - **A `files` field.** See §6.
 - **A tool-driven loop that interrogates the orchestrator.** Inverting who is in charge
   breaks badly when something goes strange: a rebase conflict needs the orchestrator

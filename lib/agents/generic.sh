@@ -32,7 +32,8 @@ agent_models() { :; }
 
 agent_injects_contract() { return 1; }
 
-# No skill mechanism, so a skill has to arrive as text like everything else does.
+# Unknown agent, so a skill arrives as text — which is all a skill ever was, and the
+# reason braid can claim to work with something it has never heard of.
 agent_loads_skills() { return 1; }
 
 # Nothing to probe: whatever unattended means for your agent is already in the template
