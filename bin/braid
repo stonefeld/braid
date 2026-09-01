@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# The one entry point. Lives on your PATH, not in your repository.
+#
+# Every command runs from the worktree you are standing in and works out the rest —
+# which repository, which feature branch, which workers — from git and the filesystem.
+# Nothing here reads a file braid wrote down about where you are.
+
+set -uo pipefail
+
+# Where the engine is. The dispatcher is normally a symlink in ~/.local/bin, so the
+# link has to be resolved before anything next to it can be found. BRAID_HOME wins, for
+# running a working copy without installing it.
+resolve_home() {
+    local target="${BASH_SOURCE[0]}" dir
+    while [[ -L "$target" ]]; do
+        dir=$(cd -P "$(dirname "$target")" && pwd)
+        target=$(readlink "$target")
+        [[ "$target" != /* ]] && target="$dir/$target"
+    done
+    cd -P "$(dirname "$target")/.." && pwd
+}
+
+BRAID_HOME="${BRAID_HOME:-$(resolve_home)}"
+export BRAID_HOME
+[[ -d "$BRAID_HOME/lib" ]] || {
+    echo "error: no braid engine at $BRAID_HOME — reinstall, or set BRAID_HOME" >&2
+    exit 1
+}
+
+# command:blurb. The dispatcher is the only place that knows the full surface, so this
+# table is also what `braid help` prints and what an unknown command is measured
+# against. A command is here once lib/<name>.sh exists.
+COMMANDS=(
+    "version:print the engine version"
+    "help:print this"
+)
+
+usage() {
+    local entry name blurb
+    cat >&2 <<'TXT'
+braid — run coding agents in parallel, then weave their work into one branch
+
+usage: braid <command> [options]
+
+TXT
+    for entry in "${COMMANDS[@]}"; do
+        name="${entry%%:*}"
+        blurb="${entry#*:}"
+        printf '  %-12s %s\n' "$name" "$blurb" >&2
+    done
+    cat >&2 <<'TXT'
+
+  BRAID_HOME  run an uninstalled working copy
+TXT
+}
+
+command="${1:-}"
+[[ $# -gt 0 ]] && shift
+
+case "$command" in
+    version)
+        cat "$BRAID_HOME/VERSION" 2>/dev/null || echo unknown
+        ;;
+    "" | -h | --help | help)
+        usage
+        ;;
+    *)
+        # A command in the table with no file behind it means a broken install, not a
+        # typo, and saying so saves reading shell to find out.
+        for entry in "${COMMANDS[@]}"; do
+            if [[ "$command" == "${entry%%:*}" ]]; then
+                [[ -f "$BRAID_HOME/lib/$command.sh" ]] ||
+                    {
+                        echo "error: braid $command is missing from $BRAID_HOME/lib — reinstall" >&2
+                        exit 1
+                    }
+                exec bash "$BRAID_HOME/lib/$command.sh" "$@"
+            fi
+        done
+        echo "error: unknown command '$command'" >&2
+        echo >&2
+        usage
+        exit 1
+        ;;
+esac
