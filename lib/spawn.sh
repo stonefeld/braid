@@ -184,6 +184,9 @@ CONTRACT="$CHECKOUT/docs/worker-contract.md"
 [[ -f "$CONTRACT" ]] || CONTRACT="$BRAID_HOME/docs/worker-contract.md"
 cp "$CONTRACT" "$WORKTREE/.braid/contract.md"
 
+# The only thing standing between an agent with no hooks and the remote.
+install_push_guard "$WORKTREE"
+
 # Materialising the slice here is what lets the no-network rule be absolute: a worker
 # never needs the tracker, or anything else, to know what it is building.
 braid_provision "$WORKTREE" "$SLUG" "$BASE" "$NEEDS_SETUP" ||

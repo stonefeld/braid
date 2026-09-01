@@ -151,6 +151,21 @@ has "and the slice after it" "Do nothing." "$PROMPTED"
 check "and it is on disk too" test -s "$(W 99-contract)/.braid/contract.md"
 "$BRAID" reap 99-contract --force >/dev/null 2>&1
 
+# --- the remote, for an agent that cannot be hooked ---------------------------
+
+phase "the push guard"
+# This shipped as documentation only: BRAID_PUSH_GUARD was a config default nothing read,
+# while the README, the worker contract and two adapters all said the hook existed. For
+# Codex and generic it is the only remote protection there is, so its absence meant they
+# had none at all.
+git init -q --bare "$TMP/remote"
+git remote add origin "$TMP/remote"
+is "a worker's hooks come from .braid/" ".braid/githooks" \
+    "$(git -C "$(W 02-session)" config --get core.hooksPath)"
+refute "and a worker cannot push" git -C "$(W 02-session)" push origin HEAD
+has "it says why" "Workers do not push" "$(git -C "$(W 02-session)" push origin HEAD 2>&1)"
+is "the human's own checkout is untouched" "" "$(git config --get core.hooksPath || true)"
+
 # --- the hooks ----------------------------------------------------------------
 
 phase "hooks"

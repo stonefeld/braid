@@ -98,6 +98,47 @@ refuse_trunk_base() {
     return 0
 }
 
+# --- the push guard -----------------------------------------------------------
+
+# An agent without a PreToolUse hook cannot be stopped mid-session from running
+# `git push`. A per-worktree pre-push hook can, and git enforces it, so it is
+# agent-agnostic by construction — which makes it the only remote protection that exists
+# for Codex, for generic, and for whatever comes next.
+#
+# Per worktree rather than repository-wide, so the human's own checkout keeps whatever
+# hooks it had. `--no-verify` bypasses it, and that is correct: this guards against an
+# agent doing it by reflex, not against a person who means it.
+install_push_guard() {
+    local worktree="${1:?worktree}" checkout
+    [[ "${BRAID_PUSH_GUARD:-1}" == 1 ]] || return 0
+    checkout=$(primary_checkout)
+
+    # Per-worktree config has to be enabled on the repository before a worktree can have
+    # any. Enabling it changes nothing on its own.
+    git -C "$checkout" config extensions.worktreeConfig true 2>/dev/null || {
+        warn "could not enable per-worktree config — no push guard in $worktree"
+        return 0
+    }
+    git -C "$worktree" config --worktree core.hooksPath .braid/githooks 2>/dev/null || {
+        warn "could not set a per-worktree hooksPath — no push guard in $worktree"
+        return 0
+    }
+
+    mkdir -p "$worktree/.braid/githooks"
+    cat >"$worktree/.braid/githooks/pre-push" <<'HOOK'
+#!/usr/bin/env bash
+cat >&2 <<'MSG'
+Workers do not push. Commit locally and write .braid/report.md — the orchestrator
+rebases your branch onto the feature branch and handles everything remote.
+
+A pushed worker branch has to be cleaned up by hand, and an opened pull request starts
+CI that re-runs on every later push. That timing is the human's call, not yours.
+MSG
+exit 1
+HOOK
+    chmod +x "$worktree/.braid/githooks/pre-push"
+}
+
 # --- worker worktrees ---------------------------------------------------------
 
 # The base a worker was cut from, recorded in full at spawn. Never reconstructed from
