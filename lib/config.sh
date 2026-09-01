@@ -37,6 +37,11 @@ braid_config() {
     braid_machine_config
 
     : "${BRAID_NAME:=$(basename "$checkout")}"
+
+    # Which agents this repository supports, best first. A committed decision, narrowed
+    # by `braid setup`; until then braid accepts any adapter it has, because before
+    # setup the repository has not decided anything for a preference to contradict.
+    : "${BRAID_AGENTS:=claude codex generic}"
     : "${BRAID_BRANCH_PREFIX:=agent}"
     : "${BRAID_PROTECTED_BRANCHES:=main master}"
     : "${BRAID_WORKTREE_ROOT:=$HOME/.braid/worktrees/$(basename "$checkout")}"
@@ -50,6 +55,6 @@ braid_config() {
     # never raise it past what the machine said.
     : "${BRAID_MAX_WORKERS:=4}"
 
-    export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES
+    export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
     export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS
 }
