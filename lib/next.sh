@@ -73,8 +73,9 @@ fi
 
 if [[ "${#SLICES[@]}" -eq 0 ]]; then
     why "no slices in $BRAID_FEATURES_DIR/$FEATURE/."
-    why "settle what you are building first — braid has no opinion about how."
-    step "write slices there, then: braid plan"
+    why "settle what you are building first. braid has no opinion about how — but it"
+    why "will open the seat for you at the tier this repository calls 'design'."
+    step "braid design      (then write slices there, and: braid plan)"
     exit 0
 fi
 

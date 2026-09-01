@@ -32,6 +32,7 @@ export BRAID_HOME
 # against. A command is here once lib/<name>.sh exists.
 COMMANDS=(
     "next:what to run now, and why"
+    "design:open the design seat, at the right tier"
     "plan:derive a feature's wave schedule from its slices"
     "wave:launch a wave, at most BRAID_MAX_WORKERS at a time"
     "spawn:launch a worker on one slice, in its own worktree"

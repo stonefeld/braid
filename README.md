@@ -51,6 +51,11 @@ slices  →  braid plan  →  braid wave  →  braid integrate  →  a linear br
 PRD, cutting it into slices — those are house decisions and it ships none of them. What it
 owns starts at *"these slices are launchable"* and ends at *"the feature branch is green"*.
 
+It will still open the seat for you — `braid design` starts your agent on the tier this
+repository calls `design`, in the worktree you are standing in, and gets out of the way.
+It carries no workflow; what it saves is choosing a model by hand at the moment you least
+want to think about one.
+
 If you are ever unsure where you are:
 
 ```bash
@@ -165,6 +170,7 @@ without telling you which merge did it.
 ```
 braid next                 what to run now, and why
 braid setup                teach braid about this repository
+braid design               open the design seat, at the right tier
 braid plan [feature]       derive the wave schedule from the slices
 braid wave <n|slices…>     launch a wave, at most BRAID_MAX_WORKERS at a time
 braid spawn <slice>        launch one worker
