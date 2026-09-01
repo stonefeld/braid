@@ -36,6 +36,14 @@ export BRAID_LAUNCHER_FILE=""
 # whole thing survivable: when herdr changes its contract and braid has not caught up,
 # twenty lines here have you running today, in a file `braid upgrade` will never
 # overwrite.
+# What a launcher is about to try. Called rather than assigned, because a variable set
+# in five files and read in a sixth looks unused in all five — and because it makes the
+# thing a launcher must do to be debuggable part of its interface rather than a
+# convention somebody has to know.
+launcher_probe() {
+    BRAID_LAUNCHER_PROBE="$*"
+}
+
 launcher_file() {
     local name="${1:?name}" override
     override="${XDG_CONFIG_HOME:-$HOME/.config}/braid/launchers/$name.sh"
@@ -55,9 +63,9 @@ launcher_load() {
     # Defaults for the two optional functions, defined before the file is sourced so it
     # can replace either. Called through the launcher interface rather than by name,
     # which is why they look unreachable from here.
-    # shellcheck disable=SC2317
+    # shellcheck disable=SC2317,SC2329
     launcher_headless() { return 1; }
-    # shellcheck disable=SC2317
+    # shellcheck disable=SC2317,SC2329
     launcher_forget() { :; }
     # shellcheck disable=SC1090
     source "$file"

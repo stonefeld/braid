@@ -1,7 +1,7 @@
 #!/bin/sh
 # Install braid.
 #
-#   curl -fsSL https://braid.sh/install | sh
+#   curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
 #   ./install.sh                              from a clone
 #
 #     --prefix DIR     where the dispatcher is linked   (default: ~/.local/bin)

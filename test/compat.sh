@@ -152,8 +152,8 @@ rm -rf "$TMPMAN"
 # --- shellcheck, when it is here ----------------------------------------------
 
 if command -v shellcheck >/dev/null 2>&1; then
-    if shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/templates/*.sh test/*.sh &&
-        shellcheck --shell=sh install.sh; then
+    if shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh \
+        lib/templates/*.sh test/*.sh && shellcheck --shell=sh install.sh; then
         ok "shellcheck clean"
     else
         bad "shellcheck findings"

@@ -123,47 +123,11 @@ done
 # push and open pull requests. Registered by name, never by path, which is what lets the
 # engine live outside this repository.
 mkdir -p .claude
-python3 - <<'PY'
-import json
-import pathlib
-import sys
-
-path = pathlib.Path(".claude/settings.json")
-want = {
-    "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "braid hook guard-remote", "timeout": 10}]}],
-    "SessionStart": [{"hooks": [{"type": "command", "command": "braid hook session-start", "timeout": 60}]}],
-    "Stop": [{"hooks": [{"type": "command", "command": "braid hook stop", "timeout": 30}]}],
-}
-
-settings = {}
-if path.exists():
-    try:
-        settings = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        # Never clobber a file we cannot parse. Somebody hand-edited it, and losing
-        # their configuration to a setup command is not forgiven.
-        print("  .claude/settings.json is not valid JSON — fix it and run setup again", file=sys.stderr)
-        raise SystemExit(1)
-
-hooks = settings.setdefault("hooks", {})
-added = []
-for event, entries in want.items():
-    existing = hooks.setdefault(event, [])
-    for entry in entries:
-        command = entry["hooks"][0]["command"]
-        if not any(h.get("command") == command for group in existing for h in group.get("hooks", [])):
-            existing.append(entry)
-            added.append(f"{event}: {command}")
-
-path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
-for line in added:
-    print(f"  hook {line}")
-if not added:
-    print("  hooks already registered")
-PY
-# Checked, not assumed. The registration refuses to touch a settings.json it cannot
-# parse, and without this setup reported success over that refusal.
-[[ $? -eq 0 ]] || die "could not register the hooks — nothing was changed"
+# Checked directly rather than through $?: the registration refuses to touch a
+# settings.json it cannot parse, and setup used to report success over that refusal.
+if ! python3 "$BRAID_HOME/lib/setup/hooks.py"; then
+    die "could not register the hooks — nothing was changed"
+fi
 
 echo
 if [[ "$SCAFFOLD_ONLY" -eq 1 ]]; then

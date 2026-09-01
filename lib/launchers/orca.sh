@@ -40,14 +40,14 @@ launcher_launch() {
     local cli terminal handle="" surface=""
 
     cli=$(orca_cli) && [[ -n "$cli" ]] || {
-        BRAID_LAUNCHER_PROBE="resolving the orca CLI (set ORCA_CLI_COMMAND)"
+        launcher_probe "resolving the orca CLI (set ORCA_CLI_COMMAND)"
         return 1
     }
 
     # orca picks a worktree up from git without any registration step, but not instantly
     # — its scan lands a few seconds after `worktree add` returns, and until then every
     # selector for it answers selector_not_found. Waited for rather than raced.
-    BRAID_LAUNCHER_PROBE="$cli worktree show --worktree path:$worktree"
+    launcher_probe "$cli worktree show --worktree path:$worktree"
     for _ in $(seq 1 30); do
         "$cli" worktree show --worktree "path:$worktree" --json >/dev/null 2>&1 && break
         sleep 1
@@ -60,7 +60,7 @@ launcher_launch() {
             note "orca would not chain this card — the worker is fine either way"
     fi
 
-    BRAID_LAUNCHER_PROBE="$cli terminal create --worktree path:$worktree"
+    launcher_probe "$cli terminal create --worktree path:$worktree"
     terminal=$("$cli" terminal create \
         --worktree "path:$worktree" --title "$title" --command "$command" --json) || return 1
 

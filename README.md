@@ -9,7 +9,7 @@ line — and in any terminal setup, from a full agent development environment do
 plain tmux.
 
 ```bash
-curl -fsSL https://braid.sh/install | sh
+curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
 ```
 
 > **Status: under construction.** The design is settled and written down in

@@ -14,6 +14,7 @@ launcher_available() { return 0; }
 launcher_headless() { return 0; }
 
 launcher_launch() {
+    # shellcheck disable=SC2034  # the launcher signature is fixed; there is no tab to title
     local worktree="${1:?worktree}" title="${2:-}" command="${3:?command}"
     (nohup bash -lc "$command" >"$worktree/.braid/session.log" 2>&1 &)
 }

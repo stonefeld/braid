@@ -95,8 +95,15 @@ time, but not eliminated.
 ### The two halves of setup
 
 ```bash
-curl -fsSL https://braid.sh/install | sh
+curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
 ```
+
+The URL is the raw file on GitHub rather than a short domain, and deliberately so for
+now: it is auditable — the thing you are about to pipe into a shell is the thing you can
+read in the repository — and it needs no infrastructure to exist. A vanity domain is a
+convenience to add later, and it should **not** be `braid.sh`: that is the name of the
+file every project using braid writes, and "edit braid.sh" beside "curl braid.sh" is an
+ambiguity in every sentence of the documentation.
 
 **Half one — mechanical, deterministic, no LLM.** Detect the platform and the agents on
 `PATH`, install the engine, symlink the dispatcher, print what it did. A `curl | sh`

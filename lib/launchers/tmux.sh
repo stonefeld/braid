@@ -8,7 +8,7 @@ launcher_available() { command -v tmux >/dev/null 2>&1; }
 
 launcher_launch() {
     local worktree="${1:?worktree}" title="${2:?title}" command="${3:?command}"
-    BRAID_LAUNCHER_PROBE="tmux new-session -d -s $title"
+    launcher_probe "tmux new-session -d -s $title"
     tmux new-session -d -s "$title" -c "$worktree" "bash -lc $(printf '%q' "$command")" || return 1
     note "tmux session $title (tmux attach -t $title)"
 }

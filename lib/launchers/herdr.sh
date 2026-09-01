@@ -23,10 +23,10 @@ sys.exit(0 if isinstance(panes, list) else 1)
 launcher_launch() {
     local worktree="${1:?worktree}" title="${2:?title}" command="${3:?command}" pane
 
-    BRAID_LAUNCHER_PROBE="herdr workspace create --cwd $worktree --label $title"
+    launcher_probe "herdr workspace create --cwd $worktree --label $title"
     herdr workspace create --cwd "$worktree" --label "$title" --no-focus >/dev/null || return 1
 
-    BRAID_LAUNCHER_PROBE="herdr pane list"
+    launcher_probe "herdr pane list"
     pane=$(herdr pane list | python3 -c '
 import json, sys
 target = sys.argv[1]
@@ -39,7 +39,7 @@ print(match[0]["pane_id"] if match else "")
 ' "$worktree") || return 1
     [[ -n "$pane" ]] || return 1
 
-    BRAID_LAUNCHER_PROBE="herdr pane run $pane"
+    launcher_probe "herdr pane run $pane"
     herdr pane run "$pane" "$command" >/dev/null || return 1
     note "herdr pane $pane"
 }

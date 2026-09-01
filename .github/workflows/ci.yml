@@ -40,7 +40,7 @@ jobs:
       - name: install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: engine
-        run: shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/templates/*.sh test/*.sh
+        run: shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh lib/templates/*.sh test/*.sh
       - name: installer
         # Separately, and as sh: it is the one file that must not be bash.
         run: shellcheck --shell=sh install.sh
