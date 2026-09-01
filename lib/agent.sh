@@ -187,6 +187,24 @@ agent_check_model() {
         die "unknown model '$model' for $BRAID_AGENT_RESOLVED (accepts: $valid)"
 }
 
+# How to put one of braid's own skills in front of an agent. An agent that loads skills
+# is told the name; one that does not is handed the markdown, which is all a skill is.
+# Same shape as the contract: braid delivers the thing, not the mechanism.
+agent_skill_prompt() {
+    local name="${1:?skill}" file="$BRAID_HOME/lib/skills/$1/SKILL.md"
+    if declare -F agent_loads_skills >/dev/null && agent_loads_skills; then
+        printf '/%s' "$name"
+    elif [[ -f "$file" ]]; then
+        # The frontmatter is addressed to a skill loader, not to a reader. awk rather
+        # than sed: the compact sed form for this is a GNU extension, and macOS ships BSD.
+        awk 'NR == 1 && $0 == "---" { inside = 1; next }
+             inside && $0 == "---" { inside = 0; next }
+             !inside' "$file"
+    else
+        die "no skill '$name' in $BRAID_HOME/lib/skills/"
+    fi
+}
+
 # --- adapter defaults ---------------------------------------------------------
 
 # Overridable from braid.sh, the same escape hatch every other seam has: a project can

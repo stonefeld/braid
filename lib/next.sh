@@ -75,7 +75,7 @@ if [[ "${#SLICES[@]}" -eq 0 ]]; then
     why "no slices in $BRAID_FEATURES_DIR/$FEATURE/."
     why "settle what you are building first. braid has no opinion about how — but it"
     why "will open the seat for you at the tier this repository calls 'design'."
-    step "braid design      (then write slices there, and: braid plan)"
+    step "braid design      (then, in that session: /braid-plan)"
     exit 0
 fi
 
@@ -197,7 +197,14 @@ fi
 
 if [[ -n "$NEXT_WAVE" ]]; then
     why "${#TODO[@]} slices not started."
-    step "braid wave $NEXT_WAVE"
+    # Said once, at the point where the seat changes. From inside the orchestrator this
+    # is the command it runs itself, so repeating the suggestion later would be noise.
+    if [[ -z "${BRAID_SEAT:-}" ]]; then
+        why "the orchestrator runs the waves, in a session of its own."
+        step "braid orchestrate      (or run it here: braid wave $NEXT_WAVE)"
+    else
+        step "braid wave $NEXT_WAVE"
+    fi
     exit 0
 fi
 

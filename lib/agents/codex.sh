@@ -45,6 +45,9 @@ agent_models() { :; }
 
 agent_injects_contract() { return 1; }
 
+# No skill mechanism, so a skill has to arrive as text like everything else does.
+agent_loads_skills() { return 1; }
+
 # workspace-write rather than --dangerously-bypass-approvals-and-sandbox. A worker is
 # already confined to its own worktree, and its dependencies were installed by
 # braid_provision before it started, so the sandbox costs it nothing it needs — and a

@@ -32,6 +32,9 @@ agent_models() { :; }
 
 agent_injects_contract() { return 1; }
 
+# No skill mechanism, so a skill has to arrive as text like everything else does.
+agent_loads_skills() { return 1; }
+
 # Nothing to probe: whatever unattended means for your agent is already in the template
 # you gave BRAID_AGENT_CMD.
 agent_auto_mode() { printf 'in BRAID_AGENT_CMD'; }

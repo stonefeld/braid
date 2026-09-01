@@ -40,6 +40,9 @@ agent_models() { echo "fable opus sonnet haiku"; }
 # at the slice. Keeping it short matters: it is what the agent reads first.
 agent_injects_contract() { return 0; }
 
+# Skills are loaded from ~/.claude/skills, so naming one is enough.
+agent_loads_skills() { return 0; }
+
 # The flag that lets a worker run unattended. Probed, not assumed: if it is renamed,
 # every worker in a wave dies at launch, and the cause is one line inside a session log
 # nobody is reading yet.
