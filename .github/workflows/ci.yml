@@ -32,6 +32,8 @@ jobs:
         run: bash test/slice.sh
       - name: the scheduler
         run: bash test/schedule.sh
+      - name: a whole feature, end to end
+        run: bash test/e2e.sh
 
   shellcheck:
     runs-on: ubuntu-latest
