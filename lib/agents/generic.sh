@@ -32,6 +32,11 @@ agent_models() { :; }
 
 agent_injects_contract() { return 1; }
 
+# Nothing to probe: whatever unattended means for your agent is already in the template
+# you gave BRAID_AGENT_CMD.
+agent_auto_mode() { printf 'in BRAID_AGENT_CMD'; }
+agent_auto_mode_probe() { return 0; }
+
 agent_command() {
     local worktree="$1" model="$2" prompt="$3" template="$BRAID_AGENT_CMD"
     [[ -n "$template" ]] ||

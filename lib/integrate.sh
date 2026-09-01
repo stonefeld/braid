@@ -25,18 +25,18 @@ set -uo pipefail
 # shellcheck source=worker.sh
 source "$BRAID_HOME/lib/worker.sh"
 
-MODE=integrate
+MODE="integrate"
 VERIFY=1
 SLUG=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --continue)
-            MODE=continue
+            MODE="continue"
             shift
             ;;
         --abort)
-            MODE=abort
+            MODE="abort"
             shift
             ;;
         --no-verify)

@@ -40,6 +40,12 @@ agent_models() { echo "fable opus sonnet haiku"; }
 # at the slice. Keeping it short matters: it is what the agent reads first.
 agent_injects_contract() { return 0; }
 
+# The flag that lets a worker run unattended. Probed, not assumed: if it is renamed,
+# every worker in a wave dies at launch, and the cause is one line inside a session log
+# nobody is reading yet.
+agent_auto_mode() { printf -- '--permission-mode %s' "$BRAID_PERMISSION_MODE"; }
+agent_auto_mode_probe() { claude --help 2>/dev/null | grep -q -- '--permission-mode'; }
+
 agent_command() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3"
