@@ -28,6 +28,8 @@ jobs:
           git --version
       - name: invariants
         run: bash test/compat.sh
+      - name: the slice parser
+        run: bash test/slice.sh
 
   shellcheck:
     runs-on: ubuntu-latest

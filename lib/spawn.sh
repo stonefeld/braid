@@ -23,6 +23,8 @@ source "$BRAID_HOME/lib/agent.sh"
 source "$BRAID_HOME/lib/env.sh"
 # shellcheck source=launcher.sh
 source "$BRAID_HOME/lib/launcher.sh"
+# shellcheck source=slice.sh
+source "$BRAID_HOME/lib/slice.sh"
 
 usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' >&2; }
 
@@ -31,7 +33,7 @@ COMPLEXITY=""
 MODEL=""
 BASE=""
 BASE_EXPLICIT=0
-NEEDS_SETUP=0
+NEEDS_SETUP=""
 LAUNCH=1
 PROMPT_OVERRIDE=""
 
@@ -105,10 +107,16 @@ BODY=$(cat "$SLICE")
 [[ -n "$BODY" ]] || die "$SLICE is empty"
 SLICE_ID=$(basename "$SLICE" .md)
 
+# The braid block is the source; the flags override it. Validated whole rather than read
+# key by key, so a typo is reported as a typo instead of silently reading as an absence.
+slice_validate "$BODY"
+[[ -n "$COMPLEXITY" ]] || COMPLEXITY=$(slice_complexity "$BODY")
+[[ -n "$NEEDS_SETUP" ]] || NEEDS_SETUP=$(slice_setup "$BODY")
+
 # The model resolves through complexity, never through a brand name in the slice.
 # --model is the escape hatch for the one case the mapping gets wrong.
 if [[ -z "$MODEL" ]]; then
-    MODEL=$(agent_complexity "${COMPLEXITY:-standard}")
+    MODEL=$(agent_complexity "$COMPLEXITY")
 fi
 agent_check_model "$MODEL"
 
@@ -147,7 +155,7 @@ printf '%s' "$BASE" >"$WORKTREE/.braid/base"
 printf '%s' "$SLICE_ID" >"$WORKTREE/.braid/slice-id"
 printf '%s' "$BRAID_AGENT_RESOLVED" >"$WORKTREE/.braid/agent"
 printf '%s' "$MODEL" >"$WORKTREE/.braid/model"
-printf '%s' "${COMPLEXITY:-standard}" >"$WORKTREE/.braid/complexity"
+printf '%s' "$COMPLEXITY" >"$WORKTREE/.braid/complexity"
 printf '%s' "$(braid_version)" >"$WORKTREE/.braid/braid-version"
 printf '%s\n' "$BODY" >"$WORKTREE/.braid/slice.md"
 
