@@ -101,6 +101,18 @@ reap_one() {
 
     git -C "$CHECKOUT" worktree remove --force "$worktree" ||
         die "could not remove $worktree"
+
+    # The branch becomes a ref under refs/braid/landed/ before it is deleted. Deleting
+    # it outright destroys the only evidence that this slice was ever built: afterwards
+    # a slice with no branch and no worktree is indistinguishable from one that never
+    # started, and `braid next` would call a wave finished that had not begun.
+    #
+    # A ref rather than a branch, so it stays out of `git branch`, out of the way, and
+    # still answers "what commit did this slice land as" months later.
+    if [[ "$FORCE" -eq 0 ]]; then
+        git -C "$CHECKOUT" update-ref "refs/braid/landed/$slug" "$branch" ||
+            warn "could not record that $slug landed — braid next will call it unstarted"
+    fi
     # -D, not -d: the ancestry check above already answered the question -d asks, and
     # answered it against the right branch.
     git -C "$CHECKOUT" branch -D "$branch" >/dev/null ||

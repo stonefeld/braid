@@ -31,6 +31,7 @@ export BRAID_HOME
 # table is also what `braid help` prints and what an unknown command is measured
 # against. A command is here once lib/<name>.sh exists.
 COMMANDS=(
+    "next:what to run now, and why"
     "plan:derive a feature's wave schedule from its slices"
     "wave:launch a wave, at most BRAID_MAX_WORKERS at a time"
     "spawn:launch a worker on one slice, in its own worktree"
