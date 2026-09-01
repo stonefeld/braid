@@ -177,6 +177,13 @@ printf '%s\n' "$BODY" >"$WORKTREE/.braid/slice.md"
 cp "$BRAID_HOME/lib/finish.sh" "$WORKTREE/.braid/finish.sh"
 chmod +x "$WORKTREE/.braid/finish.sh"
 
+# Copied in rather than referenced. An agent with no hooks reads it from the prompt, and
+# one with hooks still benefits from it being on disk after a compaction. The
+# repository's own copy wins over the engine's.
+CONTRACT="$CHECKOUT/docs/worker-contract.md"
+[[ -f "$CONTRACT" ]] || CONTRACT="$BRAID_HOME/docs/worker-contract.md"
+cp "$CONTRACT" "$WORKTREE/.braid/contract.md"
+
 # Materialising the slice here is what lets the no-network rule be absolute: a worker
 # never needs the tracker, or anything else, to know what it is building.
 braid_provision "$WORKTREE" "$SLUG" "$BASE" "$NEEDS_SETUP" ||
@@ -192,13 +199,43 @@ fi
 # report and leave alone rather than to unwind.
 CREATED=""
 
+# The contract is the one thing a worker must not be able to miss, so it is delivered
+# twice over depending on what the agent can do.
+#
+# An agent with a session hook gets it before its first turn, and the prompt only has to
+# point at the slice — but it still restates the two rules whose absence costs something,
+# because a headless run is one turn long and a worker that finishes without committing
+# has done work nobody can integrate. That is not hypothetical: it is what the first real
+# wave did.
+#
+# An agent without hooks gets the whole contract inline. Nothing else would ever give it
+# one, which is the difference between "works with any agent CLI" and "works with Claude".
 if [[ -n "$PROMPT_OVERRIDE" ]]; then
     PROMPT="$PROMPT_OVERRIDE"
-else
+elif agent_injects_contract; then
     PROMPT="$(
         printf '# Your assigned slice\n\n'
         cat "$WORKTREE/.braid/slice.md"
-        printf '\n\n---\n\nImplement it completely. It is also on disk at .braid/slice.md.\n'
+        printf '%s\n' \
+            '' '---' '' \
+            'Implement it completely. Your operating contract was loaded at the start of' \
+            'this session; follow it exactly. Two parts of it are not advice:' \
+            '' \
+            '  - You never touch the remote. No push, no gh, no PRs.' \
+            '  - You commit everything before you finish, and you write .braid/report.md.' \
+            '    Your working tree is never read by anyone. Uncommitted work is lost work.' \
+            '' \
+            'The slice is also on disk at .braid/slice.md.'
+    )"
+else
+    PROMPT="$(
+        cat "$WORKTREE/.braid/contract.md"
+        printf '\n\n---\n\n# Your assigned slice\n\n'
+        cat "$WORKTREE/.braid/slice.md"
+        printf '%s\n' \
+            '' '---' '' \
+            'Implement the slice above, completely. The contract that precedes it is not' \
+            'advice. Both are also on disk, at .braid/contract.md and .braid/slice.md.'
     )"
 fi
 

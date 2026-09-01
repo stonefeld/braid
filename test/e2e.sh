@@ -133,6 +133,24 @@ check "ports differ between workers" test "$P1" != "$P2"
 STAGED=$(git -C "$(W 01-login)" status --porcelain | grep '\.braid' || true)
 is "a worker cannot commit .braid/" "" "$STAGED"
 
+# --- the contract reaches an agent that has no hooks --------------------------
+
+phase "the contract, for an agent with no hooks"
+# This shipped broken. spawn defined agent_injects_contract in the adapters and never
+# called it, so an agent without a session hook — Codex, generic, anything future —
+# received a prompt with the slice in it and no contract at all. Nothing here caught it
+# because the simulated agent does not read its prompt; a real wave did, immediately,
+# by finishing without committing.
+slice 99-contract low no "" "Do nothing."
+BRAID_AGENT_CMD='echo {prompt}' "$BRAID" spawn "$D/99-contract.md" >/dev/null 2>&1
+sleep 1
+PROMPTED=$(cat "$(W 99-contract)/.braid/session.log" 2>/dev/null)
+has "the whole contract is in the prompt" "# Worker contract" "$PROMPTED"
+has "including the rule that costs the most" "You commit everything" "$PROMPTED"
+has "and the slice after it" "Do nothing." "$PROMPTED"
+check "and it is on disk too" test -s "$(W 99-contract)/.braid/contract.md"
+"$BRAID" reap 99-contract --force >/dev/null 2>&1
+
 # --- the hooks ----------------------------------------------------------------
 
 phase "hooks"
