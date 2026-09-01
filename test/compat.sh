@@ -162,6 +162,20 @@ else
     printf '  --    shellcheck not installed; CI runs it\n'
 fi
 
+# --- names that were renamed --------------------------------------------------
+
+# A rename that misses a document is silent in the worst way: the worker contract told
+# every worker to read AGENT_PORT out of its .env long after the variable had  compat-ignore
+# BRAID_PORT, so each one bound to nothing and the failure looked like the project's.
+stale=$(grep -rnE 'AGENT_PORT|HARNESS_[A-Z_]+|\.agent/' bin lib docs test install.sh 2>/dev/null | # compat-ignore
+    grep -v 'compat-ignore' || true)
+if [[ -z "$stale" ]]; then
+    ok "no names left over from the rename"
+else
+    bad "stale names:"
+    printf '%s\n' "$stale" | sed 's/^/          /'
+fi
+
 # --- the guard's own cases ----------------------------------------------------
 
 # Every case exists because the obvious version of a rule had a hole. They are the one

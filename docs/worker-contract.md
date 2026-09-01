@@ -96,12 +96,12 @@ report that claims a test the diff does not contain is worse than no report at a
 
 ## Your environment
 
-If your worktree has a `.env`, it was generated for you. `AGENT_PORT` is yours — bind
+If your worktree has a `.env`, it was generated for you. `BRAID_PORT` is yours — bind
 your dev server to it and nothing else:
 
 ```bash
 # whatever this project's dev server command is
-PORT="$(grep '^AGENT_PORT=' .env | cut -d= -f2)"
+PORT="$(grep '^BRAID_PORT=' .env | cut -d= -f2)"
 ```
 
 The default port is the human's, and it is usually pointed at real data. If your port is
