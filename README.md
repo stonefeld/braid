@@ -39,10 +39,7 @@ docker, no task tracker, no packages.
 > refused by a per-worktree `pre-push` hook. Claude Code and Codex have each built a
 > feature here end to end. The rest is reasoned from the same three mechanisms and has not
 > been run by anyone.
->
-> Codex does have hooks of its own, and braid does not use them yet — they are registered
-> per machine rather than per repository, which is a design question rather than a missing
-> feature. It is the first thing on the list.
+
 
 ---
 
