@@ -24,7 +24,11 @@ _BRAID_LAUNCHER_SH=1
 # shellcheck source=config.sh
 source "$BRAID_HOME/lib/config.sh"
 
-BRAID_LAUNCHER_PROBE=""
+# Set by a launcher just before each call it makes, and read by spawn when one fails —
+# so the error names the call that broke rather than only the launcher that made it.
+# Exported because the reader is a different file.
+export BRAID_LAUNCHER_PROBE=""
+export BRAID_LAUNCHER_FILE=""
 
 # --- where the launcher comes from --------------------------------------------
 
@@ -48,11 +52,17 @@ launcher_load() {
     local name="${1:?name}" file
     file=$(launcher_file "$name") || die "no launcher '$name' (built-in or in ~/.config/braid/launchers/)"
     unset -f launcher_available launcher_launch launcher_headless launcher_forget 2>/dev/null || true
+    # Defaults for the two optional functions, defined before the file is sourced so it
+    # can replace either. Called through the launcher interface rather than by name,
+    # which is why they look unreachable from here.
+    # shellcheck disable=SC2317
     launcher_headless() { return 1; }
+    # shellcheck disable=SC2317
     launcher_forget() { :; }
     # shellcheck disable=SC1090
     source "$file"
     BRAID_LAUNCHER_FILE="$file"
+    export BRAID_LAUNCHER_FILE
 }
 
 # The environment braid is running inside, if any. Both orca and herdr mark their own
