@@ -28,15 +28,19 @@ docker, no task tracker, no packages.
 > [!WARNING]
 > **braid is a work in progress. Expect it to break.**
 >
-> It grew inside a Claude Code setup, so that is the path with the most real use behind
-> it: workers there get their contract through a `SessionStart` hook, their status
-> through a `Stop` hook, and a `PreToolUse` guard that denies the remote before the
-> permission system runs.
+> It grew inside a Claude Code setup, and that shows in the mechanism rather than in
+> whether it works. A worker there gets its contract from a `SessionStart` hook, its
+> status from a `Stop` hook, and a `PreToolUse` guard that denies the remote *before* the
+> permission system runs — which is what makes it safe to launch workers with approvals
+> off.
 >
-> Every other agent gets the same guarantees by cruder means — the contract pasted at the
-> top of the prompt, the status written by `.braid/finish.sh` when the process exits, the
-> remote blocked by a `pre-push` hook. It works, and it is tested, but it is blunt. Those
-> paths will get proper integrations as each agent grows the hooks to support them.
+> Every other agent gets the same guarantees by blunter means: the contract at the top of
+> the prompt, the status written by `.braid/finish.sh` when the process exits, the remote
+> refused by a per-worktree `pre-push` hook. Claude Code and Codex have each built a
+> feature here end to end. The rest is reasoned from the same three mechanisms and has not
+> been run by anyone.
+>
+> Each will get a proper integration as the agents grow the hooks to support one.
 
 ---
 
