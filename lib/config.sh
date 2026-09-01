@@ -89,6 +89,11 @@ braid_config() {
     : "${BRAID_BRANCH_PREFIX:=agent}"
     : "${BRAID_PROTECTED_BRANCHES:=main master}"
     : "${BRAID_WORKTREE_ROOT:=$HOME/.braid/worktrees/$(basename "$checkout")}"
+    # Where a feature's slices and its plan live in files mode. One folder per feature:
+    # the folder is the parent and the files are its children, which is the parent /
+    # sub-issue relation without needing a tracker to have the primitive.
+    : "${BRAID_FEATURES_DIR:=braid/features}"
+
     : "${BRAID_PORT_BASE:=8100}"
     : "${BRAID_PORT_RANGE:=400}"
     : "${BRAID_STALE_SECONDS:=1200}"
@@ -101,5 +106,5 @@ braid_config() {
 
     export BRAID_PROJECT_FILE
     export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
-    export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS
+    export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS BRAID_FEATURES_DIR
 }

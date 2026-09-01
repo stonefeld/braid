@@ -30,6 +30,8 @@ jobs:
         run: bash test/compat.sh
       - name: the slice parser
         run: bash test/slice.sh
+      - name: the scheduler
+        run: bash test/schedule.sh
 
   shellcheck:
     runs-on: ubuntu-latest
