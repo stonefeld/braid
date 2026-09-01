@@ -21,6 +21,8 @@ set -euo pipefail
 source "$BRAID_HOME/lib/agent.sh"
 # shellcheck source=env.sh
 source "$BRAID_HOME/lib/env.sh"
+# shellcheck source=launcher.sh
+source "$BRAID_HOME/lib/launcher.sh"
 
 usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' >&2; }
 
@@ -93,6 +95,9 @@ refuse_worker_seat
 agent_load work
 
 CHECKOUT=$(primary_checkout)
+# The worktree this was run from — the feature's, when you are sitting where you should
+# be. orca hangs the worker's card off it; every other launcher ignores it.
+PARENT_WORKTREE=$(current_worktree)
 BASE="${BASE:-$(current_branch)}"
 [[ "$BASE_EXPLICIT" -eq 1 ]] || refuse_trunk_base "$BASE"
 
@@ -176,14 +181,84 @@ else
     )"
 fi
 
-# Detached for now: no terminal, so the agent has to be started in whatever headless
-# form it has. An interactive TUI with no tty either refuses or hangs, and a hung worker
-# with no output is the worst state to debug.
-note "launching detached — output in .braid/session.log"
-# finish.sh runs whatever happened to the agent — a clean exit, a crash, a CLI that was
-# never installed. Without it a worker that died at launch is indistinguishable from one
-# that is thinking, for twenty minutes.
-COMMAND="cd $(printf '%q' "$WORKTREE") && { $(agent_cmd_headless "$WORKTREE" "$MODEL" "$PROMPT"); }; bash .braid/finish.sh $(printf '%q' "$WORKTREE")"
-(nohup bash -lc "$COMMAND" >"$WORKTREE/.braid/session.log" 2>&1 &)
+# orca hangs the worker's card off whichever worktree spawned it — the feature's, when
+# you are sitting where you should be.
+export BRAID_PARENT_WORKTREE="$PARENT_WORKTREE"
 
-note "worker running — watch it with: tail -f $WORKTREE/.braid/session.log"
+read -r LAUNCHER CERTAINTY < <(launcher_resolve)
+launcher_load "$LAUNCHER"
+
+build_command() {
+    local agent_command
+    if launcher_headless; then
+        agent_command=$(agent_cmd_headless "$WORKTREE" "$MODEL" "$PROMPT")
+    else
+        agent_command=$(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT")
+    fi
+    # finish.sh runs whatever happened to the agent — a clean exit, a crash, a CLI that
+    # was never installed. It is what makes the control plane independent of hooks.
+    printf 'cd %q && { %s; }; bash .braid/finish.sh %q' "$WORKTREE" "$agent_command" "$WORKTREE"
+}
+
+try_launch() {
+    local name="${1:?name}"
+    launcher_load "$name"
+    note "launching in $name ($CERTAINTY)"
+    launcher_launch "$WORKTREE" "$BRAID_BRANCH_PREFIX-$SLUG" "$(build_command)"
+}
+
+if try_launch "$LAUNCHER"; then
+    printf '%s' "$LAUNCHER" >"$WORKTREE/.braid/launcher"
+    note "watch it with: braid status"
+    exit 0
+fi
+
+# Guessing wrong is not a failure — the list exists to be walked. Only where braid was
+# *told* where to go is there nowhere else to legitimately go.
+if [[ "$CERTAINTY" == inferred ]]; then
+    while read -r NEXT; do
+        [[ -n "$NEXT" && "$NEXT" != "$LAUNCHER" ]] || continue
+        if try_launch "$NEXT"; then
+            printf '%s' "$NEXT" >"$WORKTREE/.braid/launcher"
+            note "watch it with: braid status"
+            exit 0
+        fi
+    done < <(launcher_candidates)
+fi
+
+# It failed. What that means depends on who is reading, and braid can tell: a person
+# sitting in front of it has a terminal, an orchestrator calling through a tool does not.
+{
+    printf 'launcher:  %s (%s)\n' "$LAUNCHER" "$CERTAINTY"
+    printf 'file:      %s\n' "${BRAID_LAUNCHER_FILE:-?}"
+    printf 'last call: %s\n' "${BRAID_LAUNCHER_PROBE:-unknown}"
+} >"$WORKTREE/.braid/launch-error.log"
+
+# Strict everywhere braid was told where to go, never where it merely guessed — there,
+# guessing again is the entire point.
+STRICT=0
+[[ "$CERTAINTY" != inferred ]] && STRICT=1
+[[ "${BRAID_LAUNCHER_STRICT:-0}" == 1 ]] && STRICT=1
+
+if [[ "$STRICT" -eq 1 && -t 2 ]]; then
+    # You are here. Stopping costs thirty seconds; putting the worker somewhere you are
+    # not looking costs the twenty minutes it takes to notice.
+    warn "$(printf '%s\n' \
+        "the worktree is ready. braid could not open it in $LAUNCHER." \
+        "" \
+        "  what it needed:  run the agent, visibly, in $WORKTREE" \
+        "  last call:       ${BRAID_LAUNCHER_PROBE:-unknown}" \
+        "" \
+        "  by hand:      cd $WORKTREE && $(agent_cmd "$WORKTREE" "$MODEL" 'the slice is in .braid/slice.md')" \
+        "  teach braid:  ${XDG_CONFIG_HOME:-$HOME/.config}/braid/launchers/$LAUNCHER.sh")"
+    exit 4
+fi
+
+# Nobody is watching this call, so stopping a wave over a panel is the wrong trade.
+# Continue detached and make the degradation permanent in status rather than a warning
+# that scrolls past — the orchestrator sees it on every check and reports it.
+warn "$LAUNCHER failed to launch — continuing detached, see .braid/launch-error.log"
+printf 'detached (%s failed)' "$LAUNCHER" >"$WORKTREE/.braid/launcher"
+launcher_load detached
+launcher_launch "$WORKTREE" "$BRAID_BRANCH_PREFIX-$SLUG" "$(build_command)"
+note "watch it with: braid status"

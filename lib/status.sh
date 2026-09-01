@@ -64,7 +64,7 @@ state_colour() {
 }
 
 print_table() {
-    local worktree branch state ahead idle found=0
+    local worktree branch state ahead idle launcher found=0
     while read -r worktree; do
         [[ -n "$worktree" ]] || continue
         found=1
@@ -77,6 +77,15 @@ print_table() {
             "$(state_colour "$state")" "$state" "$_C_OFF" "$branch" "${ahead:-0}"
         [[ "$state" == working && -n "$idle" ]] && printf ', quiet %ss' "$idle"
         printf '\n'
+
+        # Degraded visibility is a state, not a warning that scrolled past at spawn.
+        # The orchestrator sees it on every check and puts it in its wave summary, so
+        # the human learns at the next natural checkpoint instead of being interrupted.
+        launcher=$(worker_field "$worktree" launcher)
+        if [[ "$launcher" == *failed* ]]; then
+            printf '  %s⚠ no panel — %s%s\n' "$_C_YELLOW" "$launcher" "$_C_OFF"
+            printf '    %s/.braid/session.log · .braid/launch-error.log\n' "$worktree"
+        fi
 
         if [[ "$REPORTS" -eq 1 && -f "$worktree/.braid/report.md" ]]; then
             sed 's/^/    /' "$worktree/.braid/report.md"
