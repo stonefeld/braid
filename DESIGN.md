@@ -288,14 +288,16 @@ orchestration plan — which is why the command is `braid plan` and not `braid h
 
 ### Where it lives
 
-**Wherever the work lives.** braid already abstracts the task source for reading;
-adding the write side is the same seam used twice, not a second code path.
+**Wherever the work lives** — which as of v0.1 means files. The tracker half is designed
+and not built: reading slices from a tracker hooks in at `braid_fetch_slice`, and the
+write side is the same seam used twice rather than a second code path. Nothing in the
+data model above depends on which it is, and that is deliberate.
 
-With a tracker, the PRD is the parent issue, slices are sub-issues, and the plan is a
+With a tracker, the PRD would be the parent issue, slices its sub-issues, and the plan a
 fenced block in the PRD body — safe to overwrite because it is computed, not curated.
 
-With files, a folder per feature reproduces the same relation without needing a
-tracker primitive:
+With files, which is what exists, a folder per feature reproduces the same relation
+without needing a tracker primitive at all:
 
 ```
 braid/features/oauth-flow/

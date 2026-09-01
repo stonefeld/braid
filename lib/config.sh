@@ -49,9 +49,8 @@ braid_machine_config() {
 #   braid_teardown <worktree> <slug>
 #       Undo whatever provision made outside the worktree. Never fails a reap.
 #
-#   braid_fetch_slice <id>
-#       Print a slice's markdown to stdout. Override to read from something other than
-#       files or GitHub issues.
+# (A fourth, braid_fetch_slice, is where reading slices from a tracker will hook in. It
+# is not implemented: v0.1 reads slices from files only.)
 braid_provision() { :; }
 braid_verify() { :; }
 braid_teardown() { :; }

@@ -113,9 +113,9 @@ agent adapter decides which model that means locally, so a slice never names one
 unchanged in a repository whose workers run something else. `setup: yes` takes the
 expensive provisioning path and serialises: two of them never share a wave.
 
-They live in a tracker, or as files. With files, the folder is the parent and the files
-in it are its slices, which is the parent/sub-issue relation without needing a tracker to
-have the primitive:
+Slices live as files. The folder is the parent and the files in it are its slices, which
+is the parent/sub-issue relation without needing a tracker to have the primitive —
+reading them from an issue tracker instead is designed and not yet built:
 
 ```
 braid/features/oauth-flow/
