@@ -32,6 +32,8 @@ export BRAID_HOME
 # against. A command is here once lib/<name>.sh exists.
 COMMANDS=(
     "spawn:launch a worker on one slice, in its own worktree"
+    "status:what every worker is doing"
+    "wait:block until this wave settles"
     "version:print the engine version"
     "help:print this"
 )
@@ -70,11 +72,14 @@ case "$command" in
         # typo, and saying so saves reading shell to find out.
         for entry in "${COMMANDS[@]}"; do
             if [[ "$command" == "${entry%%:*}" ]]; then
-                [[ -f "$BRAID_HOME/lib/$command.sh" ]] ||
+                [[ "$command" == wait || -f "$BRAID_HOME/lib/$command.sh" ]] ||
                     {
                         echo "error: braid $command is missing from $BRAID_HOME/lib — reinstall" >&2
                         exit 1
                     }
+                # wait is status with a flag: one implementation, so the states a
+                # loop waits on cannot drift from the states it prints.
+                [[ "$command" == wait ]] && exec bash "$BRAID_HOME/lib/status.sh" --wait "$@"
                 exec bash "$BRAID_HOME/lib/$command.sh" "$@"
             fi
         done

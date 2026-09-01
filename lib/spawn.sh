@@ -144,6 +144,11 @@ printf '%s' "${COMPLEXITY:-standard}" >"$WORKTREE/.braid/complexity"
 printf '%s' "$(braid_version)" >"$WORKTREE/.braid/braid-version"
 printf '%s\n' "$BODY" >"$WORKTREE/.braid/slice.md"
 
+# Copied in, not referenced: this is what writes .braid/status when the agent exits, and
+# it has to work in a worktree that knows nothing about where braid is installed.
+cp "$BRAID_HOME/lib/finish.sh" "$WORKTREE/.braid/finish.sh"
+chmod +x "$WORKTREE/.braid/finish.sh"
+
 # Materialising the slice here is what lets the no-network rule be absolute: a worker
 # never needs the tracker, or anything else, to know what it is building.
 declare -F braid_provision >/dev/null &&
@@ -173,7 +178,10 @@ fi
 # form it has. An interactive TUI with no tty either refuses or hangs, and a hung worker
 # with no output is the worst state to debug.
 note "launching detached — output in .braid/session.log"
-COMMAND="cd $(printf '%q' "$WORKTREE") && { $(agent_cmd_headless "$WORKTREE" "$MODEL" "$PROMPT"); }"
+# finish.sh runs whatever happened to the agent — a clean exit, a crash, a CLI that was
+# never installed. Without it a worker that died at launch is indistinguishable from one
+# that is thinking, for twenty minutes.
+COMMAND="cd $(printf '%q' "$WORKTREE") && { $(agent_cmd_headless "$WORKTREE" "$MODEL" "$PROMPT"); }; bash .braid/finish.sh $(printf '%q' "$WORKTREE")"
 (nohup bash -lc "$COMMAND" >"$WORKTREE/.braid/session.log" 2>&1 &)
 
 note "worker running — watch it with: tail -f $WORKTREE/.braid/session.log"
