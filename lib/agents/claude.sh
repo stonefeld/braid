@@ -23,6 +23,17 @@ agent_seat_model() {
     esac
 }
 
+# What a slice's complexity means here. The slice says how much judgement the work
+# needs; the adapter says which model that is. A slice that named a model directly
+# would be unusable in a repository whose workers run something else.
+agent_complexity_model() {
+    case "${1:?complexity}" in
+        low) echo haiku ;;
+        high) echo opus ;;
+        standard | *) echo sonnet ;;
+    esac
+}
+
 agent_models() { echo "fable opus sonnet haiku"; }
 
 # The contract arrives through the SessionStart hook, so the prompt only has to point

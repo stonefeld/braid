@@ -31,6 +31,7 @@ export BRAID_HOME
 # table is also what `braid help` prints and what an unknown command is measured
 # against. A command is here once lib/<name>.sh exists.
 COMMANDS=(
+    "spawn:launch a worker on one slice, in its own worktree"
     "version:print the engine version"
     "help:print this"
 )

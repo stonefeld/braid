@@ -59,8 +59,10 @@ vendor's model names appear in exactly one file.
 ```bash
 BRAID_MODEL_DESIGN=fable        # the grilling seat
 BRAID_MODEL_ORCHESTRATE=opus    # judgement about other agents' work
-BRAID_MODEL_WORK=sonnet         # the default for workers, overridable per slice
 ```
+
+The work seat is not one model. A worker's model comes from **the complexity its slice
+declares**, mapped by the adapter — see §6.
 
 ---
 
@@ -203,7 +205,7 @@ The fenced block is **launch configuration, not description**. Two keys, because
 keys are what `braid spawn` actually needs at the moment it launches:
 
     ```braid
-    model: sonnet
+    complexity: standard
     setup: no
     blocked-by: 280, 281
     ```
@@ -212,6 +214,24 @@ keys are what `braid spawn` actually needs at the moment it launches:
     ## Acceptance
     ## Out of scope
     ## Blocked by      ← the same blockers in prose, with navigable links
+
+**Complexity, never a model name.** A slice is the most agent-agnostic artifact braid
+has: it lives in an issue, written by a skill that does not know which agent will run
+it. `model: sonnet` is meaningless in a repository whose workers run Codex, and it
+breaks the rule the seats already follow — a vendor's model names belong in one file.
+So the slice says how much judgement the work needs, and the adapter says what that is
+here.
+
+| | The work | Claude |
+|---|---|---|
+| `low` | mechanical and fully specified: a rename, a field addition, porting a test | `haiku` |
+| `standard` | the default — an ordinary vertical slice | `sonnet` |
+| `high` | cross-module, ambiguous, architectural judgement, a migration over real rows | `opus` |
+
+An adapter that is not confident maps nothing and lets its CLI choose; `braid setup`
+asks what each level means there, which is the moment somebody with that CLI installed
+can answer. `BRAID_MODEL_LOW` / `_STANDARD` / `_HIGH` override either way, and
+`braid spawn --model` is the escape hatch for the one slice the mapping gets wrong.
 
 **Why a fence and not `**Key:** value` prose lines.** The old parser was
 `grep -i -m1 "$key"` — unanchored, over the whole body — so any prose mention above the
@@ -409,7 +429,7 @@ What must be forbidden is forbidden separately, so it survives that:
 ## 11. Deferred
 
 - **Windows outside WSL2.** See §4.
-- **Per-slice agent selection.** See §5.
+- **Per-slice agent selection.** See §5. Complexity is per slice; the agent is not.
 - **A `files` field.** See §6.
 - **A tool-driven loop that interrogates the orchestrator.** Inverting who is in charge
   breaks badly when something goes strange: a rebase conflict needs the orchestrator

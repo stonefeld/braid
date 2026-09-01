@@ -153,6 +153,29 @@ agent_model() {
     fi
 }
 
+# The model for a worker, from the slice's complexity rather than from a model name.
+# A slice is the most agent-agnostic artifact braid has — it lives in an issue, written
+# by a skill that does not know which agent will run it — so it says how much judgement
+# the work needs and the adapter says what that is here.
+#
+#   BRAID_MODEL_<COMPLEXITY>   this repository, or this session
+#   the adapter's mapping      where it is confident enough to have one
+#   nothing                    the CLI chooses, which is right for a vendor whose
+#                              model names change faster than braid can track
+agent_complexity() {
+    local level="${1:-standard}" var
+    case "$level" in
+        low | standard | high) ;;
+        *) die "unknown complexity '$level' (expected: low, standard, high)" ;;
+    esac
+    var=$(seat_var MODEL "$level")
+    if [[ -n "${!var:-}" ]]; then
+        printf '%s' "${!var}"
+    else
+        agent_complexity_model "$level"
+    fi
+}
+
 # Checked only where the adapter says what it accepts. A typo in a model name is
 # otherwise discovered by the agent, in a panel, several minutes later.
 agent_check_model() {

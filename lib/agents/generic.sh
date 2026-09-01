@@ -25,6 +25,9 @@ agent_version() { printf '%s' "${BRAID_AGENT_CMD%% *}"; }
 
 agent_seat_model() { :; }
 
+# Nothing to map. Set BRAID_MODEL_LOW / _STANDARD / _HIGH if your agent takes a model.
+agent_complexity_model() { :; }
+
 agent_models() { :; }
 
 agent_injects_contract() { return 1; }

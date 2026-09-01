@@ -30,6 +30,12 @@ agent_version() { codex --version 2>/dev/null | head -1; }
 
 agent_seat_model() { :; }
 
+# Left to the repository. `braid setup` asks which model each complexity level means
+# here, because that is the moment somebody with the CLI installed can answer it.
+#
+#   BRAID_MODEL_LOW=…  BRAID_MODEL_STANDARD=…  BRAID_MODEL_HIGH=…
+agent_complexity_model() { :; }
+
 # Anything the CLI accepts. Validating against a list braid cannot keep current would
 # reject working configurations.
 agent_models() { :; }
