@@ -30,11 +30,55 @@ braid_machine_config() {
     fi
 }
 
+# --- the project seam ---------------------------------------------------------
+
+# The four things a repository may say about itself. All optional, all no-ops, because
+# braid has to work in a repository created twenty minutes ago that has no tests, no
+# build and no .env — and the only way that claim stays true is if nothing here is
+# required.
+#
+#   braid_provision <worktree> <slug> <base> <needs-setup:0|1>
+#       Everything a worker needs before its first turn: .env, a database, an install.
+#       Runs after the worktree exists and before the agent starts. Non-zero aborts the
+#       spawn and the half-made worktree is removed.
+#
+#   braid_verify <worktree>
+#       The mechanical half of the gate — build, typecheck, lint, tests. Whatever a
+#       human should not have to eyeball. Non-zero means the branch does not integrate.
+#
+#   braid_teardown <worktree> <slug>
+#       Undo whatever provision made outside the worktree. Never fails a reap.
+#
+#   braid_fetch_slice <id>
+#       Print a slice's markdown to stdout. Override to read from something other than
+#       files or GitHub issues.
+braid_provision() { :; }
+braid_verify() { :; }
+braid_teardown() { :; }
+
+# Whether the repository actually replaced one of them. Compared against the no-op body
+# rather than asked with `declare -F`, which is true of the defaults too — and a tool
+# that reports a gate it does not have is worse than one that reports no gate at all.
+_BRAID_NOOP_BODY="$(declare -f braid_verify | sed '1d')"
+braid_overridden() {
+    declare -F "$1" >/dev/null || return 1
+    [[ "$(declare -f "$1" | sed '1d')" != "$_BRAID_NOOP_BODY" ]]
+}
+
 braid_config() {
     local checkout
     checkout=$(primary_checkout)
 
     braid_machine_config
+
+    # The repository's own file, after the machine's and before the defaults. Its
+    # `: "${VAR:=…}"` assignments therefore lose to anything already set and win over
+    # everything below.
+    BRAID_PROJECT_FILE="${BRAID_PROJECT_FILE:-$checkout/braid.sh}"
+    if [[ -f "$BRAID_PROJECT_FILE" ]]; then
+        # shellcheck disable=SC1090
+        source "$BRAID_PROJECT_FILE"
+    fi
 
     : "${BRAID_NAME:=$(basename "$checkout")}"
 
@@ -55,6 +99,7 @@ braid_config() {
     # never raise it past what the machine said.
     : "${BRAID_MAX_WORKERS:=4}"
 
+    export BRAID_PROJECT_FILE
     export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
     export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS
 }

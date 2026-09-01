@@ -120,7 +120,7 @@ unwind() {
     local status=$?
     if [[ $status -ne 0 && -n "$CREATED" ]]; then
         note "spawn failed — removing the half-made worktree so you can run it again"
-        declare -F braid_teardown >/dev/null && braid_teardown "$CREATED" "$SLUG" >/dev/null 2>&1 || true
+        braid_teardown "$CREATED" "$SLUG" >/dev/null 2>&1 || true
         git -C "$CHECKOUT" worktree remove --force "$CREATED" >/dev/null 2>&1 || true
         git -C "$CHECKOUT" branch -D "$BRANCH" >/dev/null 2>&1 || true
     fi
@@ -151,8 +151,8 @@ chmod +x "$WORKTREE/.braid/finish.sh"
 
 # Materialising the slice here is what lets the no-network rule be absolute: a worker
 # never needs the tracker, or anything else, to know what it is building.
-declare -F braid_provision >/dev/null &&
-    { braid_provision "$WORKTREE" "$SLUG" "$BASE" "$NEEDS_SETUP" || die "braid_provision failed"; }
+braid_provision "$WORKTREE" "$SLUG" "$BASE" "$NEEDS_SETUP" ||
+    die "braid_provision failed for $WORKTREE"
 
 if [[ "$LAUNCH" -eq 0 ]]; then
     note "ready, not launched — cd $WORKTREE"
