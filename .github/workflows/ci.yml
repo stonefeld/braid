@@ -1,0 +1,66 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  compat:
+    # Both, because the invariants differ by platform: macOS is where bash 3.2 is real,
+    # and Linux is where /bin/sh is dash rather than bash in POSIX mode. A check that
+    # only ran on one would pass while the other was already broken.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: versions
+        run: |
+          bash --version | head -1
+          /bin/bash --version | head -1
+          python3 --version
+          git --version
+      - name: invariants
+        run: bash test/compat.sh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: engine
+        run: shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/templates/*.sh test/*.sh
+      - name: installer
+        # Separately, and as sh: it is the one file that must not be bash.
+        run: shellcheck --shell=sh install.sh
+
+  install:
+    # The claim the installer makes is "this works on a machine that has nothing set up
+    # yet". The only way to keep that true is to run it on one.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: install from the checkout
+        run: sh ./install.sh --prefix "$HOME/.local/bin"
+      - name: the dispatcher resolves its engine through the symlink
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          braid version
+          braid help
+      - name: an unknown command exits non-zero
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          if braid nonsense >/dev/null 2>&1; then exit 1; fi
+      - name: re-installing is idempotent
+        run: sh ./install.sh --prefix "$HOME/.local/bin"
