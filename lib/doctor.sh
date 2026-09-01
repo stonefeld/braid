@@ -123,7 +123,13 @@ for seat in design orchestrate work; do
         why="${resolved#* }"
         (
             agent_load "$seat"
-            model=$([[ "$seat" == work ]] && agent_complexity standard || agent_model "$seat")
+            # The work seat has no single model: it comes from each slice's complexity,
+            # so what is shown is what a standard one would get.
+            if [[ "$seat" == work ]]; then
+                model=$(agent_complexity standard)
+            else
+                model=$(agent_model "$seat")
+            fi
             printf '  %sok%s    %-12s %-8s via %-22s %s\n' \
                 "$_C_GREEN" "$_C_OFF" "$seat" "$name" "$why" "${model:-(the CLI chooses)}"
         ) >&2
