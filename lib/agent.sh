@@ -135,7 +135,7 @@ agent_load() {
     BRAID_AGENT_REASON="${resolved#* }"
     # shellcheck disable=SC1090
     source "$BRAID_HOME/lib/agents/$BRAID_AGENT_RESOLVED.sh"
-    export BRAID_AGENT_RESOLVED
+    export BRAID_AGENT_RESOLVED BRAID_AGENT_REASON
 }
 
 # --- models -------------------------------------------------------------------

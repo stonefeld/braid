@@ -118,7 +118,14 @@ case "$0" in
 esac
 
 TMP=""
-cleanup() { [ -n "$TMP" ] && rm -rf "$TMP"; }
+# Written as an `if` rather than `[ … ] && …` on purpose: an EXIT trap whose last
+# command fails sets the script's exit status, so the short-circuit form made a
+# successful install from a clone — where TMP is empty — exit 1.
+cleanup() {
+    if [ -n "$TMP" ]; then
+        rm -rf "$TMP"
+    fi
+}
 trap cleanup EXIT INT TERM
 
 if [ -n "$SOURCE" ]; then

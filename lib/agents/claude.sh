@@ -41,6 +41,7 @@ agent_models() { echo "fable opus sonnet haiku"; }
 agent_injects_contract() { return 0; }
 
 agent_command() {
+    # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3"
     printf 'claude --model %q --permission-mode %q %q' \
         "$model" "$BRAID_PERMISSION_MODE" "$prompt"
@@ -48,6 +49,7 @@ agent_command() {
 
 # -p, because a detached launcher has no tty and the TUI needs one.
 agent_command_headless() {
+    # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3"
     printf 'claude -p --model %q --permission-mode %q %q' \
         "$model" "$BRAID_PERMISSION_MODE" "$prompt"

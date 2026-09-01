@@ -1,0 +1,13 @@
+# Two checks are disabled repository-wide, both because they are structurally wrong
+# here rather than because a finding was inconvenient.
+
+# SC1091 — "not following" a sourced file. Every source in the engine is
+# "$BRAID_HOME/lib/…", resolved at runtime from where braid was installed. There is no
+# static path for shellcheck to follow, and there must not be: that indirection is what
+# lets the engine live outside the repository it manages.
+disable=SC1091
+
+# SC2153 — "possible misspelling", triggered by pairs like BRAID_AGENT/BRAID_AGENTS and
+# BRAID_HOME/BRAID_NAME. Both members of each pair are real, deliberate, and documented;
+# the heuristic has no way to know that.
+disable=SC2153

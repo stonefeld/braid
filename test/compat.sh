@@ -9,7 +9,7 @@
 # remembered.
 
 set -uo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 
 PASS=0
 FAIL=0
@@ -102,6 +102,38 @@ for f in lib/hooks/*.py; do
         bad "$f does not parse"
 done
 ok "python hooks parse"
+
+# --- the installer's exit status ----------------------------------------------
+
+# It printed every success line and then exited 1, because an EXIT trap whose last
+# command fails sets the script's status. Nothing in the output said so, which is the
+# reason this is checked rather than read.
+TMPPREFIX=$(mktemp -d)
+if XDG_DATA_HOME="$TMPPREFIX/share" sh ./install.sh --prefix "$TMPPREFIX/bin" >/dev/null 2>&1; then
+    ok "install.sh exits 0 on success"
+else
+    bad "install.sh exits $? despite succeeding"
+fi
+if XDG_DATA_HOME="$TMPPREFIX/share" BRAID_HOME="$TMPPREFIX/share/braid" \
+    "$TMPPREFIX/bin/braid" version >/dev/null 2>&1; then
+    ok "the installed dispatcher runs"
+else
+    bad "the installed dispatcher does not run"
+fi
+rm -rf "$TMPPREFIX"
+
+# --- shellcheck, when it is here ----------------------------------------------
+
+if command -v shellcheck >/dev/null 2>&1; then
+    if shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/templates/*.sh test/*.sh &&
+        shellcheck --shell=sh install.sh; then
+        ok "shellcheck clean"
+    else
+        bad "shellcheck findings"
+    fi
+else
+    printf '  --    shellcheck not installed; CI runs it\n'
+fi
 
 # --- the guard's own cases ----------------------------------------------------
 

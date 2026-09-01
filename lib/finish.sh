@@ -31,11 +31,11 @@ head=$(git rev-parse --short HEAD 2>/dev/null || echo "")
 # marked itself dirty by writing its report would be held back from a rebase it was
 # ready for, in a repository where setup had simply not run yet.
 if [[ -n "$(git status --porcelain -- ':!.braid' 2>/dev/null)" ]]; then
-    state=dirty
+    state="dirty"
 elif [[ -f "$WORKTREE/.braid/report.md" ]]; then
-    state=done
+    state="done"
 else
-    state=done-no-report
+    state="done-no-report"
 fi
 
 printf 'state=%s\nbranch=%s\nhead=%s\nat=%s\n' \

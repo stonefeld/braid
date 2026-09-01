@@ -43,6 +43,7 @@ agent_models() { :; }
 agent_injects_contract() { return 1; }
 
 agent_command() {
+    # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3"
     # shellcheck disable=SC2086  # BRAID_AGENT_ARGS is a flag list on purpose
     if [[ -n "$model" ]]; then

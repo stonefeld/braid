@@ -44,7 +44,9 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --agent)
-            BRAID_AGENT_WORK="${2:?--agent needs a name}"
+            # Read back by agent_resolve through indirect expansion of the seat name,
+            # which is why it is exported rather than passed.
+            export BRAID_AGENT_WORK="${2:?--agent needs a name}"
             shift 2
             ;;
         --base)
