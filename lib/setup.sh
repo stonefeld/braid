@@ -104,37 +104,11 @@ else
 fi
 
 mkdir -p "$BRAID_FEATURES_DIR"
-if [[ -f "$BRAID_FEATURES_DIR/README.md" ]]; then
-    ok "$BRAID_FEATURES_DIR/"
-else
-    # git does not track an empty directory, so without this the layout disappears on
-    # the next clone and the first person to look finds nothing where the docs say to.
-    cat >"$BRAID_FEATURES_DIR/README.md" <<'TXT'
-# Features
-
-One folder per feature. The folder is the parent; the files in it are its slices.
-
-    braid/features/oauth-flow/
-      prd.md      what is being built, and why
-      01-....md   one slice, one worker, one branch
-      02-....md
-      plan.md     the wave schedule, written by `braid plan`
-
-A slice carries a braid block, which is configuration of the slice rather than
-description of it:
-
-    ```braid
-    complexity: low | standard | high
-    setup: yes | no
-    blocked-by: 01-schema
-    ```
-
-`complexity` is how much judgement the work needs; the agent adapter decides which model
-that means here, so a slice never names one. `setup: yes` takes the expensive provision
-path and serialises — two of them never share a wave.
-TXT
-    ok "$BRAID_FEATURES_DIR/README.md"
-fi
+# No placeholder file. The directory is empty only between now and the first slice, and
+# nothing depends on it existing in the meantime: plan and next both say what to do when
+# it is missing. A README here would be braid's own documentation copied into somebody
+# else's repository, where it would drift.
+ok "$BRAID_FEATURES_DIR/"
 
 for pattern in '.braid/' '.env'; do
     touch .gitignore
