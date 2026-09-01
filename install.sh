@@ -155,7 +155,45 @@ for part in bin lib docs VERSION; do
 done
 chmod +x "$DATA/bin/braid" 2>/dev/null || true
 find "$DATA/lib" -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
-ok "engine $VERSION in $DATA"
+# --- the manifest -------------------------------------------------------------
+
+# The sha256 of every file as braid delivered it. Later, `braid upgrade` compares three
+# things — what is on disk, what this manifest says was shipped, and what the new
+# version brings — which is what separates the three cases that matter:
+#
+#   on disk == manifest, upstream changed    nobody touched it     replace silently
+#   on disk != manifest, upstream unchanged  it is yours           leave it alone
+#   on disk != manifest, upstream changed    a conflict            ask, change nothing
+#
+# Without the middle column there is no way to tell "you edited this" from "we shipped
+# it that way", and an upgrade either overwrites work somebody did to unblock
+# themselves, or never updates anything.
+write_manifest() {
+    target="$1"
+    (
+        cd "$target" || exit 1
+        find . -type f ! -path './manifest' -print |
+            LC_ALL=C sort |
+            while IFS= read -r file; do
+                printf '%s  %s\n' "$(hash_file "$file")" "${file#./}"
+            done
+    ) >"$target/manifest"
+}
+
+hash_file() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | cut -d' ' -f1
+    elif command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | cut -d' ' -f1
+    else
+        # No hashing tool is not fatal: the engine still installs and runs. It only
+        # means upgrade cannot tell an edit from a delivery, and it says so there.
+        printf 'unhashed'
+    fi
+}
+
+write_manifest "$DATA"
+ok "engine $VERSION in $DATA ($(wc -l <"$DATA/manifest" | tr -d ' ') files hashed)"
 
 if [ "$SYMLINK" -eq 1 ]; then
     mkdir -p "$PREFIX"

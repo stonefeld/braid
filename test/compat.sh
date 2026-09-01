@@ -122,6 +122,33 @@ else
 fi
 rm -rf "$TMPPREFIX"
 
+# --- the manifest -------------------------------------------------------------
+
+# It has to cover everything and be reproducible, or upgrade cannot tell an edit from a
+# delivery — and its whole job is telling those apart.
+TMPMAN=$(mktemp -d)
+XDG_DATA_HOME="$TMPMAN/share" sh ./install.sh --prefix "$TMPMAN/bin" >/dev/null 2>&1
+MAN="$TMPMAN/share/braid/manifest"
+if [[ -s "$MAN" ]]; then
+    installed=$(cd "$TMPMAN/share/braid" && find . -type f ! -path './manifest' | wc -l | tr -d ' ')
+    listed=$(wc -l <"$MAN" | tr -d ' ')
+    if [[ "$installed" == "$listed" ]]; then
+        ok "manifest covers all $listed installed files"
+    else
+        bad "manifest lists $listed of $installed installed files"
+    fi
+    before=$(cat "$MAN")
+    XDG_DATA_HOME="$TMPMAN/share" sh ./install.sh --prefix "$TMPMAN/bin" >/dev/null 2>&1
+    if [[ "$before" == "$(cat "$MAN")" ]]; then
+        ok "manifest is reproducible across installs"
+    else
+        bad "manifest changes between identical installs"
+    fi
+else
+    bad "no manifest was written"
+fi
+rm -rf "$TMPMAN"
+
 # --- shellcheck, when it is here ----------------------------------------------
 
 if command -v shellcheck >/dev/null 2>&1; then
