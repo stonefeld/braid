@@ -154,12 +154,12 @@ rm -rf "$TMPMAN"
 if command -v shellcheck >/dev/null 2>&1; then
     if shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh \
         lib/templates/*.sh test/*.sh && shellcheck --shell=sh install.sh; then
-        ok "shellcheck clean"
+        ok "shellcheck clean ($(shellcheck --version | awk '/version:/ {print $2}'))"
     else
         bad "shellcheck findings"
     fi
 else
-    printf '  --    shellcheck not installed; CI runs it\n'
+    printf '  --    shellcheck not installed; CI runs 0.11.0\n'
 fi
 
 # --- names that were renamed --------------------------------------------------

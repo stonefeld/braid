@@ -35,10 +35,18 @@ jobs:
 
   shellcheck:
     runs-on: ubuntu-latest
+    env:
+      SHELLCHECK_VERSION: "0.11.0"
     steps:
       - uses: actions/checkout@v4
-      - name: install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      # Pinned, not apt's. Different versions flag different things, so an unpinned
+      # linter makes "clean on my machine" and "clean in CI" two different claims — and
+      # the difference only ever shows up as a red build on a commit that passed locally.
+      - name: install shellcheck ${{ env.SHELLCHECK_VERSION }}
+        run: |
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
+            | tar -xJf - --strip-components=1 -C /usr/local/bin "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+          shellcheck --version
       - name: engine
         run: shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh lib/templates/*.sh test/*.sh
       - name: installer

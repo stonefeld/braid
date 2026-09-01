@@ -24,7 +24,8 @@ orca_cli() {
 # should not open a desktop application.
 launcher_available() {
     local cli
-    cli=$(orca_cli) && [[ -n "$cli" ]] || return 1
+    cli=$(orca_cli)
+    [[ -n "$cli" ]] || return 1
     "$cli" status --json 2>/dev/null | python3 -c '
 import json, sys
 try:
@@ -39,10 +40,11 @@ launcher_launch() {
     local worktree="${1:?worktree}" title="${2:?title}" command="${3:?command}"
     local cli terminal handle="" surface=""
 
-    cli=$(orca_cli) && [[ -n "$cli" ]] || {
+    cli=$(orca_cli)
+    if [[ -z "$cli" ]]; then
         launcher_probe "resolving the orca CLI (set ORCA_CLI_COMMAND)"
         return 1
-    }
+    fi
 
     # orca picks a worktree up from git without any registration step, but not instantly
     # — its scan lands a few seconds after `worktree add` returns, and until then every
@@ -85,7 +87,8 @@ print(t.get("handle") or "", t.get("surface") or "")
 launcher_forget() {
     local worktree="${1:?worktree}" cli
     launcher_available || return 0
-    cli=$(orca_cli) && [[ -n "$cli" ]] || return 0
+    cli=$(orca_cli)
+    [[ -n "$cli" ]] || return 0
     "$cli" worktree rm --worktree "path:$worktree" --force --json >/dev/null 2>&1 ||
         note "orca kept a record of $worktree — remove the card by hand if it lingers"
     return 0
