@@ -201,26 +201,42 @@ if [ "$SYMLINK" -eq 1 ]; then
     ok "braid -> $PREFIX/braid"
 fi
 
-# The skills, linked rather than copied, so `braid upgrade` updates them with everything
-# else and there is no second thing to remember. A directory that is not a symlink is
-# somebody's own version and is left alone.
+# The skills go into the shared ~/.agents/skills/, which is the convention the agents
+# already use between them — ~/.claude/skills and ~/.codex/skills hold relative links
+# into it. braid joins that rather than inventing a third place, so installing once is
+# enough however many agents are on the machine.
 #
-# Only where the agent already keeps its skills: creating ~/.claude on a machine that
-# does not use Claude Code would be braid inventing configuration for a tool nobody
-# installed. Elsewhere they are plain markdown at $DATA/lib/skills, to paste.
-if [ -d "$HOME/.claude" ] && [ -d "$DATA/lib/skills" ]; then
-    mkdir -p "$HOME/.claude/skills"
+# Linked, not copied, so `braid upgrade` updates them with everything else. A directory
+# that is not a symlink is somebody's own version and is left alone.
+link_skill() {
+    from="$1"
+    to="$2"
+    if [ -d "$to" ] && [ ! -L "$to" ]; then
+        meh "$(basename "$to") kept — it is yours, not a link"
+        return 1
+    fi
+    rm -f "$to"
+    ln -s "$from" "$to"
+}
+
+if [ -d "$DATA/lib/skills" ]; then
+    SHARED="$HOME/.agents/skills"
+    mkdir -p "$SHARED"
     for skill in "$DATA"/lib/skills/*/; do
         [ -d "$skill" ] || continue
         name=$(basename "$skill")
-        target="$HOME/.claude/skills/$name"
-        if [ -d "$target" ] && [ ! -L "$target" ]; then
-            meh "$name kept — it is yours, not a link ($target)"
-        else
-            rm -f "$target"
-            ln -s "${skill%/}" "$target"
-            ok "/$name"
-        fi
+        link_skill "${skill%/}" "$SHARED/$name" || continue
+        ok "/$name"
+
+        # And into each agent that keeps its own directory, the way the others already
+        # do it — relative, so the chain survives the home directory moving. Only where
+        # the directory exists: creating one would be braid configuring an agent nobody
+        # installed.
+        for agent_dir in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+            [ -d "$(dirname "$agent_dir")" ] || continue
+            mkdir -p "$agent_dir"
+            link_skill "../../.agents/skills/$name" "$agent_dir/$name" >/dev/null 2>&1 || true
+        done
     done
 fi
 

@@ -302,6 +302,21 @@ feature run end to end.
 
 macOS, Linux and WSL2. `doctor` refuses Git Bash rather than half-working there.
 
+## Skills
+
+Two, installed into the shared `~/.agents/skills/` that the agents use between them, and
+linked from `~/.claude/skills` and `~/.codex/skills` the way the rest already are. They
+are markdown, so an agent that loads skills gets the name and one that does not gets the
+text.
+
+| | |
+|---|---|
+| `/braid-plan` | make a set of slices launchable, and derive the schedule |
+| `/braid-orchestrate` | run the waves, gate the work, integrate it |
+
+`braid design` opens the seat; `/braid-plan` runs in that same session once the slices
+exist. `braid orchestrate` opens the next seat with its skill already in front of it.
+
 ## More
 
 - [`DESIGN.md`](DESIGN.md) — every decision behind this, and why

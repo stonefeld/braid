@@ -45,7 +45,12 @@ agent_models() { :; }
 
 agent_injects_contract() { return 1; }
 
-# No skill mechanism, so a skill has to arrive as text like everything else does.
+# Codex does keep skills — ~/.codex/skills, linking into the shared ~/.agents/skills that
+# the agents use between them, and the installer puts braid's there. What has not been
+# verified here is whether a skill *name* works as an opening prompt the way `/name` does
+# for Claude Code, so braid keeps handing Codex the markdown, which always does.
+#
+# Flip this to `return 0` once that is confirmed and the prompt becomes the name instead.
 agent_loads_skills() { return 1; }
 
 # workspace-write rather than --dangerously-bypass-approvals-and-sandbox. A worker is
