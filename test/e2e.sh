@@ -130,7 +130,8 @@ check "ports differ between workers" test "$P1" != "$P2"
 # .braid/, every worker commits a different version of the same paths and every
 # integration after the first conflicts on files no slice mentions.
 (cd "$(W 01-login)" && git add -A)
-is "a worker cannot commit .braid/" "" "$(cd "$(W 01-login)" && git status --porcelain | grep '\.braid' || true)"
+STAGED=$(git -C "$(W 01-login)" status --porcelain | grep '\.braid' || true)
+is "a worker cannot commit .braid/" "" "$STAGED"
 
 # --- the hooks ----------------------------------------------------------------
 

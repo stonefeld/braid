@@ -151,15 +151,22 @@ rm -rf "$TMPMAN"
 
 # --- shellcheck, when it is here ----------------------------------------------
 
-if command -v shellcheck >/dev/null 2>&1; then
-    if shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh \
-        lib/templates/*.sh test/*.sh && shellcheck --shell=sh install.sh; then
-        ok "shellcheck clean ($(shellcheck --version | awk '/version:/ {print $2}'))"
-    else
-        bad "shellcheck findings"
-    fi
+# Pinned. Versions disagree about what to flag, so an unpinned linter makes "clean
+# here" and "clean in CI" two different claims — and the difference only ever appears
+# as a red build on a commit that passed before it was pushed. When the version does
+# not match, this says so and leaves the verdict to the job that does pin it, rather
+# than failing on a finding nobody can reproduce.
+SHELLCHECK_PINNED=0.11.0
+if ! command -v shellcheck >/dev/null 2>&1; then
+    printf '  --    shellcheck not installed; the shellcheck job runs %s\n' "$SHELLCHECK_PINNED"
+elif [[ "$(shellcheck --version | awk '/version:/ {print $2}')" != "$SHELLCHECK_PINNED" ]]; then
+    printf '  --    shellcheck %s, not the pinned %s — the shellcheck job owns this\n' \
+        "$(shellcheck --version | awk '/version:/ {print $2}')" "$SHELLCHECK_PINNED"
+elif shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh \
+    lib/templates/*.sh test/*.sh && shellcheck --shell=sh install.sh; then
+    ok "shellcheck clean ($SHELLCHECK_PINNED)"
 else
-    printf '  --    shellcheck not installed; CI runs 0.11.0\n'
+    bad "shellcheck findings"
 fi
 
 # --- names that were renamed --------------------------------------------------

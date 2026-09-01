@@ -1,18 +1,42 @@
+<div align="center">
+
 # braid
 
-Run several coding agents in parallel, each in its own git worktree, then weave their
-branches back into one feature branch that reads as though it had all been written there
-in order.
+**Parallel agents, one clean history.**
+
+Run several coding agents at once, each in its own git worktree, then weave their
+branches back into one feature branch that reads as though it had all been written
+there in order.
+
+</div>
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
-cd your-project && braid setup
+```
+
+Then, from inside a repository you want to use it in:
+
+```bash
+braid setup
 ```
 
 Works with any agent CLI — Claude Code, Codex, or anything you can put on a command line
 — and in any terminal setup, from a full agent development environment down to plain
 tmux. It needs `git`, `bash`, `python3` and an agent. Nothing else: no database, no
 docker, no task tracker, no packages.
+
+> [!WARNING]
+> **braid is a work in progress. Expect it to break.**
+>
+> It grew inside a Claude Code setup, so that is the path with the most real use behind
+> it: workers there get their contract through a `SessionStart` hook, their status
+> through a `Stop` hook, and a `PreToolUse` guard that denies the remote before the
+> permission system runs.
+>
+> Every other agent gets the same guarantees by cruder means — the contract pasted at the
+> top of the prompt, the status written by `.braid/finish.sh` when the process exits, the
+> remote blocked by a `pre-push` hook. It works, and it is tested, but it is blunt. Those
+> paths will get proper integrations as each agent grows the hooks to support them.
 
 ---
 
