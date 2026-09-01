@@ -230,7 +230,10 @@ case ":$PATH:" in
         ;;
 esac
 
-say "  next:"
+say "  one thing left — braid has to learn about the repository you want to use it in:"
 say ""
-say "      braid help"
+say "      cd <your project> && braid setup"
+say ""
+say "  that opens a short session with your agent and asks a handful of questions."
+say "  everything above this line was mechanical; that part needs to read your code."
 say ""
