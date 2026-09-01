@@ -34,6 +34,7 @@ COMMANDS=(
     "spawn:launch a worker on one slice, in its own worktree"
     "status:what every worker is doing"
     "wait:block until this wave settles"
+    "hook:run an agent hook (registered in .claude/settings.json)"
     "version:print the engine version"
     "help:print this"
 )
