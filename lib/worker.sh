@@ -127,6 +127,44 @@ worker_state() {
     fi
 }
 
+# The files a worker has actually changed, relative to the branch it was cut from.
+# Derived from the diff rather than declared up front: a slice was once asked to list the
+# files it would touch, and it was abandoned because a refactor that touches four hundred
+# files never lists them — so the field filled with "**" and the check it justified
+# became decorative, which is worse than absent because it looks like protection.
+worker_files() {
+    local worktree="${1:?worktree}" base
+    base=$(worker_base "$worktree") || return 0
+    [[ -n "$base" ]] || return 0
+    git -C "$worktree" diff --name-only "$base...HEAD" 2>/dev/null
+}
+
+# Files more than one worker in this wave has touched, with who touched them.
+#
+# This is the rule the whole thing depends on — no two slices in a wave touch the same
+# file — and until now the only thing enforcing it was an orchestrator's judgement at
+# planning time. Computed from what happened rather than what was intended, it costs one
+# git diff per worker and it can be shown **while the wave is still running**, which is
+# hours before the conflict would otherwise appear.
+wave_overlaps() {
+    local scope="${1:-mine}" worktree branch
+    while read -r worktree; do
+        [[ -n "$worktree" ]] || continue
+        branch=$(git -C "$worktree" rev-parse --abbrev-ref HEAD 2>/dev/null) || continue
+        worker_files "$worktree" | while read -r file; do
+            [[ -n "$file" ]] || printf ''
+            [[ -n "$file" ]] && printf '%s\t%s\n' "$file" "${branch#*/}"
+        done
+    done < <(worker_worktrees "$scope") |
+        LC_ALL=C sort -u |
+        awk -F'\t' '
+            # count is incremented first: referencing files[$1] to test it would create
+            # the key, so `$1 in files` is true even the first time round.
+            { if (count[$1]++) files[$1] = files[$1] ", " $2; else files[$1] = $2 }
+            END { for (f in files) if (count[f] > 1) print f "\t" files[f] }
+        ' | LC_ALL=C sort
+}
+
 worker_is_terminal() {
     case "$(worker_state "$1")" in
         done | done-no-report | dirty | stale) return 0 ;;

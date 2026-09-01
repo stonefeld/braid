@@ -78,6 +78,14 @@ print_table() {
         [[ "$state" == working && -n "$idle" ]] && printf ', quiet %ss' "$idle"
         printf '\n'
 
+        # A worker that finished with nothing to show and no commits did not do quiet
+        # work — it almost never started. Saying so here is the difference between
+        # reading one log and re-reading a wave.
+        if [[ "$state" == done-no-report && "${ahead:-0}" -eq 0 ]]; then
+            printf '  %sno commits — it probably died at launch%s\n' "$_C_YELLOW" "$_C_OFF"
+            printf '    %s\n' "$(tail -1 "$worktree/.braid/session.log" 2>/dev/null || echo '.braid/session.log is empty')"
+        fi
+
         # Degraded visibility is a state, not a warning that scrolled past at spawn.
         # The orchestrator sees it on every check and puts it in its wave summary, so
         # the human learns at the next natural checkpoint instead of being interrupted.
@@ -92,7 +100,27 @@ print_table() {
             printf '\n'
         fi
     done < <(worker_worktrees "$SCOPE")
-    [[ "$found" -eq 1 ]] || printf 'no workers off %s\n' "$(current_branch)"
+    [[ "$found" -eq 1 ]] || {
+        printf 'no workers off %s\n' "$(current_branch)"
+        return 0
+    }
+    print_overlaps
+}
+
+# Printed under the table rather than beside a worker, because an overlap belongs to a
+# pair and naming it twice reads as two problems.
+print_overlaps() {
+    local file branches first=1
+    while IFS=$'\t' read -r file branches; do
+        [[ -n "$file" ]] || continue
+        if [[ "$first" -eq 1 ]]; then
+            printf '\n%soverlap%s — these workers have touched the same file:\n' \
+                "$_C_YELLOW" "$_C_OFF"
+            first=0
+        fi
+        printf '  %-44s %s\n' "$file" "$branches"
+    done < <(wave_overlaps "$SCOPE")
+    [[ "$first" -eq 1 ]] || printf '  integrate them in one order and expect the second to conflict.\n'
 }
 
 all_settled() {
