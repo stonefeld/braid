@@ -11,10 +11,11 @@ style preferences; each one is load-bearing and there is a reason under it.
 | `lib/` | the engine — one file per command, plus `core.sh` |
 | `lib/agents/` | one adapter per agent CLI, ~30 lines each |
 | `lib/hooks/` | Claude Code hooks |
+| `lib/launchers/` | one per place a worker can run, shadowable from `~/.config/braid/` |
 | `lib/skills/` | the skills braid owns, installed to the user's agent |
 | `lib/templates/` | `braid.sh` presets and slice templates |
-| `docs/` | the protocol, and the worker contract |
-| `test/` | the end-to-end |
+| `docs/` | the worker contract |
+| `test/` | `e2e.sh`, plus the parser, the scheduler and the compat invariants |
 
 ## Rules
 
@@ -23,14 +24,17 @@ style preferences; each one is load-bearing and there is a reason under it.
 `mapfile`/`readarray`, no `${var,,}` or `${var^^}`, no `&>>`. CI checks this; do not
 work around the check.
 
-**Python 3 standard library only.** No `pip`, no virtualenv, no third-party imports —
-not in the hooks, not anywhere. "Needs python3" is a dependency people already have.
-"Needs a python environment" is a support burden. Python earns its place for JSON
+**Python 3.9, standard library only.** No `pip`, no virtualenv, no third-party imports —
+not in the hooks, not anywhere. "Needs python3" is a dependency people already have;
+"needs a python environment" is a support burden. Python earns its place for JSON
 parsing and for `guard_remote.py`, which is a real program; everything else is shell.
+3.9 is the floor because the hooks annotate with `list[str]`, which is evaluated at
+import time — below it a hook does not fail a test, it fails to load.
 
-**No new runtime dependencies.** `git`, `bash`, `python3`, and the agent CLI. Not
-`jq` — it is less widely installed than `python3`, so reaching for it trades a common
-dependency for a rarer one.
+**No new runtime dependencies.** `git` 2.20, `bash` 3.2, `python3` 3.9, and the agent
+CLI. Not `jq` — it is less widely installed than `python3`, so reaching for it trades a
+common dependency for a rarer one. `braid doctor` checks all three minimums; if you
+raise one, raise it there too.
 
 **Progress goes to stderr, and only to a TTY.** These commands are run by an agent as
 often as by a person. A spinner on stdout fills an orchestrator's context with frames
@@ -61,13 +65,17 @@ silently at the moment a wave starts.
 
 ## Tests
 
-`test/run.sh` installs into a repository created thirty seconds ago and runs a wave
-through every state. **No agent is ever launched.** A worker is simulated by
-committing in its worktree and running the stop hook by hand, which is exactly what a
-real worker does — the one thing that cannot be tested is the agent, and the test does
-not pretend otherwise.
+`test/e2e.sh` installs into a repository created thirty seconds ago and runs a whole
+feature through every state — 88 assertions, ending in the feature's own teardown.
+**No agent is ever launched.** A worker is simulated by committing in its worktree and
+running `.braid/finish.sh`, which is exactly what a real worker does: the one thing that
+cannot be tested is the agent, and the test does not pretend otherwise.
 
-Add to it when behaviour changes. Do not add unit tests for `slugify`.
+Three others guard what rots silently — `compat.sh` (bash 3.2, no third-party python),
+`slice.sh` (the block parser), `schedule.sh` (wave derivation). CI runs all four on
+macOS and Linux.
+
+Add to them when behaviour changes. Do not add unit tests for `slugify`.
 
 ## Commits
 

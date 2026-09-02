@@ -41,7 +41,7 @@ a handoff document feel like a layer instead of a decision.
 |---|---|---|
 | **Human** | you | `braid setup`, `braid doctor`, `braid upgrade`, `braid next` |
 | **Design** | agent, top tier | grilling → PRD → slices → `braid plan` |
-| **Orchestrator** | agent, mid tier | `braid wave`, `status`, `wait`, `verify`, `integrate`, `reap`, `pr` |
+| **Orchestrator** | agent, mid tier | `braid wave`, `status`, `wait`, `verify`, `integrate`, `reap` |
 | **Worker** | agent, low tier | **nothing** |
 
 The design seat and the orchestrator share the feature worktree, one after the other.
@@ -75,7 +75,7 @@ The single most important structural decision. Three kinds of artifact, three ho
 | | What | Where | Updated by |
 |---|---|---|---|
 | **Engine** | `lib/`, adapters, hooks, skills, docs | `~/.local/share/braid`, dispatcher on `PATH` | `braid upgrade` |
-| **Repo config** | `braid.sh`, `docs/agents/`, supported agents, pinned version | committed, small | a pull request |
+| **Repo config** | `braid.sh`, `docs/agents/`, `docs/worker-rules.md`, supported agents, pinned version | committed, small | a pull request |
 | **Wiring** | `.claude/settings.json`, `AGENTS.md` | committed, tiny, path-free | `braid setup` |
 
 The engine is **not vendored into the user's repository**. Vendoring puts thousands of
@@ -98,12 +98,11 @@ time, but not eliminated.
 curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
 ```
 
-The URL is the raw file on GitHub rather than a short domain, and deliberately so for
-now: it is auditable — the thing you are about to pipe into a shell is the thing you can
-read in the repository — and it needs no infrastructure to exist. A vanity domain is a
-convenience to add later, and it should **not** be `braid.sh`: that is the name of the
-file every project using braid writes, and "edit braid.sh" beside "curl braid.sh" is an
-ambiguity in every sentence of the documentation.
+The URL is the raw file on GitHub rather than a vanity domain: what you are about to
+pipe into a shell is exactly what you can read in the repository, and it needs no
+infrastructure to exist. If a short domain is ever added it must **not** be `braid.sh` —
+that is the name of the file every project using braid writes, and "edit braid.sh"
+beside "curl braid.sh" is an ambiguity in every sentence of the documentation.
 
 **Half one — mechanical, deterministic, no LLM.** Detect the platform and the agents on
 `PATH`, install the engine, symlink the dispatcher, print what it did. A `curl | sh`
@@ -122,18 +121,21 @@ or a coworker arrives with a different agent.
 
 ### Auditability
 
-The engine stays shell rather than a compiled binary. For a tool distributed by
-`curl | sh`, **what you run is what you read**. A binary requires published checksums
-and reproducible builds that nobody verifies. Dropping Windows removes the only real
-argument for a binary, and shell keeps `lib/agents/codex.sh` something anyone can open
-and fork.
+The engine stays shell rather than a compiled binary: for a tool distributed by
+`curl | sh`, **what you run is what you read**. A binary would need published checksums
+and reproducible builds nobody verifies, and dropping Windows removed the only real
+argument for one.
 
 ### Updates
 
-`braid upgrade` updates one place; every repository gets it. Repo config pins a range
-(`braid = "^0.3"`) and every command checks the installed engine satisfies it. Spawn
-records the resolved version alongside the agent and model. `braid doctor --fix`
-repairs drifted wiring.
+`braid upgrade` updates one place; every repository gets it. Spawn records the resolved
+version in the worktree's `.braid/`, alongside the agent and the model, so a worker can
+always say which engine ran it. Comparing what is on disk against the shipped manifest
+is what lets an edit made while something was broken survive an upgrade, and a genuine
+conflict be reported rather than resolved behind braid's back.
+
+Pinning a version *range* per repository, and `doctor --fix` for drifted wiring, are the
+half of this that is designed and not built — see §12.
 
 ---
 
@@ -145,15 +147,32 @@ path translation against a native Windows `git`, no tmux so every launcher colla
 detached, and `printf '%q'` quoting crossing into npm `.cmd` shims. A Windows user
 watching workers fail to commit blames braid, not MSYS.
 
-**`git`, `bash`, `python3`, and an agent CLI.** Nothing else.
+**`git`, `bash`, `python3`, and an agent CLI.** Nothing else — no database, no docker,
+no task tracker, no packages.
 
-- **Bash 3.2**, because macOS still ships it and a `curl | sh` tool cannot demand a
-  brew install first. Enforced in CI.
-- **Python 3, standard library only.** No `pip`, ever. It earns its place for JSON
-  parsing (agent development environment and `gh` output) and for `guard_remote.py`,
-  which parses shell command lines with `shlex` and is a real program. Parsing JSON in
-  pure bash produces silently wrong answers; `jq` is *less* widely installed than
-  `python3`, so it trades a common dependency for a rarer one.
+Each carries a minimum, and each minimum is a decision:
+
+- **git 2.20.** Worktrees are older than that; `git config --worktree` is not, and it is
+  what installs a `pre-push` hook in one worker's worktree without touching the human's
+  own checkout. Below it the guard degrades to a warning and workers have no remote
+  protection at all — which is a thing to be told, not to discover.
+- **bash 3.2**, because macOS still ships it as `/bin/bash` and a `curl | sh` tool cannot
+  demand a brew install before its first command works. No `declare -A`, no `mapfile`,
+  no `${var,,}`. Enforced in CI, on macOS, where 3.2 is real.
+- **Python 3.9, standard library only.** No `pip`, ever. The floor is `list[str]` in the
+  hooks' own annotations, which is evaluated at import time — so on 3.8 the guard hook
+  does not fail a test, it fails to load. Python earns its place for JSON parsing (ADE
+  and `gh` output) and for `guard_remote.py`, which parses shell command lines with
+  `shlex` and is a real program. Parsing JSON in pure bash produces silently wrong
+  answers, and `jq` is *less* widely installed than `python3`, so reaching for it trades
+  a common dependency for a rarer one.
+
+**`doctor` checks all three**, and it is the only place braid version-gates anything.
+Everywhere else — launchers, agents — capability is probed, because a version number
+does not tell you the shape of somebody's JSON response changed. git and python are the
+exception because their own CLIs are stable in exactly the way a third party's is not,
+and because a minimum stated in a README that nothing enforces is the same decorative
+protection a `files:` field would have been (§6).
 
 ---
 
@@ -208,8 +227,9 @@ just the answer.
 
 ### A slice
 
-The fenced block is **launch configuration, not description**. Two keys, because two
-keys are what `braid spawn` actually needs at the moment it launches:
+The fenced block is **launch configuration, not description**. Three keys and no more:
+two that `braid spawn` needs at the moment it launches, and one that `braid plan` needs
+to schedule.
 
     ```braid
     complexity: standard
@@ -288,16 +308,20 @@ orchestration plan — which is why the command is `braid plan` and not `braid h
 
 ### Where it lives
 
-**Wherever the work lives** — which as of v0.1 means files. The tracker half is designed
-and not built: reading slices from a tracker hooks in at `braid_fetch_slice`, and the
-write side is the same seam used twice rather than a second code path. Nothing in the
-data model above depends on which it is, and that is deliberate.
+**Wherever the work lives.** `BRAID_SLICE_SOURCE` picks between `files` and `github`, and
+nothing in the data model above depends on which — that is the whole point of the fenced
+block being markdown in both. A third source is a project overriding `braid_fetch_slice`
+in `braid.sh`: given an id, print the slice's markdown. There is no second code path.
 
-With a tracker, the PRD would be the parent issue, slices its sub-issues, and the plan a
-fenced block in the PRD body — safe to overwrite because it is computed, not curated.
+With `github`, the PRD is the parent issue and slices are its sub-issues; the plan is a
+fenced block in the PRD body, safe to overwrite because it is computed rather than
+curated. The id a slice is known by is then the issue number, and the branch takes the
+title as well — `agent/2-add-a-licence`, because `agent/2` names nothing a person can
+read. Those two being different strings is a distinction the file mode never exercises,
+and it is where two bugs lived.
 
-With files, which is what exists, a folder per feature reproduces the same relation
-without needing a tracker primitive at all:
+With `files`, a folder per feature reproduces the same parent/child relation without
+needing a tracker to have the primitive:
 
 ```
 braid/features/oauth-flow/
@@ -381,7 +405,74 @@ than the sequence gets today.
 
 ---
 
-## 9. The control plane
+## 9. The project seam
+
+Everything a project says about itself lives in two files, and both follow one rule:
+**braid owns the general case, the project owns its delta.** A seam that offers only
+replacement forces a project to own the general case too, and then upgrades stop
+reaching it.
+
+### braid.sh — four hooks
+
+```
+braid_provision         <worktree> <slug> <base> <needs-setup>    at spawn
+braid_verify            <worktree>                                the gate
+braid_teardown          <worktree> <slug>                         at reap
+braid_teardown_feature  <feature-worktree> <feature-slug> <trunk> at reap --feature
+```
+
+All optional, all no-ops, because braid has to work in a repository created twenty
+minutes ago that has no tests and no `.env`. Whether one is *defined* is decided by
+comparing its body against the no-op body, not by `declare -F` — which is true of the
+defaults too, and a tool that reports a gate it does not have is worse than one that
+reports no gate at all.
+
+The fourth exists because the other three are scoped to one worker and some resources
+are not: a database created by a feature's first `setup: yes` worker and reused
+idempotently by every later one. It **must** survive each worker's reap — the next
+serialized worker is cut from a tree that already holds the previous one's migrations —
+so no hook could drop it, and projects kept a Makefile target beside braid to do by hand
+what braid was meant to make unnecessary.
+
+`braid reap --feature` runs it, generalizing the check `reap` already makes: refuse
+unless every commit of the feature branch is reachable from a protected branch, or
+`--force`, saying what is lost. **Against the local trunk** — `git fetch` is the human's,
+and a tool that goes to the network to decide whether it may delete something deletes on
+a stale answer. It also removes the feature's `refs/braid/landed/*`, the last
+braid-owned state a finished feature leaves behind.
+
+### The contract — three states
+
+| State | The repository has | Upgrades |
+|---|---|---|
+| **bundled** | nothing | reach it |
+| **bundled + rules** | `docs/worker-rules.md` | reach the part braid owns |
+| **replaced** | `docs/worker-contract.md` | never reach it |
+
+Replacement shipped first and was for a while the only option, so a project with six
+house rules copied 118 lines to append them — and every later fix to the bundled
+contract silently missed the copy. The setup prompt had to warn against the only
+mechanism it offered.
+
+The heading and lead-in are **braid's**, not the project's: a rules file that has to
+introduce itself can forget to, and a worker reading an unannounced block at the end of
+its contract cannot tell what weight it carries. If both files exist the replacement
+wins and `doctor` says the rules file is ignored — silently honouring one of two
+contradictory declarations is what costs a wave to notice.
+
+Composition happens **once**, at spawn, into `.braid/contract.md`, and both delivery
+paths read that file; the session hook composes only for a worktree made by hand, by
+calling the same shell function. Two paths independently computing the same contract is
+exactly how the prompt for an agent with no hooks once shipped with no contract in it at
+all, and nothing caught it because the simulated agent in the tests does not read its
+prompt.
+
+Nothing here is per slice, and there is no templating inside the contract: the moment a
+rule needs to interpolate something it belongs in the slice or in `braid.sh`.
+
+---
+
+## 10. The control plane
 
 `braid status` reads state off the filesystem and out of git. The agent development
 environment is a **view**; the filesystem is the control plane. That is why the same
@@ -393,13 +484,17 @@ written whether the agent cooperated, crashed, or was never installed. Without i
 worker that died at launch is indistinguishable from one that is thinking, for twenty
 minutes.
 
-Two things every worker needs are therefore delivered twice over:
+The three things every worker needs are therefore delivered twice over — once the way
+Claude Code's hooks allow, once by a means that needs nothing of the agent at all:
 
 | | Claude Code | everything else |
 |---|---|---|
-| the contract | injected at `SessionStart` | at the top of the prompt, and on disk |
+| the contract (§9) | injected at `SessionStart` | at the top of the prompt, and on disk |
 | status | `Stop` hook, which can push back on a dirty tree | `finish.sh` on exit |
 | the remote | `PreToolUse` denies `gh` and `git push` | a per-worktree `pre-push` hook |
+
+The second column is the one that has to be right. It is what "works with any agent CLI"
+means, and it is the only column an agent released next year is guaranteed to land in.
 
 ### Deriving state, not storing it
 
@@ -410,14 +505,15 @@ everyone does: an issue created in a browser, an edited plan, a killed worker. A
 phase file sends you to the wrong step with total confidence, which is the worst
 failure mode for the command whose job is to guide.
 
-The remote half is cached briefly (~30s, `--fresh` to bypass) because deriving over a
-tracker means network on a command you type whenever you are unsure. The local half is
-never cached: it changes fastest and is free to read. A cache that can be stale about
-the slow-moving half never lies about the half that matters.
+Nothing is cached today: every signal `next` reads is local and free. When deriving over
+a tracker starts putting the network on a command people type whenever they are unsure,
+the remote half is what may be cached briefly and the local half is what may not — a
+cache that can be stale about the slow-moving half never lies about the half that
+matters.
 
 ---
 
-## 10. Permissions
+## 11. Permissions
 
 Workers launch with approvals off. A wave that stops on a permission prompt stops in a
 panel nobody is watching, and the human ends up approving edits one at a time for an
@@ -435,7 +531,7 @@ What must be forbidden is forbidden separately, so it survives that:
 
 ---
 
-## 11. Deferred
+## 12. Deferred
 
 - **Windows outside WSL2.** See §4.
 - **Per-slice agent selection.** See §5. Complexity is per slice; the agent is not.
@@ -445,6 +541,13 @@ What must be forbidden is forbidden separately, so it survives that:
   set up for braid" a fact about a laptop instead of something a team reviewed. That
   tension is worth resolving deliberately rather than at a release boundary.
 - **A `files` field.** See §6.
+- **A `braid_provision_feature` hook.** See §9.
+- **A pinned engine version per repository** (`braid = "^0.3"`), checked by every command,
+  and `braid doctor --fix` to repair drifted wiring. The manifest half of this exists;
+  the pin does not.
+- **`braid pr`.** Opening the pull request stays the human's, and the orchestrator writes
+  the proposed title and body to `.braid/pr.md` instead. A command for it would be the
+  one thing in braid that touches the remote on its own initiative.
 - **A tool-driven loop that interrogates the orchestrator.** Inverting who is in charge
   breaks badly when something goes strange: a rebase conflict needs the orchestrator
   with its context, not a callback.
