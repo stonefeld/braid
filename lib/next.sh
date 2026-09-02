@@ -230,3 +230,12 @@ fi
 why "every slice in the plan is accounted for, and $AHEAD commits are on $BRANCH."
 why "braid does not push or open pull requests — that timing is yours."
 step "review the diff, push, and open the PR when you are ready"
+
+# Only when the repository actually has something to tear down. A feature's shared
+# resources — the database every `setup: yes` worker seeded into, a container — outlive
+# every worker by design, so no reap has dropped them and nothing else will mention it.
+if braid_overridden braid_teardown_feature; then
+    echo >&2
+    why "this repository defines braid_teardown_feature, and what it undoes is still up."
+    step "braid reap --feature       once the PR has merged"
+fi

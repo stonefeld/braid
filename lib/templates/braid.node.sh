@@ -30,3 +30,14 @@ braid_verify() {
 braid_teardown() {
     :
 }
+
+# Undo what belongs to the **feature** rather than to one worker — the database every
+# `setup: yes` worker of this feature seeded into, a shared container, a fixture store.
+# It has to outlive every worker (the next serialized one is cut from a tree that already
+# holds the previous one's migrations), so no reap drops it. `braid reap --feature` runs
+# this once, after the feature has landed in the trunk.
+#
+#   $1 the feature's worktree   $2 the feature slug   $3 the trunk it landed in
+braid_teardown_feature() {
+    : # e.g. dropdb "app_$2"
+}

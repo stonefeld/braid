@@ -32,7 +32,7 @@ braid_machine_config() {
 
 # --- the project seam ---------------------------------------------------------
 
-# The four things a repository may say about itself. All optional, all no-ops, because
+# The things a repository may say about itself. All optional, all no-ops, because
 # braid has to work in a repository created twenty minutes ago that has no tests, no
 # build and no .env — and the only way that claim stays true is if nothing here is
 # required.
@@ -47,13 +47,23 @@ braid_machine_config() {
 #       human should not have to eyeball. Non-zero means the branch does not integrate.
 #
 #   braid_teardown <worktree> <slug>
-#       Undo whatever provision made outside the worktree. Never fails a reap.
+#       Undo whatever provision made outside the worktree, for **one worker**. Never
+#       fails a reap.
 #
-# (A fourth, braid_fetch_slice, is where reading slices from a tracker will hook in. It
-# is not implemented: v0.1 reads slices from files only.)
+#   braid_teardown_feature <feature-worktree> <feature-slug> <base-branch>
+#       Undo what is scoped to the whole feature rather than to one worker — a database
+#       seeded once and shared by every `setup: yes` worker, a container, a fixture
+#       store. It outlives every worker by design, so no per-worker reap may drop it;
+#       `braid reap --feature` runs this, once, after the feature has landed. Never
+#       fails that command.
+#
+#   braid_fetch_slice <id>
+#       Where slices come from, when they come from neither files nor GitHub issues.
+#       Given an id, print the slice's markdown.
 braid_provision() { :; }
 braid_verify() { :; }
 braid_teardown() { :; }
+braid_teardown_feature() { :; }
 
 # Whether the repository actually replaced one of them. Compared against the no-op body
 # rather than asked with `declare -F`, which is true of the defaults too — and a tool

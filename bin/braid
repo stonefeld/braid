@@ -40,7 +40,7 @@ COMMANDS=(
     "status:what every worker is doing"
     "wait:block until this wave settles"
     "integrate:rebase a worker onto the feature branch and fast-forward"
-    "reap:tear a worker down once its commits have landed"
+    "reap:tear a worker down once its commits have landed, or the whole feature"
     "verify:run the project's mechanical gate"
     "setup:teach braid about this repository"
     "doctor:check this machine can run a wave"

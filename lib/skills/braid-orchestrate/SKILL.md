@@ -100,6 +100,11 @@ When every wave is in and the gate is green:
 
 You cannot merge or close anything. That is not a limitation to work around.
 
+If `braid doctor` shows `braid_teardown_feature defined`, this feature is holding a
+resource that no worker's reap has dropped — a shared database, a container. Say so in
+your summary: it comes down with `braid reap --feature`, **after** the PR merges, and
+that command is the user's to run.
+
 ## Long-running commands
 
 Anything that might take minutes goes to a file under `.braid/` and you read the file. A
