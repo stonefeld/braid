@@ -18,6 +18,8 @@ source "$BRAID_HOME/lib/agent.sh"
 source "$BRAID_HOME/lib/launcher.sh"
 # shellcheck source=worker.sh
 source "$BRAID_HOME/lib/worker.sh"
+# shellcheck source=contract.sh
+source "$BRAID_HOME/lib/contract.sh"
 
 FATAL=0
 fail() {
@@ -43,7 +45,24 @@ case "$(uname -s)" in
     *) meh "$(uname -s) — untested" ;;
 esac
 info "bash $(bash --version | head -1 | sed -E 's/.*version ([0-9.]+).*/\1/'), /bin/bash $(/bin/bash --version | head -1 | sed -E 's/.*version ([0-9.]+).*/\1/')"
-info "python3 $(python3 --version 2>&1 | awk '{print $2}'), git $(git --version | awk '{print $3}')"
+
+# The two versions that are requirements rather than trivia. Stating a minimum in the
+# README that nothing checks is the same decorative protection a `files:` field would
+# have been — so it is checked here, and it is the only place braid version-gates
+# anything: git's and python's own CLIs are stable in a way a third party's JSON is not.
+PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null; then
+    info "python3 $PYTHON_VERSION"
+else
+    fail "python3 $PYTHON_VERSION — the hooks need 3.9 or newer (builtin generic annotations)"
+fi
+
+GIT_VERSION=$(git --version | awk '{print $3}')
+if [[ "$(printf '%s\n2.20\n' "${GIT_VERSION%%[!0-9.]*}" | sort -t. -k1,1n -k2,2n | head -1)" == 2.20 ]]; then
+    info "git $GIT_VERSION"
+else
+    meh "git $GIT_VERSION — 2.20+ is needed for the per-worktree push guard; workers would have none"
+fi
 info "engine: $BRAID_HOME"
 echo
 
@@ -99,13 +118,28 @@ if [[ -f "$BRAID_PROJECT_FILE" ]]; then
 else
     meh "no braid.sh — no provisioning and no gate. Fine for a first spawn."
 fi
-for hook in provision verify teardown; do
+for hook in provision verify teardown teardown_feature; do
     if braid_overridden "braid_$hook"; then
         ok "braid_$hook defined"
     else
         info "braid_$hook is a no-op"
     fi
 done
+
+# Which of the three states this repository's worker contract is in. A replacement is
+# not wrong, but it is the one state where nothing braid ships afterwards reaches the
+# workers here, and that is worth saying out loud once a release.
+case "$(contract_state "$CHECKOUT")" in
+    replaced)
+        line="contract: replaced by docs/worker-contract.md — upgrades will not reach it"
+        [[ -n "$(contract_rules "$CHECKOUT")" ]] && line="$line; docs/worker-rules.md is ignored"
+        meh "$line"
+        ;;
+    bundled+rules)
+        ok "contract: bundled + docs/worker-rules.md ($(wc -l <"$(contract_rules "$CHECKOUT")" | tr -d " ") lines)"
+        ;;
+    *) ok "contract: bundled" ;;
+esac
 info "worktrees: $BRAID_WORKTREE_ROOT"
 info "features:  $BRAID_FEATURES_DIR"
 info "capacity:  $BRAID_MAX_WORKERS workers at once"

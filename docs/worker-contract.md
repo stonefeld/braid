@@ -7,6 +7,9 @@ your work.
 This contract came with your slice — injected at session start, or at the top of the
 prompt that started you, and on disk at `.braid/contract.md`. It is not advice.
 
+If it ends in a **`## House rules`** section, that is this project's own addition to it
+and carries exactly the same weight as everything above.
+
 ## You never touch the remote
 
 No `gh`, no `git push`, no remotes, no PRs, no comments on issues. Not once, not for

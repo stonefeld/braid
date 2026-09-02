@@ -15,7 +15,8 @@ you are done, show the diff and let them commit it.
 
 ## 1. How this project is built, tested and set up
 
-This fills in `braid.sh`, the one file braid asks a project to write. Three functions:
+This fills in `braid.sh`, the one file braid asks a project to write. Four functions,
+all optional:
 
 - **`braid_verify`** — the mechanical gate. Build, typecheck, lint, tests: whatever a
   human should not have to read a diff to check. It runs against a worker's worktree
@@ -24,8 +25,12 @@ This fills in `braid.sh`, the one file braid asks a project to write. Three func
 - **`braid_provision`** — everything a worker needs before its first turn. A worker's
   worktree is a fresh checkout: no `node_modules`, no virtualenv, no `.env`. Whatever
   makes those appear goes here.
-- **`braid_teardown`** — undoes only what provision made *outside* the worktree. A
-  container, a database schema, a queue. Leave it empty if provision made nothing.
+- **`braid_teardown`** — undoes only what provision made *outside* the worktree, for
+  one worker. A container, a schema, a queue. Leave it empty if provision made nothing.
+- **`braid_teardown_feature`** — undoes what is shared by all of a feature's workers and
+  therefore outlives every one of them: a database seeded once by the first `setup: yes`
+  worker and reused by the rest. `braid reap --feature` runs it after the feature lands.
+  Ask about this only if provision creates something on first need and reuses it after.
 
 Read the repository before asking anything: the `Makefile`, `package.json` scripts,
 `pyproject.toml`, the CI workflow, any `CONTRIBUTING.md`. Then propose concrete commands
@@ -75,10 +80,22 @@ complexity level means, and record it in `braid.sh`:
 
 ## 4. House rules for workers
 
-`docs/worker-contract.md` in this repository, if it exists, replaces the one braid
-ships. Offer it only if this project has rules a worker would otherwise break — a
-layering rule, a directory that is off limits, a commit convention. If it does not,
-skip this; an unnecessary copy is one more file that drifts from upstream.
+Every worker is launched with braid's own contract: never touch the remote, commit
+everything, stay inside the slice, write a report. This section is about what *this*
+project has to add to it — a layering rule, a directory that is off limits, the one way
+its test suite must be run. If there is nothing, skip the section.
+
+Two ways to say it, and they are not equivalent:
+
+- **`docs/worker-rules.md`** — appended to braid's contract under a `## House rules`
+  heading braid supplies. Offer this one. It holds only the delta, and every future
+  change to the part braid owns still reaches this project.
+- **`docs/worker-contract.md`** — replaces braid's contract entirely. Only for a
+  project that wants control of every word, and it costs exactly that: nothing braid
+  ships afterwards ever reaches these workers again. `braid doctor` says so on every run.
+
+If both exist the replacement wins and the rules file is ignored, which is a state to
+get out of rather than into.
 
 ## 5. Finish
 

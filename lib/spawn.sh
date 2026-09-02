@@ -22,6 +22,8 @@ set -euo pipefail
 
 # shellcheck source=agent.sh
 source "$BRAID_HOME/lib/agent.sh"
+# shellcheck source=contract.sh
+source "$BRAID_HOME/lib/contract.sh"
 # shellcheck source=env.sh
 source "$BRAID_HOME/lib/env.sh"
 # shellcheck source=launcher.sh
@@ -194,12 +196,11 @@ printf '%s\n' "$BODY" >"$WORKTREE/.braid/slice.md"
 cp "$BRAID_HOME/lib/finish.sh" "$WORKTREE/.braid/finish.sh"
 chmod +x "$WORKTREE/.braid/finish.sh"
 
-# Copied in rather than referenced. An agent with no hooks reads it from the prompt, and
-# one with hooks still benefits from it being on disk after a compaction. The
-# repository's own copy wins over the engine's.
-CONTRACT="$CHECKOUT/docs/worker-contract.md"
-[[ -f "$CONTRACT" ]] || CONTRACT="$BRAID_HOME/docs/worker-contract.md"
-cp "$CONTRACT" "$WORKTREE/.braid/contract.md"
+# Composed here and nowhere else: the bundled contract, plus this repository's
+# docs/worker-rules.md, or its docs/worker-contract.md replacing both. An agent with no
+# hooks reads this file from its prompt and one with hooks reads it from the session
+# hook, so both are reading the same bytes rather than repeating the same lookup.
+contract_compose "$CHECKOUT" >"$WORKTREE/.braid/contract.md"
 
 # The only thing standing between an agent with no hooks and the remote.
 install_push_guard "$WORKTREE"

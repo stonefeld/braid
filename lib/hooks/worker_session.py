@@ -44,21 +44,35 @@ def branch_of(cwd: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def contract_for(root: Path) -> str:
-    """The project's own contract if it wrote one, else the bundled default.
+COMPOSE = 'cd "$1" && . "$BRAID_HOME/lib/contract.sh" && contract_compose "$(primary_checkout)"'
 
-    The repository's own copy wins. A project adding house rules writes
-    docs/worker-contract.md and edits that; the bundled one lives with the engine,
-    outside the repository, and is replaced by every upgrade.
+
+def contract_for(root: Path) -> str:
+    """What spawn composed for this worktree.
+
+    `.braid/contract.md` is the answer whenever braid made the worktree: the bundled
+    contract, plus the repository's `docs/worker-rules.md` under `## House rules`, or
+    its `docs/worker-contract.md` replacing both. Reading the file rather than
+    repeating the lookup is what stops this path and the prompt path from drifting.
+
+    The fallback is for a worktree somebody made by hand on an agent/* branch, and it
+    runs the same composition through the shell rather than reimplementing it here.
     """
-    candidates = [root / "docs" / "worker-contract.md"]
-    home = os.environ.get("BRAID_HOME")
-    if home:
-        candidates.append(Path(home) / "docs" / "worker-contract.md")
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate.read_text(encoding="utf-8")
-    return ""
+    composed = root / ".braid" / "contract.md"
+    if composed.exists():
+        return composed.read_text(encoding="utf-8")
+    if not os.environ.get("BRAID_HOME"):
+        return ""
+    try:
+        result = subprocess.run(
+            ["bash", "-c", COMPOSE, "bash", str(root)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout if result.returncode == 0 else ""
 
 
 def main() -> None:

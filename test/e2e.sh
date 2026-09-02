@@ -35,6 +35,10 @@ has() {
     local label="$1" needle="$2" hay="$3"
     if [[ "$hay" == *"$needle"* ]]; then ok "$label"; else bad "$label — no '$needle' in: $hay"; fi
 }
+hasnt() {
+    local label="$1" needle="$2" hay="$3"
+    if [[ "$hay" == *"$needle"* ]]; then bad "$label — found '$needle'"; else ok "$label"; fi
+}
 
 # `cmd && ok … || bad …` is not if-then-else, and shellcheck is right to say so every
 # time. These are, and they read better anyway.
@@ -150,6 +154,46 @@ has "including the rule that costs the most" "You commit everything" "$PROMPTED"
 has "and the slice after it" "Do nothing." "$PROMPTED"
 check "and it is on disk too" test -s "$(W 99-contract)/.braid/contract.md"
 "$BRAID" reap 99-contract --force >/dev/null 2>&1
+
+# --- house rules, appended rather than copied ---------------------------------
+
+phase "a project's own rules, appended to the contract"
+# The alternative braid shipped with was replace-or-nothing: six house rules cost a copy
+# of the whole contract, and every later fix to the bundled one missed the copy silently.
+mkdir -p docs
+printf '# House rules\n\nNever migrate the shared schema.\n' >docs/worker-rules.md
+slice 98-rules low no "" "Do nothing."
+BRAID_AGENT_CMD='echo {prompt}' "$BRAID" spawn "$D/98-rules.md" >/dev/null 2>&1
+sleep 1
+PROMPTED=$(cat "$(W 98-rules)/.braid/session.log" 2>/dev/null)
+COMPOSED=$(cat "$(W 98-rules)/.braid/contract.md" 2>/dev/null)
+has "the bundled contract still arrives" "# Worker contract" "$COMPOSED"
+has "under a heading braid supplies" "## House rules" "$COMPOSED"
+has "with the project's own text after it" "Never migrate the shared schema." "$COMPOSED"
+is "and the bundled contract appears once" "1" \
+    "$(printf '%s\n' "$COMPOSED" | grep -c '^# Worker contract$')"
+has "the prompt carries exactly what is on disk" "$COMPOSED" "$PROMPTED"
+CTX=$(printf '{"cwd":"%s"}' "$(W 98-rules)" | "$BRAID" hook session-start)
+has "and so does the session hook" "Never migrate the shared schema." "$CTX"
+has "doctor names the state" "bundled + docs/worker-rules.md" "$("$BRAID" doctor 2>&1)"
+"$BRAID" reap 98-rules --force >/dev/null 2>&1
+
+# A full replacement still wins, and doctor says what that costs.
+printf '# Worker contract\n\nOurs, entirely.\n' >docs/worker-contract.md
+DOC=$("$BRAID" doctor 2>&1)
+has "a replacement is reported as one" "replaced by docs/worker-contract.md" "$DOC"
+has "and the rules file as ignored" "docs/worker-rules.md is ignored" "$DOC"
+slice 97-replaced low no "" "Do nothing."
+"$BRAID" spawn "$D/97-replaced.md" --no-launch >/dev/null 2>&1
+COMPOSED=$(cat "$(W 97-replaced)/.braid/contract.md")
+has "the replacement is what is delivered" "Ours, entirely." "$COMPOSED"
+hasnt "and the rules file is not" "Never migrate" "$COMPOSED"
+"$BRAID" reap 97-replaced --force >/dev/null 2>&1
+
+rm -f docs/worker-contract.md docs/worker-rules.md
+DOC=$("$BRAID" doctor 2>&1)
+has "with neither, doctor says bundled" "contract: bundled" "$DOC"
+hasnt "and mentions no file of the project's" "worker-rules.md" "$DOC"
 
 # --- the remote, for an agent that cannot be hooked ---------------------------
 
@@ -312,6 +356,74 @@ NEXT=$("$BRAID" next 2>&1)
 has "wave 1 reads as done" "3 done" "$NEXT"
 has "wave 2 does not read as done" "1 todo" "$NEXT"
 has "and it says to run it" "braid wave 2" "$NEXT"
+
+# --- a feature that is finished -----------------------------------------------
+
+phase "what outlives every worker"
+# braid_teardown is per worker, and a resource shared by all of a feature's `setup: yes`
+# workers must survive every one of their reaps — the next serialized worker is cut from
+# a tree that already holds the previous one's migrations. So it comes down here, once.
+info_hook() { "$BRAID" doctor 2>&1 | grep 'braid_teardown_feature'; }
+has "undefined, doctor says so" "braid_teardown_feature is a no-op" "$(info_hook)"
+
+export MARK="$TMP/torn-down"
+cat >>braid.sh <<'TXT'
+braid_teardown_feature() { printf '%s %s\n' "$2" "$3" >"$MARK"; }
+TXT
+git add -A
+git commit -qm "chore: a feature teardown"
+has "defined, doctor says so" "braid_teardown_feature defined" "$(info_hook)"
+
+# Finish the feature: wave 2 is the last slice, and only a landed feature can be torn down.
+"$BRAID" spawn "$D/04-e2e.md" --no-launch >/dev/null 2>&1
+work 04-e2e e2e.txt "e2e" "Drove it."
+"$BRAID" integrate 04-e2e >/dev/null 2>&1
+"$BRAID" reap 04-e2e >/dev/null 2>&1
+NEXT=$("$BRAID" next 2>&1)
+has "next says to open the PR" "open the PR" "$NEXT"
+has "and then to tear the feature down" "braid reap --feature" "$NEXT"
+
+# A worker still off the branch is the one case that must refuse before anything else:
+# the hook would undo what that worker is still using.
+slice 06-late low no "" "Still going."
+"$BRAID" spawn "$D/06-late.md" --no-launch >/dev/null 2>&1
+OUT=$("$BRAID" reap --feature 2>&1)
+is "refuses while a worker is still off the branch" "1" "$?"
+has "and says what to run first" "braid reap --merged" "$OUT"
+"$BRAID" reap 06-late --force >/dev/null 2>&1
+
+OUT=$("$BRAID" reap --feature 2>&1)
+is "refuses while the feature is not in the trunk" "1" "$?"
+has "and says how much is not there yet" "not in main" "$OUT"
+refute "having torn nothing down" test -f "$MARK"
+check "the landed refs are untouched" git show-ref --verify --quiet refs/braid/landed/01-login
+
+git checkout -q main
+git merge -q --ff-only feat/auth
+git checkout -q feat/auth
+check "once it is in the trunk, it just runs" "$BRAID" reap --feature
+is "the hook gets the feature and its trunk" "auth main" "$(cat "$MARK")"
+refute "and the feature's landed refs are gone" \
+    git show-ref --verify --quiet refs/braid/landed/01-login
+refute "all of them" git show-ref --verify --quiet refs/braid/landed/42-with-a-long-title
+
+# Ahead of the trunk again — the same refusal, and what --force costs.
+rm -f "$MARK"
+git commit -q --allow-empty -m "chore: after the merge"
+"$BRAID" reap --feature >/dev/null 2>&1
+is "ahead of the trunk again, it refuses again" "1" "$?"
+check "--force does it anyway" "$BRAID" reap --feature --force
+check "and the hook ran" test -f "$MARK"
+
+# A repository that never defined the hook still gets its refs cleaned.
+rm -f "$MARK"
+grep -v braid_teardown_feature braid.sh >braid.sh.new && mv braid.sh.new braid.sh
+git add -A
+git commit -qm "chore: drop the feature teardown"
+OUT=$("$BRAID" reap --feature --force 2>&1)
+is "with no hook it still succeeds" "0" "$?"
+has "and says there was nothing of the project's to undo" "no braid_teardown_feature" "$OUT"
+refute "and ran nothing" test -f "$MARK"
 
 echo
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
