@@ -82,7 +82,13 @@ while read -r id; do
     [[ -n "$id" ]] || continue
     body=$(BRAID_FEATURE="$FEATURE" fetch_slice "$id")
     slice_validate "$body"
-    TABLE+="$id	$(slice_complexity "$body")	$(slice_setup "$body")	$(slice_blocked_by "$body")
+    # Each field in its own substitution, each failure caught here: a `die` inside
+    # `$(...)` ends only the subshell, and the plan used to carry on with an empty
+    # column as if the slice had answered.
+    complexity=$(slice_complexity "$body") || die "#$id: unusable braid block"
+    setup=$(slice_setup "$body") || die "#$id: unusable braid block"
+    blockers=$(slice_blocked_by "$body") || die "#$id: unusable braid block"
+    TABLE+="$id	$complexity	$setup	$blockers
 "
     COUNT=$((COUNT + 1))
 done < <(BRAID_FEATURE="$FEATURE" BRAID_PRD="$PRD" list_slices "$FEATURE")
