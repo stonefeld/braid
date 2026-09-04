@@ -127,6 +127,19 @@ braid_config() {
     # default: a repository that never mentions this keeps the git configuration it had.
     : "${BRAID_WORKER_IGNORE:=}"
 
+    # How this house gets from "we should build something" to a set of launchable
+    # slices. braid ships none of these steps and never runs them — grilling, writing a
+    # spec, cutting it into tickets are somebody else's skills, and the glue test says
+    # braid must not grow a layer that reshapes their output.
+    #
+    # But refusing to *own* them turned into refusing to *name* them, and the result was
+    # a person opening `braid design` to a blank session with nothing to go on. The rest
+    # of that rule is "push it into configuration those skills already read", and this is
+    # that: a list braid prints and never interprets.
+    #
+    #   : "${BRAID_DESIGN_STEPS:=/grilling /to-spec /to-tickets}"
+    : "${BRAID_DESIGN_STEPS:=}"
+
     : "${BRAID_PORT_BASE:=8100}"
     : "${BRAID_PORT_RANGE:=400}"
     : "${BRAID_STALE_SECONDS:=1200}"
@@ -140,5 +153,5 @@ braid_config() {
     export BRAID_PROJECT_FILE
     export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
     export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS BRAID_FEATURES_DIR BRAID_SLICE_SOURCE
-    export BRAID_WORKER_IGNORE
+    export BRAID_WORKER_IGNORE BRAID_DESIGN_STEPS
 }

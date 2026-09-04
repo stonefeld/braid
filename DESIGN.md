@@ -33,6 +33,14 @@ contracts pass (an invariant shared by four slices has no home in a per-slice is
 A restatement of the PRD's "why" and scope fails — that is glue, and it is what makes
 a handoff document feel like a layer instead of a decision.
 
+**The rule has a second half that was being dropped.** "Drop it, *or push it into
+configuration those skills already read*." Refusing to own grilling, specs and ticket
+cutting turned into refusing to name them, and the result was `braid design` opening a
+blank session immediately after telling somebody braid has no opinion about what to do
+in it. `BRAID_DESIGN_STEPS` is a list braid prints and never interprets — said to the
+person, never injected into the agent's prompt, because that is where naming would
+become carrying.
+
 ---
 
 ## 2. The four seats

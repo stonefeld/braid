@@ -74,7 +74,15 @@ if [[ "${#SLICES[@]}" -eq 0 ]]; then
     fi
     why "settle what you are building first. braid has no opinion about how — but it"
     why "will open the seat for you at the tier this repository calls 'design'."
-    step "braid design      (then, in that session: /braid-plan)"
+    # Named, never run. Without this the guidance stops exactly where a person needs it
+    # most: at a blank session, having been told braid has no opinion.
+    if [[ -n "${BRAID_DESIGN_STEPS:-}" ]]; then
+        why ""
+        why "this repository designs with:  $BRAID_DESIGN_STEPS  →  /braid-plan"
+        step "braid design      (then, in that session, those in order)"
+    else
+        step "braid design      (then, in that session: /braid-plan)"
+    fi
     exit 0
 fi
 

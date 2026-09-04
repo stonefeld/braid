@@ -97,7 +97,25 @@ they want changed, in `braid.sh`:
 For an agent whose adapter maps nothing — Codex is one — there is no default to show and
 the same question has to be answered from scratch.
 
-## 4. House rules for workers
+## 4. How this house decides what to build
+
+braid owns none of this and never will. Grilling an idea, writing a spec, cutting it into
+tickets — those are skills this repository already has or does not, and braid's job starts
+at *"these slices are launchable"*.
+
+But it can **say what they are**, and not saying them leaves somebody opening `braid
+design` to a blank session having just been told braid has no opinion. So ask: from "we
+should build something" to a set of slices, what do they actually run here? Slash
+commands, a skill, a document they fill in, a conversation with no name at all.
+
+Record whatever has a name, in order, in `braid.sh`:
+
+    : "${BRAID_DESIGN_STEPS:=/grilling /to-spec /to-tickets}"
+
+`braid next` and `braid design` print it and nothing else — braid never runs these. If
+there is no named process, leave it empty and say so; an invented one is worse than none.
+
+## 5. House rules for workers
 
 Every worker is launched with braid's own contract: never touch the remote, commit
 everything, stay inside the slice, write a report. This section is about what *this*
@@ -116,7 +134,7 @@ Two ways to say it, and they are not equivalent:
 If both exist the replacement wins and the rules file is ignored, which is a state to
 get out of rather than into.
 
-## 5. Finish
+## 6. Finish
 
 Show `git status` and the diff. Tell them to commit it, and then:
 

@@ -60,6 +60,11 @@ agent_check_model "$MODEL"
 
 ensure_seat_dir "$(current_worktree)"
 note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — the design seat, in $(current_worktree)"
+# To the person, before the session opens — not into the prompt. Putting it there would
+# make braid carry the workflow it spent this whole file refusing to carry; saying it out
+# loud only means you are not staring at a blank session wondering what this house does.
+[[ -z "${BRAID_DESIGN_STEPS:-}" ]] ||
+    info "here that means:  $BRAID_DESIGN_STEPS  →  /braid-plan"
 [[ -z "$PROMPT" ]] && note "slices go in $BRAID_FEATURES_DIR/$(branch_slug "$(current_branch)")/, then: braid plan"
 
 eval "$(agent_cmd "$(current_worktree)" "$MODEL" "$PROMPT")"

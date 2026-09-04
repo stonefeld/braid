@@ -63,3 +63,9 @@ braid_teardown_feature() {
 #
 #   : "${BRAID_WORKER_IGNORE:=build/
 #   .cache/}"
+
+# How this house gets from "we should build something" to a set of launchable slices.
+# braid ships none of these and never runs them — it prints the list so that `braid
+# design` opens onto something other than a blank session.
+#
+#   : "${BRAID_DESIGN_STEPS:=/grilling /to-spec /to-tickets}"

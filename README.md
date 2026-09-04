@@ -173,7 +173,14 @@ job is judging other agents' work against their diffs, and a session that just s
 hour designing the feature is the worst possible reader of it.
 
 braid has no opinion about how you decide what to build. What it owns starts at *"these
-slices are launchable"* and ends at *"the feature branch is green"*. `braid next` derives
+slices are launchable"* and ends at *"the feature branch is green"*. It will still **name**
+your process if you tell it one — grilling, a spec, cutting tickets are skills braid does
+not ship and never runs, but a `braid design` that opens onto a blank session having just
+said "braid has no opinion" is guidance that stops where it is needed:
+
+```bash
+: "${BRAID_DESIGN_STEPS:=/grilling /to-spec /to-tickets}"   # in braid.sh
+``` `braid next` derives
 where you are from git and the worktrees every time it is asked — never from a file braid
 wrote down — and says what to run.
 

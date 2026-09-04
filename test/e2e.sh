@@ -526,6 +526,38 @@ work 42-with-a-long-title done.txt "done" "Did it."
 check "and the landed marker uses the id the plan knows" \
     git show-ref --verify --quiet "refs/braid/landed/42-with-a-long-title"
 
+# --- where the guidance used to stop ------------------------------------------
+
+phase "what this house does before there are slices"
+# braid owns none of grilling, specs or ticket cutting, and never will. It was also not
+# naming them, so `braid next` with no slices said "braid has no opinion about how" and
+# then opened a blank session — guidance that stops exactly where somebody needs it.
+BEFORE=$("$BRAID" next 2>&1)
+git checkout -q -b feat/unplanned
+NEXT=$("$BRAID" next 2>&1)
+has "with nothing named, it still opens the seat" "braid design" "$NEXT"
+hasnt "and invents no process" "→ /braid-plan" "$NEXT"
+
+cat >>braid.sh <<'TXT'
+: "${BRAID_DESIGN_STEPS:=/grilling /to-spec /to-tickets}"
+TXT
+NEXT=$("$BRAID" next 2>&1)
+has "named, it says what this repository actually runs" "/grilling /to-spec /to-tickets" "$NEXT"
+has "and where that ends" "/braid-plan" "$NEXT"
+has "doctor lists it with the rest of the configuration" "design steps: /grilling" \
+    "$("$BRAID" doctor 2>&1)"
+# Said to the person, never put into the agent's prompt. Naming a process is not carrying
+# one, and the prompt is exactly where that line would be crossed — so the assertion has
+# to separate the two streams, or it passes for the wrong reason.
+PROMPT=$(BRAID_AGENT_CMD='echo {prompt}' "$BRAID" design "the payments flow" 2>/dev/null)
+NOTES=$(BRAID_AGENT_CMD='echo {prompt}' "$BRAID" design "the payments flow" 2>&1 >/dev/null)
+has "the prompt is what you asked for" "the payments flow" "$PROMPT"
+has "design names the steps to the person" "/grilling" "$NOTES"
+hasnt "and never into the agent's prompt" "/grilling" "$PROMPT"
+git checkout -q -- braid.sh
+git checkout -q feat/auth
+has "and none of this disturbed a feature that has slices" "wave 1" "$BEFORE"
+
 # --- slices in a tracker -------------------------------------------------------
 
 phase "a feature whose slices are issues"
