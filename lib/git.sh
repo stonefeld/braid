@@ -98,6 +98,41 @@ refuse_trunk_base() {
     return 0
 }
 
+# --- .braid/, in any worktree braid works in -----------------------------------
+
+# Excluded per repository, not left to the project's .gitignore. .braid/ is braid's own
+# scratch space — the slice, the report, the session log, whatever an agent was told to
+# write there — and if it can be committed then every worker in a wave commits a
+# different version of the same paths, and every integration after the first conflicts on
+# files no slice mentioned. That is a baffling failure, and it would depend on whether
+# somebody had run setup.
+#
+# The common directory, not the worktree's own: git does not read info/exclude from a
+# linked worktree's git dir, only from the shared one. Checked, not assumed.
+exclude_braid_dir() {
+    local worktree="${1:?worktree}" exclude
+    exclude=$(git -C "$worktree" rev-parse --git-common-dir) || return 0
+    [[ "$exclude" = /* ]] || exclude="$worktree/$exclude"
+    exclude="$exclude/info/exclude"
+    mkdir -p "$(dirname "$exclude")"
+    grep -qxF '.braid/' "$exclude" 2>/dev/null || printf '.braid/\n' >>"$exclude"
+}
+
+# The seat's own .braid/. Workers get one at spawn; the design and orchestrator seats got
+# nothing, and the contract they run under says "anything that might take minutes goes to
+# a file under .braid/". An agent told that, in a worktree with no such directory,
+# improvises — one real run left forty `.braid-verify-<slug>.log` files and 1.1 MB beside
+# the checkout, which `.gitignore`'s `.braid/` does not match and `git add -A` would have
+# swept in.
+#
+# Created rather than documented: the directory existing is what makes the instruction
+# true, and no amount of wording in a skill substitutes for it.
+ensure_seat_dir() {
+    local worktree="${1:?worktree}"
+    mkdir -p "$worktree/.braid"
+    exclude_braid_dir "$worktree"
+}
+
 # --- the push guard -----------------------------------------------------------
 
 # An agent without a PreToolUse hook cannot be stopped mid-session from running

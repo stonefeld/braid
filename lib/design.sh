@@ -58,6 +58,7 @@ agent_load design || exit 1
 MODEL="${MODEL:-$(agent_model design)}"
 agent_check_model "$MODEL"
 
+ensure_seat_dir "$(current_worktree)"
 note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — the design seat, in $(current_worktree)"
 [[ -z "$PROMPT" ]] && note "slices go in $BRAID_FEATURES_DIR/$(branch_slug "$(current_branch)")/, then: braid plan"
 

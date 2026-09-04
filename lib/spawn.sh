@@ -171,18 +171,7 @@ CREATED="$WORKTREE"
 # deleting anything.
 mkdir -p "$WORKTREE/.braid"
 
-# Excluded per worktree, not left to the project's .gitignore. .braid/ is braid's own
-# scratch space — the slice, the report, the session log — and if a worker can commit it
-# then every worker in a wave commits a different version of the same paths, and every
-# integration after the first one conflicts on files the slice never mentioned. That is
-# a baffling failure, and it would depend on whether somebody had run setup.
-# The common directory, not the worktree's own: git does not read info/exclude from a
-# linked worktree's git dir, only from the shared one. Checked, not assumed.
-EXCLUDE=$(git -C "$WORKTREE" rev-parse --git-common-dir)
-[[ "$EXCLUDE" = /* ]] || EXCLUDE="$WORKTREE/$EXCLUDE"
-EXCLUDE="$EXCLUDE/info/exclude"
-mkdir -p "$(dirname "$EXCLUDE")"
-grep -qxF '.braid/' "$EXCLUDE" 2>/dev/null || printf '.braid/\n' >>"$EXCLUDE"
+exclude_braid_dir "$WORKTREE"
 printf '%s' "$BASE" >"$WORKTREE/.braid/base"
 printf '%s' "$SLICE_ID" >"$WORKTREE/.braid/slice-id"
 printf '%s' "$BRAID_AGENT_RESOLVED" >"$WORKTREE/.braid/agent"

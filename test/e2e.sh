@@ -89,6 +89,11 @@ git commit -qm "initial"
 "$BRAID" setup --scaffold >/dev/null 2>&1
 check "setup wrote braid.sh" test -f braid.sh
 check "gitignored .braid/" grep -qx '.braid/' .gitignore
+# The glob, not just the directory: an agent that writes beside the checkout — which is
+# what they did before the seats had a .braid/ — leaves .braid-verify-<slug>.log, and
+# `.braid/` does not match it. One real feature left forty of them, 1.1 MB, one `git add
+# -A` away from the branch.
+check "and the stray logs an agent writes beside it" grep -qx '.braid-\*.log' .gitignore
 has "registered hooks by name, not by path" "braid hook guard-remote" "$(cat .claude/settings.json)"
 git add -A
 git commit -qm "chore: braid"
@@ -329,6 +334,19 @@ is "refuses to reap unintegrated work" "1" "$?"
 check "--force says so and does it" "$BRAID" reap 05-bad --force
 "$BRAID" reap --merged >/dev/null 2>&1
 is "reap --merged clears the wave" "0" "$(git worktree list | grep -c 'agent-')"
+
+# --- the orchestrator's own seat ----------------------------------------------
+
+phase "the seat an orchestrator works from"
+# Workers get a .braid/ at spawn; the design and orchestrator seats got nothing, while
+# the contract they run under says "anything that might take minutes goes to a file under
+# .braid/". An agent told that, in a worktree with no such directory, writes
+# .braid-verify-<slug>.log beside the checkout instead.
+rm -rf "$REPO/.braid"
+BRAID_AGENT_CMD=true "$BRAID" orchestrate --here >/dev/null 2>&1
+check "orchestrate makes one before the agent starts" test -d "$REPO/.braid"
+printf 'a long test run\n' >"$REPO/.braid/verify.log"
+is "and nothing in it can be committed" "" "$(git status --porcelain -- .braid 2>/dev/null)"
 
 # --- a launcher that owns the worktree ----------------------------------------
 

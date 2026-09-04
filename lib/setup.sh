@@ -110,7 +110,11 @@ mkdir -p "$BRAID_FEATURES_DIR"
 # else's repository, where it would drift.
 ok "$BRAID_FEATURES_DIR/"
 
-for pattern in '.braid/' '.env'; do
+# `.braid/` is where everything braid and its agents write is supposed to go. The glob
+# beside it is for when an agent writes beside the checkout anyway — which is what
+# happened for a whole feature before the seats had a .braid/ of their own, and `.braid/`
+# does not match `.braid-verify-<slug>.log`.
+for pattern in '.braid/' '.braid-*.log' '.env'; do
     touch .gitignore
     grep -qxF "$pattern" .gitignore || {
         printf '%s\n' "$pattern" >>.gitignore

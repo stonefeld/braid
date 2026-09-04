@@ -107,7 +107,10 @@ that command is the user's to run.
 
 ## Long-running commands
 
-Anything that might take minutes goes to a file under `.braid/` and you read the file. A
+Anything that might take minutes goes to a file under `.braid/` **in the worktree you are
+standing in** — braid created it for you — and you read the file. Never beside the
+checkout: `.braid-something.log` in the repository root is ignored by nothing and a
+`git add -A` sweeps it into the feature branch. A
 foreground command killed at ten minutes takes its output with it, which is what turns one
 twelve-minute run into four. **If you missed something, open the log; never re-run to see
 output.**

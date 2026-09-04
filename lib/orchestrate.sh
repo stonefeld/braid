@@ -52,6 +52,9 @@ MODEL="${MODEL:-$(agent_model orchestrate)}"
 agent_check_model "$MODEL"
 
 WORKTREE=$(current_worktree)
+# Before the agent starts, because the first thing it is told is to write its long
+# command output there.
+ensure_seat_dir "$WORKTREE"
 PROMPT=$(agent_skill_prompt braid-orchestrate)
 
 if [[ "$HERE" -eq 1 ]]; then
