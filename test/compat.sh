@@ -122,6 +122,22 @@ else
 fi
 rm -rf "$TMPPREFIX"
 
+# --- what the bootstrapper may say to the installer ----------------------------
+
+# install.sh piped from curl hands over to the install.sh inside the tarball it just
+# downloaded — which is whatever version was asked for, possibly years old. Its public
+# flags are --prefix and --no-symlink; anything else is an "unknown argument" die on the
+# first thing a new user types, and only when installing an old version, which is exactly
+# the case nobody tries. Newer information travels as an environment variable instead,
+# which an old script ignores.
+handover=$(grep -E '^[[:space:]]*(\[.*\][[:space:]]*\|\|[[:space:]]*)?set -- ' install.sh |
+    grep -oE '\-\-[a-z-]+' | LC_ALL=C sort -u | tr '\n' ' ' | sed 's/ $//')
+if [[ "$handover" == "--no-symlink --prefix" ]]; then
+    ok "the bootstrapper passes only the installer's stable flags"
+else
+    bad "the bootstrapper passes: ${handover:-nothing} — only --prefix and --no-symlink may cross"
+fi
+
 # --- the manifest -------------------------------------------------------------
 
 # It has to cover everything and be reproducible, or upgrade cannot tell an edit from a

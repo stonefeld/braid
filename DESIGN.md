@@ -147,10 +147,20 @@ The split exists because the installer changes between versions. Without it, the
 `main` installs an older engine using a newer installer — a combination nobody tested and
 nothing declares. `braid upgrade` already had this property, because it runs the new
 version's `install.sh`; a fresh install did not, and two entry points with different
-guarantees is worse than either. The constraint that follows: the bootstrapper may pass
-the inner run **only flags that have always existed**, because that run may be any
-released version. Anything newer travels as an environment variable, which an older
-script ignores harmlessly.
+guarantees is worse than either.
+
+The interface between the halves is **`--prefix` and `--no-symlink`** — the installer's
+public flags, unchanged since the first release — plus environment variables, which an
+older script ignores harmlessly. Nothing else crosses: the inner run is whatever version
+was asked for, and a flag it does not know is a `die` on the first thing a new user
+types, in the one case nobody tries. `test/compat.sh` checks it, because a contract
+nothing verifies is a comment.
+
+The same cut decides who checks what. The bootstrapper validates only what the
+bootstrapper needs — a Unix-like platform, `git` to resolve, `curl` to download. bash,
+python3 and git 2.20 are *braid's* requirements and belong to the installer, which
+validates them a second later; checking them in both is one definition too many, and the
+copy that drifts is always the one nobody runs.
 
 `REF` beside the engine records what it was installed from, and `doctor` reports it.
 `VERSION` cannot answer that: `0.1.0` says nothing about whether this came from the tag

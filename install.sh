@@ -25,8 +25,12 @@
 # that shipped with the engine it is installing, which is the property `braid upgrade`
 # already had and a fresh install did not.
 #
-# The consequence to keep in mind when editing: **the inner run may be an old version**,
-# so the bootstrapper may only pass it flags that have always existed.
+# The interface between the two halves is **`--prefix` and `--no-symlink`** — the
+# installer's public flags, unchanged since the first release — plus environment
+# variables, which an older script ignores harmlessly. Nothing else may cross that line:
+# the inner run is whatever version you asked for, and a flag it does not know is a `die`
+# on the first thing a new user types. test/compat.sh checks this, because a contract
+# nothing verifies is a comment.
 #
 # POSIX sh on purpose. `curl | sh` runs under /bin/sh, which is dash on Debian and
 # busybox ash elsewhere; a bashism here fails on the very first thing a new user runs.
@@ -98,18 +102,6 @@ case "$0" in
         ;;
 esac
 
-# The bootstrapper stays quiet on success: everything it would print, the run it hands
-# over to prints properly a second later, and a doubled banner is the first thing a new
-# user sees.
-if [ -z "$SOURCE" ]; then
-    BOOTSTRAP=1
-else
-    BOOTSTRAP=0
-    say ""
-    say "braid"
-    say ""
-fi
-
 # --- the machine --------------------------------------------------------------
 
 # Refused rather than attempted. Under MSYS the failures are all silent: path
@@ -127,24 +119,6 @@ case "$(uname -s)" in
         ;;
     *) meh "untested platform: $(uname -s) — continuing anyway" ;;
 esac
-
-command -v git >/dev/null 2>&1 || die "git is required"
-command -v bash >/dev/null 2>&1 || die "bash is required"
-command -v python3 >/dev/null 2>&1 ||
-    die "python3 is required (standard library only — braid never installs packages)"
-
-# 2.20 is where `git config --worktree` arrived, which is how the push guard is
-# installed per worktree without touching the human's own checkout.
-git_version=$(git --version | awk '{print $3}')
-git_major=$(printf '%s' "$git_version" | cut -d. -f1)
-git_minor=$(printf '%s' "$git_version" | cut -d. -f2)
-if [ "$git_major" -lt 2 ] || { [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 20 ]; }; then
-    die "git $git_version is too old — braid needs 2.20 or newer for per-worktree config"
-fi
-
-[ "$BOOTSTRAP" -eq 1 ] || ok "git $git_version, bash, python3"
-
-# --- the source ---------------------------------------------------------------
 
 TMP=""
 # Written as an `if` rather than `[ … ] && …` on purpose: an EXIT trap whose last
@@ -174,6 +148,12 @@ record_ref() {
 
 if [ -z "$SOURCE" ]; then
     # --- the bootstrapper ------------------------------------------------------
+    #
+    # It checks only what *it* needs to do its own job. bash, python3 and git 2.20 are
+    # braid's requirements, and the installer below validates them a second later —
+    # checking them in both places is one definition too many, and the one that drifts
+    # is always the copy nobody runs.
+    command -v git >/dev/null 2>&1 || die "git is required to resolve which version to install"
     command -v curl >/dev/null 2>&1 || die "curl is required to download braid"
     [ -z "${BRAID_INSTALL_DELEGATED:-}" ] ||
         die "the archive for $REF has no engine in it — not fetching again"
@@ -211,6 +191,31 @@ if [ -z "$SOURCE" ]; then
     record_ref "$REF"
     exit 0
 fi
+
+# --- the installer ------------------------------------------------------------
+#
+# Past here this run holds the engine it is installing, whether that is a clone or the
+# tarball the bootstrapper just handed over. braid's own requirements are checked here,
+# once, by the version they belong to.
+
+say ""
+say "braid"
+say ""
+
+command -v bash >/dev/null 2>&1 || die "bash is required"
+command -v python3 >/dev/null 2>&1 ||
+    die "python3 is required (standard library only — braid never installs packages)"
+command -v git >/dev/null 2>&1 || die "git is required"
+
+# 2.20 is where `git config --worktree` arrived, which is how the push guard is
+# installed per worktree without touching the human's own checkout.
+git_version=$(git --version | awk '{print $3}')
+git_major=$(printf '%s' "$git_version" | cut -d. -f1)
+git_minor=$(printf '%s' "$git_version" | cut -d. -f2)
+if [ "$git_major" -lt 2 ] || { [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 20 ]; }; then
+    die "git $git_version is too old — braid needs 2.20 or newer for per-worktree config"
+fi
+ok "git $git_version, bash, python3"
 
 ok "installing from $SOURCE"
 VERSION=$(cat "$SOURCE/VERSION" 2>/dev/null || echo "unknown")
