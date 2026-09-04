@@ -26,6 +26,9 @@ jobs:
           /bin/bash --version | head -1
           python3 --version
           git --version
+      # One step per suite rather than ./test.sh, so a red build names which one on the
+      # summary page. ./test.sh is what you run locally, and compat checks it is the same
+      # set.
       - name: invariants
         run: bash test/compat.sh
       - name: the slice parser
@@ -52,7 +55,7 @@ jobs:
             | tar -xJf - --strip-components=1 -C /usr/local/bin "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
           shellcheck --version
       - name: engine
-        run: shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh lib/templates/*.sh test/*.sh
+        run: shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh lib/templates/*.sh test/*.sh test.sh
       - name: installer
         # Separately, and as sh: it is the one file that must not be bash.
         run: shellcheck --shell=sh install.sh

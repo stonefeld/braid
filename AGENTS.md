@@ -3,6 +3,10 @@
 House rules for anyone — human or agent — changing this repository. These are not
 style preferences; each one is load-bearing and there is a reason under it.
 
+The *process* around a change — branches, commits, pull requests, what a good issue looks
+like — is [`CONTRIBUTING.md`](CONTRIBUTING.md). This file is what the code itself has to
+keep true.
+
 ## The shape
 
 | Directory | What it is |
@@ -14,8 +18,9 @@ style preferences; each one is load-bearing and there is a reason under it.
 | `lib/launchers/` | one per place a worker can run, shadowable from `~/.config/braid/` |
 | `lib/skills/` | the skills braid owns, installed to the user's agent |
 | `lib/templates/` | `braid.sh` presets and slice templates |
-| `docs/` | the worker contract |
+| `docs/` | the worker contract, and the configuration reference |
 | `test/` | `e2e.sh`, plus the parser, the scheduler and the compat invariants |
+| `test.sh` | the runner — `./test.sh [suite…]` |
 
 ## Rules
 
@@ -65,17 +70,24 @@ silently at the moment a wave starts.
 
 ## Tests
 
+`./test.sh` runs every suite; `./test.sh e2e` runs one. Everything happens against a
+temporary `HOME`, so an installed braid is never touched.
+
 `test/e2e.sh` installs into a repository created thirty seconds ago and runs a whole
-feature through every state — 88 assertions, ending in the feature's own teardown.
+feature through every state — over a hundred assertions, ending in the feature's own teardown.
 **No agent is ever launched.** A worker is simulated by committing in its worktree and
 running `.braid/finish.sh`, which is exactly what a real worker does: the one thing that
 cannot be tested is the agent, and the test does not pretend otherwise.
 
-Three others guard what rots silently — `compat.sh` (bash 3.2, no third-party python),
-`slice.sh` (the block parser), `schedule.sh` (wave derivation). CI runs all four on
-macOS and Linux.
+Three others guard what rots silently — `compat.sh` (bash 3.2, no third-party python,
+the manifest, the runner), `slice.sh` (the block parser), `schedule.sh` (wave
+derivation). CI runs all four on macOS and Linux, one step each so a red build names
+which.
 
-Add to them when behaviour changes. Do not add unit tests for `slugify`.
+**Add to them when behaviour changes, and check the new test fails without the change.**
+Two fixes here shipped with tests that passed against the bug they were meant to catch;
+both were caught by running the suite against the old code on purpose, not by reading it.
+Do not add unit tests for `slugify`.
 
 ## Commits
 

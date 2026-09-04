@@ -33,7 +33,7 @@ echo
 # A line carrying this marker is exempt — which the pattern below needs, since it
 # contains every construct it looks for.
 BASH4='declare -A|mapfile|readarray|\$\{[A-Za-z_][A-Za-z0-9_]*,,\}|\$\{[A-Za-z_][A-Za-z0-9_]*\^\^\}|&>>|;;&' # compat-ignore
-hits=$(grep -rnE "$BASH4" bin lib test 2>/dev/null |
+hits=$(grep -rnE "$BASH4" bin lib test test.sh 2>/dev/null |
     grep -v 'compat-ignore' | grep -v '^[^:]*:[0-9]*: *#' || true)
 if [[ -z "$hits" ]]; then
     ok "no bash 4 constructs"
@@ -44,7 +44,7 @@ fi
 
 if command -v bash >/dev/null && [[ -x /bin/bash ]]; then
     version=$(/bin/bash --version | head -1 | sed -E 's/.*version ([0-9]+\.[0-9]+).*/\1/')
-    for f in bin/braid lib/*.sh lib/agents/*.sh lib/templates/*.sh test/*.sh; do
+    for f in bin/braid lib/*.sh lib/agents/*.sh lib/templates/*.sh test/*.sh test.sh; do
         /bin/bash -n "$f" 2>/dev/null || bad "/bin/bash $version cannot parse $f"
     done
     ok "/bin/bash $version parses every script"
@@ -184,10 +184,23 @@ elif [[ "$(shellcheck --version | awk '/version:/ {print $2}')" != "$SHELLCHECK_
     printf '  --    shellcheck %s, not the pinned %s — the shellcheck job owns this\n' \
         "$(shellcheck --version | awk '/version:/ {print $2}')" "$SHELLCHECK_PINNED"
 elif shellcheck --shell=bash bin/braid lib/*.sh lib/agents/*.sh lib/launchers/*.sh \
-    lib/templates/*.sh test/*.sh && shellcheck --shell=sh install.sh; then
+    lib/templates/*.sh test/*.sh test.sh && shellcheck --shell=sh install.sh; then
     ok "shellcheck clean ($SHELLCHECK_PINNED)"
 else
     bad "shellcheck findings"
+fi
+
+# --- the runner knows about every suite ---------------------------------------
+
+# ./test.sh is what a person runs; CI runs the files. A suite added to test/ and not to
+# the runner passes locally by never running, which is the failure this whole file is
+# about.
+declared=$(./test.sh --list | LC_ALL=C sort | tr '\n' ' ')
+present=$(for f in test/*.sh; do basename "$f" .sh; done | LC_ALL=C sort | tr '\n' ' ')
+if [[ "$declared" == "$present" ]]; then
+    ok "./test.sh runs every suite in test/"
+else
+    bad "./test.sh runs [$declared] but test/ holds [$present]"
 fi
 
 # --- names that were renamed --------------------------------------------------
