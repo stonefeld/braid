@@ -341,6 +341,53 @@ check "--force says so and does it" "$BRAID" reap 05-bad --force
 "$BRAID" reap --merged >/dev/null 2>&1
 is "reap --merged clears the wave" "0" "$(git worktree list | grep -c 'agent-')"
 
+# --- the branch you stand on is where the instructions live -------------------
+
+phase "a feature worktree, with the primary checkout on the trunk"
+# The shape of a real run and the one nothing here exercised: the orchestrator sits on
+# the feature branch in a worktree of its own while the primary checkout stays on the
+# trunk. `primary_checkout` answers the same from every worktree, so braid read its
+# instructions from one branch and did the work on another — a plan committed on the
+# feature branch had no effect, because braid was reading an untracked copy in the
+# trunk's tree, and a hook a feature added to its own braid.sh was invisible to the run
+# it was written for. That run only worked by accident.
+SEAT="$TMP/feat-beta"
+git checkout -q main
+git worktree add -q "$SEAT" -b feat/beta
+cd "$SEAT" || exit 1
+
+# A braid.sh that exists only on this branch.
+cat >braid.sh <<'TXT'
+: "${BRAID_AGENTS:=generic}"
+braid_verify() { test -f "$1/beta-marker"; }
+TXT
+mkdir -p braid/features/beta
+# shellcheck disable=SC2016  # the braid fence is literal text, not an expansion
+printf '# %s\n\n```braid\ncomplexity: low\nsetup: no\nblocked-by: \n```\n\n## What to build\n\nb\n' \
+    01-beta >braid/features/beta/01-beta.md
+git add -A
+git commit -qm "chore: beta brings its own braid.sh"
+
+DOC=$("$BRAID" doctor 2>&1)
+has "braid.sh comes from the branch that defines it" "$SEAT/braid.sh" "$DOC"
+has "and so does the feature's directory" "$SEAT/braid/features/beta" "$DOC"
+
+"$BRAID" plan >/dev/null 2>&1
+check "the plan is written where the work is" test -f "$SEAT/braid/features/beta/plan.md"
+refute "and not into the trunk's tree" test -f "$REPO/braid/features/beta/plan.md"
+
+# The gate defined on this branch is the one that runs, which is what a mid-feature hook
+# is for. It fails until its marker exists, and the marker is this branch's business.
+"$BRAID" verify >/dev/null 2>&1
+is "the branch's own gate is the one that runs" "1" "$?"
+touch "$SEAT/beta-marker"
+check "and it passes once this branch says so" "$BRAID" verify
+
+cd "$REPO" || exit 1
+git worktree remove --force "$SEAT"
+git branch -qD feat/beta
+git checkout -q feat/auth
+
 # --- the orchestrator's own seat ----------------------------------------------
 
 phase "the seat an orchestrator works from"

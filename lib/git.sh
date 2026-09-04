@@ -37,6 +37,40 @@ current_branch() {
     git rev-parse --abbrev-ref HEAD 2>/dev/null || die "not inside a git repository"
 }
 
+# --- branch content, versus repository state -----------------------------------
+
+# Where braid reads things that live **on a branch**: `braid.sh`, a feature's slices, its
+# plan. Resolved against the worktree you are standing in, falling back to the primary
+# checkout when it is not there, and defaulting to the former when it is nowhere yet —
+# so a file braid creates lands on the branch whose work it describes.
+#
+# The distinction is invisible until somebody uses a worktree per feature, and then it is
+# the whole game. `primary_checkout` answers the same from every worktree, so an
+# orchestrator standing on the feature branch while the primary checkout sat on the trunk
+# had braid reading its instructions from one branch and doing the work on another: a
+# plan committed on the feature branch had no effect, because braid was reading an
+# untracked copy in the trunk's tree, and a hook a feature added to its own `braid.sh`
+# was invisible to the run it was written for.
+#
+# What stays on `primary_checkout` is repository state — `refs/braid/landed/*`, the
+# worktree registry, the branch list. Those belong to the repository and answer the same
+# from anywhere, which is exactly why the shared answer is the right one for them and the
+# wrong one here.
+branch_path() {
+    local rel="${1:?relative path}" here there
+    here="$(current_worktree)/$rel"
+    [[ -e "$here" ]] && {
+        printf '%s' "$here"
+        return 0
+    }
+    there="$(primary_checkout)/$rel"
+    [[ -e "$there" ]] && {
+        printf '%s' "$there"
+        return 0
+    }
+    printf '%s' "$here"
+}
+
 # --- names --------------------------------------------------------------------
 
 slugify() {

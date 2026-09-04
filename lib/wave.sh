@@ -59,9 +59,8 @@ refuse_worker_seat
 
 [[ "${#ARGS[@]}" -gt 0 ]] || die "usage: braid wave <number> | braid wave <slice> [slice…]"
 
-CHECKOUT=$(primary_checkout)
 FEATURE=$(branch_slug "$(current_branch)")
-DIR="$CHECKOUT/$BRAID_FEATURES_DIR/$FEATURE"
+DIR=$(slice_dir "$FEATURE")
 PLAN="$DIR/plan.md"
 
 # A single bare number is a wave in the plan; anything else is a list of slices. The

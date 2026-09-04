@@ -23,8 +23,10 @@ set -uo pipefail
 source "$BRAID_HOME/lib/worker.sh"
 # shellcheck source=launcher.sh
 source "$BRAID_HOME/lib/launcher.sh"
-# shellcheck source=slice.sh
-source "$BRAID_HOME/lib/slice.sh"
+# slice.sh for the plan's fence, source.sh for the one definition of where a feature's
+# files live — which is not the primary checkout.
+# shellcheck source=source.sh
+source "$BRAID_HOME/lib/source.sh"
 
 FORCE=0
 MERGED=0
@@ -213,7 +215,7 @@ worktree_for_branch() {
 feature_slice_ids() {
     local feature="${1:?feature}" dir plan line file
     {
-        plan="$CHECKOUT/$BRAID_FEATURES_DIR/$feature/plan.md"
+        plan="$(slice_dir "$feature")/plan.md"
         if [[ -f "$plan" ]]; then
             while IFS= read -r line; do
                 case "$line" in
@@ -221,7 +223,7 @@ feature_slice_ids() {
                 esac
             done < <(slice_block "$(cat "$plan")")
         fi
-        dir="$CHECKOUT/$BRAID_FEATURES_DIR/$feature"
+        dir=$(slice_dir "$feature")
         for file in "$dir"/*.md; do
             [[ -f "$file" ]] || continue
             case "$(basename "$file" .md)" in

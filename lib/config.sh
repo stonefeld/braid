@@ -83,7 +83,11 @@ braid_config() {
     # The repository's own file, after the machine's and before the defaults. Its
     # `: "${VAR:=…}"` assignments therefore lose to anything already set and win over
     # everything below.
-    BRAID_PROJECT_FILE="${BRAID_PROJECT_FILE:-$checkout/braid.sh}"
+    #
+    # Read from the branch you are standing on, not from the primary checkout: a hook a
+    # feature adds to its own braid.sh has to govern that feature's run, which is the
+    # entire reason to add one mid-feature.
+    BRAID_PROJECT_FILE="${BRAID_PROJECT_FILE:-$(branch_path braid.sh)}"
     if [[ -f "$BRAID_PROJECT_FILE" ]]; then
         # shellcheck disable=SC1090
         source "$BRAID_PROJECT_FILE"

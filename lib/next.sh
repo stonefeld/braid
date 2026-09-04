@@ -46,7 +46,7 @@ if is_protected_branch "$BRANCH"; then
 fi
 
 FEATURE=$(branch_slug "$BRANCH")
-DIR="$CHECKOUT/$BRAID_FEATURES_DIR/$FEATURE"
+DIR=$(slice_dir "$FEATURE")
 PLAN="$DIR/plan.md"
 
 TRUNK=""

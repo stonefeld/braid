@@ -19,8 +19,11 @@ source "$BRAID_HOME/lib/slice.sh"
 # shellcheck source=config.sh
 source "$BRAID_HOME/lib/config.sh"
 
+# The one definition of where a feature's slices and plan live. Three commands used to
+# build this path themselves, which is why fixing it in one place would have left three
+# reading the wrong tree.
 slice_dir() {
-    printf '%s/%s/%s' "$(primary_checkout)" "$BRAID_FEATURES_DIR" "${1:?feature}"
+    branch_path "$BRAID_FEATURES_DIR/${1:?feature}"
 }
 
 # --- one slice ----------------------------------------------------------------

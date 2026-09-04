@@ -47,7 +47,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 braid_config
-CHECKOUT=$(primary_checkout)
+# The worktree you are standing in, not the primary checkout. Everything setup writes —
+# braid.sh, .gitignore, .claude/settings.json — is committed and reviewed, so it belongs
+# on the branch you are on. Forcing the primary checkout meant running setup from a
+# feature worktree silently edited a different branch's tree, which is the same mistake
+# the plan and braid.sh used to make.
+CHECKOUT=$(current_worktree)
 cd "$CHECKOUT" || die "cannot enter $CHECKOUT"
 
 # --- --add-agent --------------------------------------------------------------

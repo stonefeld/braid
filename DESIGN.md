@@ -538,6 +538,35 @@ Claude Code's hooks allow, once by a means that needs nothing of the agent at al
 The second column is the one that has to be right. It is what "works with any agent CLI"
 means, and it is the only column an agent released next year is guaranteed to land in.
 
+### Which tree, of the ones open
+
+Two different questions, and conflating them cost a whole feature run.
+
+| | Read from | |
+|---|---|---|
+| **Branch content** | the worktree you are standing in | `braid.sh`, a feature's slices, its plan, what `setup` writes |
+| **Repository state** | the primary checkout | `refs/braid/landed/*`, the worktree registry, the branch list |
+
+`primary_checkout()` resolves through `--git-common-dir`, so it answers the same from
+inside any worktree. That is exactly right for the second row and exactly wrong for the
+first — and invisible until somebody keeps a worktree per feature, which is the setup
+braid pushes people towards.
+
+What it looked like when it bit: the orchestrator stood on the feature branch in its own
+worktree while the primary checkout sat on the trunk. Editing the plan and committing it
+changed nothing, because braid was reading an untracked copy in the trunk's tree. A
+`braid_slice_launchable` hook added to the feature's own `braid.sh` was invisible to the
+run it was written for, so a warning about 39 sub-issues it existed to filter never went
+away. **The run succeeded by accident**: a leftover `braid/` directory in the primary
+checkout happened to hold a plan. On a clean checkout there would have been none.
+
+`branch_path` is the one place the rule lives — current worktree, falling back to the
+primary checkout, defaulting to the current one when the file is nowhere yet, so
+something braid creates lands on the branch whose work it describes. `slice_dir` is the
+one definition of where a feature's files are; three commands used to build that path
+themselves, which is why fixing it in one place would have left three of them still
+reading the trunk.
+
 ### Deriving state, not storing it
 
 `braid next` derives the phase every time — is there a PRD, are there slices, do they

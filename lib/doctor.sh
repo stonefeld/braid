@@ -20,6 +20,8 @@ source "$BRAID_HOME/lib/launcher.sh"
 source "$BRAID_HOME/lib/worker.sh"
 # shellcheck source=contract.sh
 source "$BRAID_HOME/lib/contract.sh"
+# shellcheck source=source.sh
+source "$BRAID_HOME/lib/source.sh"
 
 FATAL=0
 fail() {
@@ -153,7 +155,10 @@ case "$(contract_state "$CHECKOUT")" in
     *) ok "contract: bundled" ;;
 esac
 info "worktrees: $BRAID_WORKTREE_ROOT"
-info "features:  $BRAID_FEATURES_DIR"
+# Resolved, not the setting. braid.sh and a feature's files are read from the branch you
+# are standing on; refs and the worktree registry come from the primary checkout. When
+# those two are different directories, saying which is which is the whole point.
+info "features:  $(slice_dir "$(branch_slug "$BRANCH")")"
 info "capacity:  $BRAID_MAX_WORKERS workers at once"
 info "protected: $BRAID_PROTECTED_BRANCHES"
 echo
