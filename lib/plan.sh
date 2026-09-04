@@ -58,21 +58,25 @@ refuse_worker_seat
 # cut from. Naming one explicitly is for planning a feature you are not standing in.
 [[ -n "$FEATURE" ]] || FEATURE=$(branch_slug "$(current_branch)")
 DIR="$(slice_dir "$FEATURE")"
-PLAN="$DIR/plan.md"
 CAPACITY="${CAPACITY:-$BRAID_MAX_WORKERS}"
 
-# A PRD given once is remembered, in the plan's own braid block, so every later command
-# finds the feature's slices without being told again.
-if [[ -z "$PRD" && "$BRAID_SLICE_SOURCE" == github ]]; then
-    PRD=$(feature_prd "$FEATURE" 2>/dev/null || true)
+# A PRD given once is remembered, so every later command finds the feature's slices
+# without being told again. Written before anything else needs it, because with a tracker
+# the plan itself lives in that issue and cannot be found without it.
+if [[ "$BRAID_SLICE_SOURCE" == github ]]; then
+    if [[ -n "$PRD" ]]; then
+        remember_prd "$FEATURE" "$PRD"
+    else
+        PRD=$(feature_prd "$FEATURE" 2>/dev/null || true)
+    fi
 fi
-if [[ "$BRAID_SLICE_SOURCE" == files && ! -d "$DIR" ]]; then
-    die "$(printf '%s\n' \
+if [[ "$BRAID_SLICE_SOURCE" == files ]]; then
+    [[ -d "$DIR" ]] || die "$(printf '%s\n' \
         "no feature at $DIR" \
         "  a feature is a folder: its slices are the files in it, and the folder is their parent." \
         "  mkdir -p $DIR and write the slices, or pass a different name.")"
+    mkdir -p "$DIR"
 fi
-mkdir -p "$DIR"
 
 # The braid block is parsed the same from a file and from an issue body, which is the
 # whole point of putting it in the markdown rather than in a tracker's own fields.
@@ -113,39 +117,32 @@ done
 echo
 
 if [[ "$DRY" -eq 1 ]]; then
-    note "--dry-run: $PLAN not written"
+    note "--dry-run: nothing written"
     exit 0
 fi
 
-# Rewrite only the fence. Everything else in the file is human-written and is the
-# reason the file is worth committing at all.
-python3 - "$PLAN" "$FEATURE" "$WAVES" "${PRD:-}" <<'PY'
-import pathlib
+# The document as it stands — a file, or the PRD issue's own body — or nothing at all the
+# first time. Only the fence in it belongs to braid; everything else is the reason the
+# document is worth having.
+EXISTING=$(fetch_plan "$FEATURE" 2>/dev/null || true)
+
+# Through the environment, not a pipe: `python3 -` already reads its program from stdin,
+# so a heredoc and a pipe cannot both be there — the heredoc wins and the document
+# silently arrives empty, which would rewrite somebody's PRD body as a bare template.
+UPDATED=$(BRAID_PLAN_DOCUMENT="$EXISTING" \
+    python3 - "$FEATURE" "$WAVES" "${PRD:-}" <<'PYEOF'
+import os
 import re
 import sys
 
-path, feature, waves = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
-prd = sys.argv[4] if len(sys.argv) > 4 else ""
+feature, waves = sys.argv[1], sys.argv[2]
+prd = sys.argv[3] if len(sys.argv) > 3 else ""
+document = os.environ.get("BRAID_PLAN_DOCUMENT", "")
+
 body = (f"prd: #{prd}\n" if prd else "") + waves.strip()
 fence = "```braid\n" + body + "\n```"
 
-if path.exists():
-    original = path.read_text(encoding="utf-8")
-    updated, count = re.subn(
-        r"```braid\n.*?\n```", fence, original, count=1, flags=re.DOTALL
-    )
-    if count == 0:
-        # A plan somebody wrote by hand, or one whose fence they deleted. Prepend rather
-        # than guess where it belonged.
-        updated = fence + "\n\n" + original
-    path.write_text(updated, encoding="utf-8")
-    print(f"updated {path}")
-else:
-    path.write_text(
-        f"""# Plan — {feature}
-
-{fence}
-
+SECTIONS = """
 ## Contracts
 
 <Only what spans slices: an interface two of them implement, an invariant they must
@@ -156,8 +153,30 @@ belongs in that slice.>
 
 <What will bite: coexistence with a legacy path, a chokepoint that has to keep
 working, a module that looks unrelated and is not.>
-""",
-        encoding="utf-8",
-    )
-    print(f"wrote {path}")
-PY
+"""
+
+updated, count = re.subn(r"```braid\n.*?\n```", fence, document, count=1, flags=re.DOTALL)
+if count == 0:
+    if document.strip():
+        # A PRD body, or a plan whose fence somebody deleted. Appended rather than
+        # prepended: the document is the point and the schedule is an appendix to it,
+        # which is the wrong way round the moment the document is an issue people read.
+        updated = document.rstrip() + "\n\n" + fence + "\n"
+    else:
+        updated = f"# Plan \u2014 {feature}\n\n{fence}\n"
+
+# Added once and never re-added: they are the human's, an empty pair of headings is a
+# prompt to fill them in, and a second pair below the filled-in ones is a mess.
+if not re.search(r"^##\s+Contracts", updated, flags=re.M):
+    updated = updated.rstrip() + "\n" + SECTIONS
+
+sys.stdout.write(updated)
+PYEOF
+)
+
+WHERE=$(write_plan "$FEATURE" "$UPDATED")
+if [[ -n "$EXISTING" ]]; then
+    note "updated the plan in $WHERE"
+else
+    note "wrote the plan to $WHERE"
+fi

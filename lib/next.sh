@@ -46,8 +46,6 @@ if is_protected_branch "$BRANCH"; then
 fi
 
 FEATURE=$(branch_slug "$BRANCH")
-DIR=$(slice_dir "$FEATURE")
-PLAN="$DIR/plan.md"
 
 TRUNK=""
 for candidate in $BRAID_PROTECTED_BRANCHES; do
@@ -82,19 +80,19 @@ fi
 
 # --- plan ---------------------------------------------------------------------
 
-if [[ ! -f "$PLAN" ]]; then
+# Wherever it lives — a file beside the slices, or the PRD's own body.
+PLAN_BODY=$(fetch_plan "$FEATURE" 2>/dev/null) || {
     why "${#SLICES[@]} slices, no schedule."
     step "braid plan"
     exit 0
-fi
+}
 
-PLAN_BODY=$(cat "$PLAN")
 WAVES=()
 while IFS= read -r line; do
     [[ "$line" =~ ^wave ]] && WAVES+=("$line")
 done < <(slice_block "$PLAN_BODY")
 [[ "${#WAVES[@]}" -gt 0 ]] || {
-    why "$PLAN has no braid block — its wave schedule is missing."
+    why "the plan has no braid block — its wave schedule is missing."
     step "braid plan"
     exit 0
 }

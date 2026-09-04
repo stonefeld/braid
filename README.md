@@ -149,7 +149,10 @@ so a CLI that changes its contract costs you twenty lines, not a release.
 | **github** | slices are issues, a feature's PRD is their parent issue | `gh`, authenticated |
 
 The braid block is parsed identically from either, which is what lets a slice move
-between them unrewritten.
+between them unrewritten. **The plan follows the slices**: a `plan.md` beside them in
+files mode, the PRD issue's own body with a tracker — so a repository whose work lives in
+issues does not accumulate one dead plan file per shipped feature. Say
+`braid plan --prd <n>` once; braid keeps the pointer.
 
 ---
 

@@ -362,6 +362,28 @@ title as well — `agent/2-add-a-licence`, because `agent/2` names nothing a per
 read. Those two being different strings is a distinction the file mode never exercises,
 and it is where two bugs lived.
 
+**The plan follows the slices.** With `files` it is `plan.md` beside them; with `github`
+it is the PRD issue's own body, and no file is committed. Putting a `plan.md` in a
+repository whose slices are issues would leave the tree accumulating one dead file per
+shipped feature while every live artifact lived somewhere else — and the plan is
+coordination *for the duration* of a feature, not a record of it. Once the branch lands,
+what it held has either become code or become nothing. What is worth keeping goes to the
+pull request, where it is read.
+
+Storing it is the same seam used twice more — `fetch_plan` and `write_plan` beside
+`fetch_slice` and `list_slices` — rather than a second code path. Only the fenced block
+is ever rewritten, in either. Appended to a document that has one rather than prepended:
+an issue's body is the PRD, and the schedule is an appendix to it.
+
+The PRD number is the one thing that cannot live in the plan, because you need it to find
+the plan. It is a pointer, kept per feature in the worktree's `.braid/`, said once with
+`braid plan --prd N`. Not committed: it costs one command to re-establish, and a feature
+is driven through by a single orchestrator — even with workers in the cloud there is one
+point of control — so there is nobody to share it with who is not about to say it
+themselves. Keyed by feature rather than by worktree, because a worktree outlives the
+branch checked out in it and a pointer that survives a `git checkout` is a pointer that
+lies.
+
 With `files`, a folder per feature reproduces the same parent/child relation without
 needing a tracker to have the primitive:
 

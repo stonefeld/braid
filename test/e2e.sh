@@ -523,6 +523,124 @@ work 42-with-a-long-title done.txt "done" "Did it."
 check "and the landed marker uses the id the plan knows" \
     git show-ref --verify --quiet "refs/braid/landed/42-with-a-long-title"
 
+# --- slices in a tracker -------------------------------------------------------
+
+phase "a feature whose slices are issues"
+# A stub tracker, not a network. It answers the four calls braid makes and records what
+# it was told, which tests the side braid owns; whether the real gh's JSON still has this
+# shape is the one thing it cannot say, exactly as the simulated worker cannot test an
+# agent. Saying "this needs gh, so it cannot be tested" was wrong: it needs *a* gh.
+GH="$TMP/tracker"
+mkdir -p "$GH/bin"
+cat >"$GH/bin/gh" <<'FAKEGH'
+#!/usr/bin/env bash
+# issues live as $GH_STATE/<n>.{title,body,children}
+set -uo pipefail
+[[ "${1:-}" == auth ]] && exit 0
+[[ "${1:-}" == issue ]] || exit 1
+shift
+verb="$1"
+shift
+number="$1"
+shift
+json=""
+jq=""
+bodyfile=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --json)
+            json="$2"
+            shift 2
+            ;;
+        --jq | -q)
+            jq="$2"
+            shift 2
+            ;;
+        --body-file)
+            bodyfile="$2"
+            shift 2
+            ;;
+        *) shift ;;
+    esac
+done
+case "$verb" in
+    edit)
+        [[ -n "$bodyfile" ]] || exit 1
+        cp "$bodyfile" "$GH_STATE/$number.body"
+        ;;
+    view)
+        [[ -f "$GH_STATE/$number.body" ]] || exit 1
+        case "$json" in
+            *subIssues*) cat "$GH_STATE/$number.children" 2>/dev/null ;;
+            *body*)
+                if [[ -n "$jq" ]]; then
+                    cat "$GH_STATE/$number.body"
+                else
+                    python3 -c 'import json,sys
+n,t,b=sys.argv[1:4]
+print(json.dumps({"number":int(n),"title":t,"body":open(b).read(),"url":"https://x/"+n}))' \
+                        "$number" "$(cat "$GH_STATE/$number.title")" "$GH_STATE/$number.body"
+                fi
+                ;;
+            *title*) cat "$GH_STATE/$number.title" ;;
+            *) exit 1 ;;
+        esac
+        ;;
+    *) exit 1 ;;
+esac
+FAKEGH
+chmod +x "$GH/bin/gh"
+export GH_STATE="$GH/state"
+mkdir -p "$GH_STATE"
+
+issue() { # number title body children
+    printf '%s' "$2" >"$GH_STATE/$1.title"
+    printf '%s' "$3" >"$GH_STATE/$1.body"
+    printf '%s' "${4:-}" >"$GH_STATE/$1.children"
+}
+# shellcheck disable=SC2016  # the braid fence is literal text, not an expansion
+SLICEBODY='```braid
+complexity: standard
+setup: no
+```
+
+## What to build
+
+A thing.'
+issue 100 "Payments" "The PRD, written by a person. This paragraph is the point of the issue." "101
+102"
+issue 101 "Take a payment" "$SLICEBODY"
+issue 102 "Refund a payment" "$SLICEBODY"
+
+git checkout -q -b feat/payments
+export PATH="$GH/bin:$PATH" BRAID_SLICE_SOURCE=github
+
+"$BRAID" plan --prd 100 >/dev/null 2>&1
+BODY=$(cat "$GH_STATE/100.body")
+has "the schedule is written into the PRD issue" "wave 1: 101, 102" "$BODY"
+has "and the PRD it was written under survives it" "written by a person" "$BODY"
+has "the sections only the plan can hold are added once" "## Contracts" "$BODY"
+refute "and no plan.md is left in the repository" test -f braid/features/payments/plan.md
+
+# Said once. The pointer is what makes every later command able to find the plan at all.
+has "the PRD number is remembered" "100" "$(cat .braid/prd-payments)"
+has "so next finds the schedule without being told again" "wave 1" "$("$BRAID" next 2>&1)"
+
+# Re-running rewrites the fence and nothing else — the same guarantee as with files.
+printf '%s\n' "$BODY" | sed 's/^<Only what spans.*/The token shape is shared./' \
+    >"$GH_STATE/100.body"
+"$BRAID" plan >/dev/null 2>&1
+BODY=$(cat "$GH_STATE/100.body")
+has "a re-run keeps what a person wrote in Contracts" "The token shape is shared." "$BODY"
+is "and does not append a second pair of headings" "1" \
+    "$(printf '%s\n' "$BODY" | grep -c '^## Contracts')"
+has "while the fence itself is rewritten" "wave 1: 101, 102" "$BODY"
+
+git checkout -q feat/auth
+unset BRAID_SLICE_SOURCE GH_STATE
+PATH="${PATH#"$GH/bin:"}"
+export PATH
+
 # --- what next ----------------------------------------------------------------
 
 phase "what next"

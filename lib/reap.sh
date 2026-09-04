@@ -215,13 +215,12 @@ worktree_for_branch() {
 feature_slice_ids() {
     local feature="${1:?feature}" dir plan line file
     {
-        plan="$(slice_dir "$feature")/plan.md"
-        if [[ -f "$plan" ]]; then
+        if plan=$(fetch_plan "$feature" 2>/dev/null); then
             while IFS= read -r line; do
                 case "$line" in
                     wave*) printf '%s' "${line#*:}" | tr ',' '\n' ;;
                 esac
-            done < <(slice_block "$(cat "$plan")")
+            done < <(slice_block "$plan")
         fi
         dir=$(slice_dir "$feature")
         for file in "$dir"/*.md; do

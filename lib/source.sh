@@ -143,7 +143,7 @@ list_slices() {
             [[ -n "$prd" ]] ||
                 die "$(printf '%s\n' \
                     "this feature has no PRD issue recorded." \
-                    "  braid plan --prd <number>    say it once; it is kept in plan.md")"
+                    "  braid plan --prd <number>    say it once; braid keeps the pointer")"
             progress "reading the sub-issues of #${prd}…"
             # A closed sub-issue is not work, whatever it once was. A PRD that has
             # shipped three waves keeps every one of them as a child, and scheduling
@@ -175,14 +175,96 @@ list_slices() {
     esac
 }
 
-# The PRD an existing plan was built from. Recorded in the plan's own braid block the
-# first time, so every later command finds it without being told again.
+# --- the plan -----------------------------------------------------------------
+#
+# A document with two halves and two owners: a fenced block braid computes and
+# overwrites, and `## Contracts` / `## Traps` a person writes and braid never touches.
+# **Where it is stored follows the slices**, for the same reason they do — a file beside
+# them, or the PRD's own body.
+#
+# Committing a plan.md in a repository whose slices are issues would leave the tree
+# accumulating one dead file per shipped feature while every live artifact is somewhere
+# else. The plan is coordination for the duration of a feature, not a record of it: once
+# the branch lands, what it held has either become code or become nothing.
+#
+# The PRD number is the one thing that cannot live in the plan, because you need it to
+# find the plan. It is a pointer, kept per feature in the worktree's own `.braid/` —
+# said once with `braid plan --prd N` and never again. Not committed: it is worth exactly
+# one command to re-establish, and one orchestrator drives a feature through, so there is
+# nobody to share it with who is not about to say it themselves.
+#
+# Keyed by feature, not just `.braid/prd`, because a worktree outlives the branch checked
+# out in it and a pointer that survives a `git checkout` is a pointer that lies.
+
+prd_pointer() {
+    printf '%s/.braid/prd-%s' "$(current_worktree)" "${1:?feature}"
+}
+
+remember_prd() {
+    local feature="${1:?feature}" prd="${2:?prd}" file
+    file=$(prd_pointer "$feature")
+    mkdir -p "$(dirname "$file")"
+    printf '%s' "${prd#\#}" >"$file"
+}
+
 feature_prd() {
-    local plan prd
-    plan="$(slice_dir "${1:?feature}")/plan.md"
-    [[ -f "$plan" ]] || return 1
-    prd=$(slice_field "$(cat "$plan")" prd) || return 1
-    prd="${prd#\#}"
+    local file prd
+    file=$(prd_pointer "${1:?feature}")
+    [[ -f "$file" ]] || return 1
+    prd=$(cat "$file")
     [[ -n "$prd" ]] || return 1
     printf '%s' "$prd"
+}
+
+plan_file() { printf '%s/plan.md' "$(slice_dir "${1:?feature}")"; }
+
+# The plan as it stands, or non-zero when there is none yet.
+fetch_plan() {
+    local feature="${1:?feature}" file prd
+    case "$BRAID_SLICE_SOURCE" in
+        files)
+            file=$(plan_file "$feature")
+            [[ -f "$file" ]] || return 1
+            cat "$file"
+            ;;
+        github)
+            prd=$(feature_prd "$feature") || return 1
+            command -v gh >/dev/null 2>&1 || die "$(gh_trouble)"
+            progress "reading the plan in #${prd}…"
+            gh issue view "$prd" --json body --jq .body 2>/dev/null ||
+                die "$(printf '%s\n' "could not read the plan in #$prd." "$(gh_trouble)")"
+            progress_done
+            ;;
+    esac
+}
+
+# Prints where it went, for the command that has to say so.
+write_plan() {
+    local feature="${1:?feature}" body="${2?body}" file prd tmp
+    case "$BRAID_SLICE_SOURCE" in
+        files)
+            file=$(plan_file "$feature")
+            mkdir -p "$(dirname "$file")"
+            printf '%s\n' "$body" >"$file"
+            printf '%s' "$file"
+            ;;
+        github)
+            prd=$(feature_prd "$feature") ||
+                die "no PRD issue recorded for '$feature' — braid plan --prd <number>"
+            command -v gh >/dev/null 2>&1 || die "$(gh_trouble)"
+            # Through a file, never `--body "$long_string"`: a plan carries backticks,
+            # newlines and whatever a person wrote in Contracts, and an argument is the
+            # wrong shape for all three.
+            tmp=$(mktemp) || die "could not make a temporary file"
+            printf '%s\n' "$body" >"$tmp"
+            progress "writing the plan into #${prd}…"
+            gh issue edit "$prd" --body-file "$tmp" >/dev/null 2>&1 || {
+                rm -f "$tmp"
+                die "$(printf '%s\n' "could not write the plan into #$prd." "$(gh_trouble)")"
+            }
+            progress_done
+            rm -f "$tmp"
+            printf '#%s' "$prd"
+            ;;
+    esac
 }

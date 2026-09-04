@@ -61,18 +61,17 @@ refuse_worker_seat
 
 FEATURE=$(branch_slug "$(current_branch)")
 DIR=$(slice_dir "$FEATURE")
-PLAN="$DIR/plan.md"
 
 # A single bare number is a wave in the plan; anything else is a list of slices. The
 # ambiguity is resolved toward the plan because that is the common call, and a slice
 # whose whole name is "2" would be unnameable for other reasons.
 SLICES=()
 if [[ "${#ARGS[@]}" -eq 1 && "${ARGS[0]}" =~ ^[0-9]+$ ]]; then
-    [[ -f "$PLAN" ]] || die "no plan at $PLAN — run: braid plan"
-    line=$(slice_field "$(cat "$PLAN")" "wave ${ARGS[0]}") ||
+    PLAN_BODY=$(fetch_plan "$FEATURE") || die "no plan for '$FEATURE' — run: braid plan"
+    line=$(slice_field "$PLAN_BODY" "wave ${ARGS[0]}") ||
         die "$(printf '%s\n' \
-            "wave ${ARGS[0]} is not in $PLAN. it has:" \
-            "$(slice_block "$(cat "$PLAN")" | sed 's/^/  /')")"
+            "wave ${ARGS[0]} is not in this feature's plan. it has:" \
+            "$(slice_block "$PLAN_BODY" | sed 's/^/  /')")"
     IFS=', ' read -r -a SLICES <<<"$line"
     note "wave ${ARGS[0]}: ${SLICES[*]}"
 else
