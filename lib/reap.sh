@@ -71,7 +71,7 @@ is_integrated() {
 }
 
 reap_one() {
-    local worktree="${1:?worktree}" branch base slug unmerged launcher recorded
+    local worktree="${1:?worktree}" branch base slug unmerged launcher recorded owned
 
     branch=$(git -C "$worktree" rev-parse --abbrev-ref HEAD 2>/dev/null) ||
         die "$worktree is not a git worktree"
@@ -99,26 +99,18 @@ reap_one() {
     # branch slug, which is a different string as soon as a tracker is involved.
     recorded=$(worker_field "$worktree" slice-id)
 
-    # Outside the worktree first, while everything that names it still exists.
-    braid_teardown "$worktree" "$slug" >/dev/null 2>&1 || true
-
-    # Checked before loading, never guarded with 2>/dev/null. launcher_load dies when
-    # there is no such launcher — and a worker spawned with --no-launch has no
-    # .braid/launcher at all — so the guarded form swallowed the message *and* the
-    # command, and reap exited silently having done nothing.
-    launcher=$(worker_field "$worktree" launcher | sed 's/ .*//')
-    if [[ -n "$launcher" ]] && launcher_file "$launcher" >/dev/null 2>&1; then
-        launcher_load "$launcher"
-        launcher_forget "$worktree" >/dev/null 2>&1 || true
-    fi
-
-    git -C "$CHECKOUT" worktree remove --force "$worktree" ||
-        die "could not remove $worktree"
-
-    # The branch becomes a ref under refs/braid/landed/ before it is deleted. Deleting
-    # it outright destroys the only evidence that this slice was ever built: afterwards
-    # a slice with no branch and no worktree is indistinguishable from one that never
-    # started, and `braid next` would call a wave finished that had not begun.
+    # **First.** The branch becomes a ref under refs/braid/landed/ before anything is
+    # torn down. Deleting the branch without this destroys the only evidence that the
+    # slice was ever built: afterwards a slice with no branch and no worktree is
+    # indistinguishable from one that never started, and `braid next` would call a wave
+    # unstarted that had in fact been integrated and reaped.
+    #
+    # It used to be the last statement in this function, below a `die`, which is how it
+    # was lost on every single reap under a launcher that owns the worktree — the
+    # comment describing the harm sat directly under the line that caused it. It is a
+    # cheap idempotent update-ref, the ancestry check above has already proved the claim
+    # it records, and nothing below needs to succeed for it to stay true. Writing it here
+    # makes the rest of this function safe to fail anywhere.
     #
     # A ref rather than a branch, so it stays out of `git branch`, out of the way, and
     # still answers "what commit did this slice land as" months later.
@@ -129,6 +121,48 @@ reap_one() {
         git -C "$CHECKOUT" update-ref "refs/braid/landed/${recorded:-$slug}" "$branch" ||
             warn "could not record that $slug landed — braid next will call it unstarted"
     fi
+
+    # Outside the worktree first, while everything that names it still exists.
+    braid_teardown "$worktree" "$slug" >/dev/null 2>&1 || true
+
+    # Checked before loading, never guarded with 2>/dev/null. launcher_load dies when
+    # there is no such launcher — and a worker spawned with --no-launch has no
+    # .braid/launcher at all — so the guarded form swallowed the message *and* the
+    # command, and reap exited silently having done nothing.
+    #
+    # `launcher_owns_worktree` is what separates "forget the card" from "delete the
+    # tree". orca's forget is `orca worktree rm --force`, which removes the directory;
+    # tmux's kills a session and touches nothing. Until the interface said which, this
+    # function could not be ordered correctly for both.
+    owned=0
+    launcher=$(worker_field "$worktree" launcher | sed 's/ .*//')
+    if [[ -n "$launcher" ]] && launcher_file "$launcher" >/dev/null 2>&1; then
+        launcher_load "$launcher"
+        launcher_owns_worktree && owned=1
+        launcher_forget "$worktree" >/dev/null 2>&1 || true
+    fi
+
+    # A missing directory here is the expected state when the launcher owns the tree, and
+    # tolerated even when it does not: something else having already removed it is not a
+    # reason to abandon a reap half-done. Only a directory that is still there and still
+    # refuses to go is a real failure.
+    if [[ -d "$worktree" ]]; then
+        # Still refusing with the directory present means the tree is in a state git will
+        # not touch — usually a half-deleted one, missing its .git file. Say what to run
+        # rather than reaching for `rm -rf` on braid's behalf: the record above is already
+        # safe, so stopping here costs nothing but a minute.
+        git -C "$CHECKOUT" worktree remove --force "$worktree" ||
+            die "$(printf '%s\n' \
+                "git will not remove $worktree." \
+                "  $slug is recorded as landed and its work is in $base — nothing is lost." \
+                "  finish it by hand:  rm -rf $worktree && git worktree prune")"
+    elif [[ "$owned" -eq 0 ]]; then
+        warn "$worktree was already gone — $launcher removed it, or somebody did"
+    fi
+    # Without this, `git worktree list` keeps advertising a directory that no longer
+    # exists, and the next spawn of the same slug refuses because the admin entry is
+    # still there.
+    git -C "$CHECKOUT" worktree prune
     # -D, not -d: the ancestry check above already answered the question -d asks, and
     # answered it against the right branch.
     git -C "$CHECKOUT" branch -D "$branch" >/dev/null ||

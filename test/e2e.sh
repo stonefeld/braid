@@ -330,6 +330,40 @@ check "--force says so and does it" "$BRAID" reap 05-bad --force
 "$BRAID" reap --merged >/dev/null 2>&1
 is "reap --merged clears the wave" "0" "$(git worktree list | grep -c 'agent-')"
 
+# --- a launcher that owns the worktree ----------------------------------------
+
+phase "reaping under a launcher that deletes the worktree"
+# This is what orca does: `launcher_forget` is `orca worktree rm --force`, which removes
+# the directory. reap then ran `git worktree remove` on a path that was already gone,
+# died, and never reached the `update-ref` below it — so every reap under orca lost the
+# landed ref, and `braid next` reported integrated waves as never started. The comment
+# above that update-ref described exactly the harm the die above it was causing.
+mkdir -p "$XDG_CONFIG_HOME/braid/launchers"
+# Not `rm -rf`: orca removes the worktree with git, which also deregisters it, and that
+# is what makes braid's own `git worktree remove` fail with "is not a working tree". A
+# plain rm leaves the admin entry behind and modern git removes it happily — simulating
+# it that way passes against the broken code and proves nothing.
+cat >"$XDG_CONFIG_HOME/braid/launchers/greedy.sh" <<'LAUNCHER'
+launcher_available() { return 0; }
+launcher_launch() { return 0; }
+launcher_owns_worktree() { return 0; }
+launcher_forget() {
+    local wt="${1:?}" common
+    common=$(git -C "$wt" rev-parse --git-common-dir 2>/dev/null) || return 0
+    git -C "$(dirname "$common")" worktree remove --force "$wt" >/dev/null 2>&1 || true
+}
+LAUNCHER
+slice 07-greedy low no "" "Its launcher owns the worktree."
+BRAID_LAUNCHER=greedy "$BRAID" spawn "$D/07-greedy.md" >/dev/null 2>&1
+check "a launcher from ~/.config shadows nothing and still loads" test -d "$(W 07-greedy)"
+work 07-greedy greedy.txt "greedy" "Did it."
+"$BRAID" integrate 07-greedy >/dev/null 2>&1
+check "reap succeeds even though the tree is already gone" "$BRAID" reap 07-greedy
+check "and the landed ref survived" git show-ref --verify --quiet refs/braid/landed/07-greedy
+refute "the branch is gone" git show-ref --verify --quiet refs/heads/agent/07-greedy
+is "and git is not left advertising a worktree that vanished" "0" \
+    "$(git worktree list | grep -c 'agent-07-greedy')"
+
 # --- an id that is not its own slug -------------------------------------------
 
 phase "a slice whose id and branch name differ"

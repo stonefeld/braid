@@ -84,6 +84,11 @@ print(t.get("handle") or "", t.get("surface") or "")
     note "orca terminal${handle:+ $handle}"
 }
 
+# `orca worktree rm --force` removes the directory, not just the card. reap has to know
+# that before it calls forget, or it spends its next step failing to remove a path that
+# is already gone.
+launcher_owns_worktree() { return 0; }
+
 launcher_forget() {
     local worktree="${1:?worktree}" cli
     launcher_available || return 0

@@ -13,6 +13,13 @@
 #   launcher_launch <wt> <title> <command>                    required
 #   launcher_headless             does it need the agent's headless form?  (optional)
 #   launcher_forget <wt>          undo any registration on reap             (optional)
+#   launcher_owns_worktree        does forget delete the directory too?     (optional)
+#
+# The last one exists because `launcher_forget` means two different things. For tmux it
+# kills a session and touches nothing on disk; for orca it is `orca worktree rm --force`,
+# which removes the directory. While that stayed implicit, `reap` could not be ordered
+# correctly for both — and it was ordered for tmux, so under orca `git worktree remove`
+# failed every time and took the landed ref down with it.
 #
 # Capability is probed, never version-checked. A version number does not tell you the
 # shape of a JSON response changed, so a version gate rejects working setups and admits
@@ -59,14 +66,21 @@ launcher_file() {
 launcher_load() {
     local name="${1:?name}" file
     file=$(launcher_file "$name") || die "no launcher '$name' (built-in or in ~/.config/braid/launchers/)"
-    unset -f launcher_available launcher_launch launcher_headless launcher_forget 2>/dev/null || true
-    # Defaults for the two optional functions, defined before the file is sourced so it
-    # can replace either. Called through the launcher interface rather than by name,
+    unset -f launcher_available launcher_launch launcher_headless launcher_forget \
+        launcher_owns_worktree 2>/dev/null || true
+    # Defaults for the optional functions, defined before the file is sourced so it can
+    # replace any of them. Called through the launcher interface rather than by name,
     # which is why they look unreachable from here.
+    #
+    # The default for ownership is **no**, so a launcher somebody wrote before this
+    # existed keeps the old behaviour, and reap tolerates a directory that vanished
+    # anyway rather than trusting the declaration alone.
     # shellcheck disable=SC2317,SC2329
     launcher_headless() { return 1; }
     # shellcheck disable=SC2317,SC2329
     launcher_forget() { :; }
+    # shellcheck disable=SC2317,SC2329
+    launcher_owns_worktree() { return 1; }
     # shellcheck disable=SC1090
     source "$file"
     BRAID_LAUNCHER_FILE="$file"
