@@ -1,7 +1,7 @@
 #!/bin/sh
 # Install braid.
 #
-#   curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
+#   curl -fsSL https://braid.stonefeld.net/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- --ref v0.1.0      pin a version
 #   ./install.sh                              from a clone
 #

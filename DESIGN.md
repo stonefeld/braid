@@ -103,14 +103,28 @@ time, but not eliminated.
 ### The two halves of setup
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
+curl -fsSL https://braid.stonefeld.net/install.sh | sh
 ```
 
-The URL is the raw file on GitHub rather than a vanity domain: what you are about to
-pipe into a shell is exactly what you can read in the repository, and it needs no
-infrastructure to exist. If a short domain is ever added it must **not** be `braid.sh` —
-that is the name of the file every project using braid writes, and "edit braid.sh"
-beside "curl braid.sh" is an ambiguity in every sentence of the documentation.
+**A redirect, never a copy.** The short URL is a 301 to the raw file on GitHub, so what
+you are about to pipe into a shell is still exactly what you can read in the repository,
+and anyone can prove it with one `curl -sIL`. Serving a copy would add a host you have to
+trust to keep serving the same bytes, and a second file that drifts from the first —
+which is the failure this whole design keeps arriving at from other directions.
+
+Two properties make the redirect cheap to keep correct. It points at `main` **forever**,
+because the script it fetches is a bootstrapper that resolves the release itself, so the
+short URL never needs versioning. And it fronts *one auditable file*: the engine tarball
+is fetched from github.com by that script, so the domain sits in front of two hundred
+lines of shell rather than in front of the engine.
+
+The domain is not `braid.sh`, and that was decided before one existed: `braid.sh` is the
+name of the file every project using braid writes, and "edit braid.sh" beside "curl
+braid.sh" is an ambiguity in every sentence of the documentation.
+
+What it costs, stated plainly: an install path that depends on a domain somebody renews.
+The raw GitHub URL keeps working and is documented in `CONTRIBUTING.md`, so the failure
+mode is an inconvenience rather than a project nobody can install.
 
 **Half one — mechanical, deterministic, no LLM.** Detect the platform and the agents on
 `PATH`, install the engine, symlink the dispatcher, print what it did. A `curl | sh`

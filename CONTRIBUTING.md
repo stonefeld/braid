@@ -29,6 +29,11 @@ git clone https://github.com/stonefeld/braid && cd braid
 ./test.sh
 ```
 
+The documented install URL, `https://braid.stonefeld.net/install.sh`, is a redirect to
+`https://raw.githubusercontent.com/stonefeld/braid/main/install.sh`. **The raw URL is
+supported and always will be** — the short one is a convenience, and anything that
+depends on braid being installable must not depend on a domain.
+
 You need what braid needs: **git 2.20, bash 3.2, python3 3.9**. `shellcheck` if you have
 it — CI pins 0.11.0, and the local run says so rather than reporting findings you cannot
 reproduce.

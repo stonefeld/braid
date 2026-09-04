@@ -19,15 +19,23 @@ there in order.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
+curl -fsSL https://braid.stonefeld.net/install.sh | sh
 ```
 
 That installs **the latest release**. To pin a version, name it — the URL you fetch the
 script from never decides which engine you get:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh -s -- --ref v0.1.0
-curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh -s -- --ref main
+curl -fsSL https://braid.stonefeld.net/install.sh | sh -s -- --ref v0.1.0
+curl -fsSL https://braid.stonefeld.net/install.sh | sh -s -- --ref main
+```
+
+That short URL is a **redirect**, not a copy — it lands on
+[`install.sh`](install.sh) in this repository and nothing is served from anywhere else.
+Check it yourself before you pipe it into a shell, which is the point:
+
+```bash
+curl -sIL -o /dev/null -w '%{url_effective}\n' https://braid.stonefeld.net/install.sh
 ```
 
 The installer is mechanical — it detects the platform, copies the engine to
