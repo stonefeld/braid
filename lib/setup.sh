@@ -47,11 +47,23 @@ while [[ $# -gt 0 ]]; do
 done
 
 braid_config
+# A worker implements one slice and never configures the repository. Committing braid.sh
+# from inside a worktree that is about to be rebased and reaped is the one case here with
+# no good reading.
+refuse_worker_seat
+
 # The worktree you are standing in, not the primary checkout. Everything setup writes —
 # braid.sh, .gitignore, .claude/settings.json — is committed and reviewed, so it belongs
-# on the branch you are on. Forcing the primary checkout meant running setup from a
-# feature worktree silently edited a different branch's tree, which is the same mistake
-# the plan and braid.sh used to make.
+# on the branch you are on, where you can commit it and open a pull request for it.
+#
+# The old behaviour was not "write to the trunk", which would at least be a rule: it was
+# "write to whatever branch the primary checkout happens to be standing on", and with a
+# worktree per feature that checkout is just another worktree nobody is coordinating. It
+# also disagreed with where braid_config *reads* braid.sh from, which is the branch you
+# are on — so setup could leave you configured and doctor could still say you were not.
+#
+# Wanting the configuration on the trunk is a perfectly good workflow. It is spelled
+# "stand on the trunk and run this", and braid no longer decides it for you.
 CHECKOUT=$(current_worktree)
 cd "$CHECKOUT" || die "cannot enter $CHECKOUT"
 
@@ -88,7 +100,10 @@ fi
 
 # --- the deterministic half ---------------------------------------------------
 
-note "scaffolding $CHECKOUT"
+# Said before anything is written, and it names the branch as well as the directory:
+# everything below this line is committed, and which branch it lands on is the thing
+# worth being sure about.
+note "scaffolding $CHECKOUT on '$(current_branch)'"
 
 if [[ -z "$PRESET" ]]; then
     if [[ -f package.json ]]; then
