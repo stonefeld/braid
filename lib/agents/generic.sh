@@ -45,6 +45,9 @@ agent_command() {
     local worktree="$1" model="$2" prompt="$3" template="$BRAID_AGENT_CMD"
     [[ -n "$template" ]] ||
         die "BRAID_AGENT=generic needs BRAID_AGENT_CMD (see lib/agents/generic.sh)"
+    # Bash >=5.2's patsub_replacement turns an unescaped '&' in the replacement below
+    # into the matched text, mangling any '&' in the prompt (e.g. 2>&1 -> 2>{prompt}1).
+    shopt -u patsub_replacement 2>/dev/null || true
     template="${template//\{prompt\}/$(printf '%q' "$prompt")}"
     template="${template//\{model\}/$(printf '%q' "$model")}"
     template="${template//\{worktree\}/$(printf '%q' "$worktree")}"
