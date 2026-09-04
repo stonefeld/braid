@@ -190,6 +190,51 @@ else
     bad "shellcheck findings"
 fi
 
+# --- markdown that renders where it is read -----------------------------------
+
+# A code fence left open, or a closing fence with the next sentence stuck to it, turns
+# the rest of a document into one grey box. It is invisible in the diff — the source
+# reads correctly, the prose is all there — and shows up only on the page somebody else
+# is looking at. The README shipped that way twice: once from a nested ```` fence a
+# renderer closed early, once from an edit that ended mid-sentence.
+if python3 - <<'PY'; then
+import pathlib, re, sys
+
+problems = []
+roots = [pathlib.Path(".")]
+files = sorted(pathlib.Path(".").glob("*.md"))
+for d in ("docs", "lib", "braid"):
+    files += sorted(pathlib.Path(d).rglob("*.md")) if pathlib.Path(d).is_dir() else []
+
+for f in files:
+    stack = []
+    for n, line in enumerate(f.read_text(encoding="utf-8").split("\n"), 1):
+        m = re.match(r"^(`{3,}|~{3,})(.*)$", line)
+        if not m:
+            continue
+        mark, rest = m.group(1), m.group(2)
+        if stack and mark[0] == stack[-1][0] and len(mark) >= len(stack[-1]):
+            if rest.strip():
+                problems.append(f"{f}:{n}: a closing fence with text after it")
+            stack.pop()
+        else:
+            # A backtick fence opened inside a backtick fence is legal and renderers
+            # disagree about it. Tildes outside, backticks inside.
+            if stack and mark[0] == "`" == stack[-1][0]:
+                problems.append(f"{f}:{n}: backtick fence nested in a backtick fence")
+            stack.append(mark)
+    if stack:
+        problems.append(f"{f}: {len(stack)} code fence(s) never closed")
+
+if problems:
+    print("\n".join(problems))
+    sys.exit(1)
+PY
+    ok "every code fence in every document opens and closes"
+else
+    bad "markdown that will not render:"
+fi
+
 # --- the runner knows about every suite ---------------------------------------
 
 # ./test.sh is what a person runs; CI runs the files. A suite added to test/ and not to

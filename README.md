@@ -174,14 +174,15 @@ said "braid has no opinion" is guidance that stops where it is needed:
 
 ```bash
 : "${BRAID_DESIGN_STEPS:=/grilling /to-spec /to-tickets}"   # in braid.sh
-``` `braid next` derives
-where you are from git and the worktrees every time it is asked — never from a file braid
-wrote down — and says what to run.
+```
+
+`braid next` derives where you are from git and the worktrees every time it is asked —
+never from a file braid wrote down — and says what to run.
 
 **A slice** is one worker's work: one session, one branch, one worktree. It carries a
 **braid block**, which is configuration of the slice rather than description of it:
 
-````markdown
+~~~markdown
 # Add the OAuth callback endpoint
 
 ```braid
@@ -193,7 +194,7 @@ blocked-by: 01-schema
 ## What to build
 ## Acceptance
 ## Out of scope
-````
+~~~
 
 `complexity` is how much judgement the work needs — `low`, `standard`, `high` — and the
 adapter decides which model that means locally, so a slice never names one. `setup: yes`
