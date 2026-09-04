@@ -22,6 +22,32 @@ source "$BRAID_HOME/lib/config.sh"
 # The one definition of where a feature's slices and plan live. Three commands used to
 # build this path themselves, which is why fixing it in one place would have left three
 # reading the wrong tree.
+# Why the tracker did not answer. Called only after something has already failed, so it
+# can afford to ask questions the fast path never pays for — and "could not read #123"
+# with no reason costs a great deal more than the second this takes.
+#
+# Three answers, and they have three different remedies. It does not pretend to separate
+# "offline" from "not logged in": `gh auth status` fails the same way for both, guessing
+# would be a coin flip, and the two lines it prints cover either.
+gh_trouble() {
+    if ! command -v gh >/dev/null 2>&1; then
+        printf '%s\n' \
+            "the gh CLI is not installed, and BRAID_SLICE_SOURCE=github needs it." \
+            "  install it, or put the slices in files: BRAID_SLICE_SOURCE=files"
+        return 0
+    fi
+    if ! gh auth status >/dev/null 2>&1; then
+        printf '%s\n' \
+            "gh could not reach GitHub, or is not authenticated here." \
+            "  gh auth status        what it thinks" \
+            "  gh auth login         if that is the problem"
+        return 0
+    fi
+    printf '%s\n' \
+        "gh is working, so this is about the issue itself: it does not exist," \
+        "  belongs to another repository, or this account cannot see it."
+}
+
 slice_dir() {
     branch_path "$BRAID_FEATURES_DIR/${1:?feature}"
 }
@@ -49,7 +75,7 @@ fetch_slice() {
             cat "$match"
             ;;
         github)
-            require_cmd gh "BRAID_SLICE_SOURCE=github needs the gh CLI"
+            command -v gh >/dev/null 2>&1 || die "$(gh_trouble)"
             progress "reading #${id}…"
             gh issue view "$id" --json number,title,body,url 2>/dev/null |
                 python3 -c '
@@ -67,7 +93,7 @@ print("# " + d["title"] + "\n")
 print(d["url"] + "\n")
 print("---\n")
 print(d["body"] or "")
-' || die "could not read issue #$id"
+' || die "$(printf '%s\n' "could not read issue #$id." "$(gh_trouble)")"
             progress_done
             ;;
         *) die "unknown BRAID_SLICE_SOURCE '$BRAID_SLICE_SOURCE' (expected: files, github)" ;;
@@ -110,7 +136,7 @@ list_slices() {
             done
             ;;
         github)
-            require_cmd gh "BRAID_SLICE_SOURCE=github needs the gh CLI"
+            command -v gh >/dev/null 2>&1 || die "$(gh_trouble)"
             # Given on the command line the first time, read back out of the plan every
             # time after — which is why `braid plan --prd N` is said once and never again.
             prd="${BRAID_PRD:-$(feature_prd "$feature" 2>/dev/null || true)}"
@@ -129,7 +155,7 @@ list_slices() {
             # it; undefined, it returns 0 and everything open is work.
             ids=$(gh issue view "$prd" --json subIssues \
                 --jq '.subIssues.nodes[] | select(.state == "OPEN") | .number' 2>/dev/null) ||
-                die "could not read the sub-issues of #$prd"
+                die "$(printf '%s\n' "could not read the sub-issues of #$prd." "$(gh_trouble)")"
             progress_done
             # Counted and said once, not announced per issue: the PRD this was written
             # for has thirty-nine of them, and a line each turns every `braid next` into

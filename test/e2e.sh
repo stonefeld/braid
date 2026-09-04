@@ -148,6 +148,33 @@ check "ports differ between workers" test "$P1" != "$P2"
 STAGED=$(git -C "$(W 01-login)" status --porcelain | grep '\.braid' || true)
 is "a worker cannot commit .braid/" "" "$STAGED"
 
+# --- when the tracker does not answer -----------------------------------------
+
+phase "a tracker that cannot be reached"
+# `could not read the sub-issues of #1` is true and useless: it is the same sentence for
+# gh missing, gh logged out, no network, and an issue that does not exist, and those have
+# four different remedies. A fake gh makes both branches deterministic — the real one is
+# installed and authenticated on this machine and neither on CI.
+mkdir -p "$TMP/fakebin"
+printf '#!/bin/sh\nexit 1\n' >"$TMP/fakebin/gh"
+chmod +x "$TMP/fakebin/gh"
+OUT=$(PATH="$TMP/fakebin:$PATH" BRAID_SLICE_SOURCE=github "$BRAID" plan --prd 1 2>&1)
+has "a logged-out gh says how to log in" "gh auth login" "$OUT"
+
+# shellcheck disable=SC2016  # $1 belongs to the fake gh, not to this script
+printf '#!/bin/sh\ncase "$1" in auth) exit 0 ;; *) exit 1 ;; esac\n' >"$TMP/fakebin/gh"
+OUT=$(PATH="$TMP/fakebin:$PATH" BRAID_SLICE_SOURCE=github "$BRAID" plan --prd 1 2>&1)
+has "a working gh points at the issue instead" "about the issue itself" "$OUT"
+hasnt "and does not send you to log in again" "gh auth login" "$OUT"
+# The failure to list is not the same event as there being nothing to list, and saying
+# both is saying one of them wrongly.
+hasnt "nor contradicts itself with 'no slices found'" "no slices found" "$OUT"
+
+DOC=$(PATH="$TMP/fakebin:$PATH" BRAID_SLICE_SOURCE=github "$BRAID" doctor 2>&1)
+has "doctor treats the tracker as a precondition" "slices: github" "$DOC"
+has "and files mode says so too" "slices: files" "$("$BRAID" doctor 2>&1)"
+rm -rf "$TMP/fakebin"
+
 # --- what a worker's own run leaves behind ------------------------------------
 
 phase "junk a fresh worktree makes and the project never ignores"

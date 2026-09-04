@@ -170,6 +170,21 @@ echo
 
 # --- agents -------------------------------------------------------------------
 
+# Where slices come from is as much a precondition for a wave as an agent is: with a
+# tracker, a `plan` that cannot read its PRD is a wave that does not start.
+if [[ "$BRAID_SLICE_SOURCE" == github ]]; then
+    if ! command -v gh >/dev/null 2>&1; then
+        fail "slices: github, but gh is not installed"
+    elif gh auth status >/dev/null 2>&1; then
+        ok "slices: github, gh authenticated"
+    else
+        fail "slices: github, but gh cannot reach it or is not logged in (gh auth status)"
+    fi
+else
+    ok "slices: files, under $BRAID_FEATURES_DIR/"
+fi
+echo
+
 echo "agents"
 info "supported here: $BRAID_AGENTS   ($BRAID_PROJECT_FILE)"
 info "installed:      $(agents_installed || echo none)"

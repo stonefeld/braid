@@ -76,6 +76,13 @@ mkdir -p "$DIR"
 
 # The braid block is parsed the same from a file and from an issue body, which is the
 # whole point of putting it in the markdown rather than in a tracker's own fields.
+# Read into a variable first, so a failure to *list* the slices is distinguishable from
+# there being none. Consumed through `< <(…)` the list ran in a subshell, where a die ends
+# only the subshell — so a logged-out gh printed why it could not reach the tracker and
+# then plan carried on and said "no slices found for 'auth'", which is a different and
+# wrong explanation of the same event.
+IDS=$(BRAID_FEATURE="$FEATURE" BRAID_PRD="$PRD" list_slices "$FEATURE") || exit 1
+
 TABLE=""
 COUNT=0
 while read -r id; do
@@ -91,7 +98,7 @@ while read -r id; do
     TABLE+="$id	$complexity	$setup	$blockers
 "
     COUNT=$((COUNT + 1))
-done < <(BRAID_FEATURE="$FEATURE" BRAID_PRD="$PRD" list_slices "$FEATURE")
+done <<<"$IDS"
 [[ "$COUNT" -gt 0 ]] ||
     die "no slices found for '$FEATURE' (source: $BRAID_SLICE_SOURCE)"
 
