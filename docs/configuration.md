@@ -3,26 +3,35 @@
 Everything braid reads, and where each thing belongs. The README covers what most people
 set; this is the whole surface.
 
-Three layers, and the order is the point:
+Four layers, highest priority first:
 
-```
-the environment   >   the repository's braid.sh   >   braid's defaults
-```
+| | Lives in | Committed | Scope |
+|---|---|---|---|
+| **One command** | the environment, or a flag | — | this invocation |
+| **Machine** | `~/.config/braid/config` | no | this computer, **every** repository |
+| **Repository** | `braid.sh` at the root of the repo | yes | this repository, everyone |
+| **Defaults** | braid itself | — | — |
 
-which is why `braid.sh` assigns with `: "${VAR:=value}"` and never `VAR=value`. A
-repository states what it needs; a person overrides it for one command without editing a
-committed file.
+`braid.sh` assigns with `: "${VAR:=value}"` and never `VAR=value`, which is what puts it
+below the two above it: a repository states what it needs, and a person overrides it
+without editing a committed file.
 
 **What belongs where is not a matter of taste.** A repository's settings are decisions a
 team made and reviewed — the branch prefix, which agents are supported, what `verify`
 runs. A machine's settings are facts about one computer — how many agents it survives,
 which agent that person prefers. Conflating them is how one laptop configures a team.
 
-| | Lives in | Committed |
-|---|---|---|
-| **Repository** | `braid.sh` at the root of the repo | yes |
-| **Machine** | `~/.config/braid/config` | no |
-| **One command** | the environment, or a flag | — |
+> [!WARNING]
+> **The machine layer currently outranks the repository for *every* variable**, including
+> the ones that exist precisely so that one laptop cannot configure a team. A
+> `BRAID_AGENTS=codex` written once in `~/.config/braid/config` silently un-supports
+> Claude in every repository on that machine, and nothing reports it.
+>
+> That is the behaviour, not the intent, and it is stated here because a reference that
+> omits it is worse than none. Narrowing which keys a machine may override — and having
+> `braid doctor` name every value that came from outside the committed file — is designed
+> and not built. There is also **no per-repository, per-person layer**, which is what a
+> coworker running a different agent actually needs.
 
 `braid.sh` is read from **the branch you are standing on**, not from the primary
 checkout, so a hook a feature adds mid-flight governs that feature's own run.

@@ -76,6 +76,13 @@ is "reports its version" "$(cat "$SOURCE/VERSION")" "$("$BRAID" version)"
 # from the v0.1.0 tag or from main a week after it. Installed from a working copy here,
 # so it is whatever git calls this checkout — the point is that something is recorded.
 check "records what it was installed from" test -s "$XDG_DATA_HOME/braid/REF"
+# What the bootstrapper tells the installer it handed over to. An environment variable
+# rather than a flag, because that inner run may be a version that predates it — and this
+# is the one behaviour a *newer* inner run has that the delegation to an older one never
+# exercised. It is the path that runs the moment a release exists.
+XDG_DATA_HOME="$TMP/reftest" BRAID_INSTALL_REF=v9.9.9 \
+    sh "$SOURCE/install.sh" --no-symlink >/dev/null 2>&1
+is "and honours the ref the bootstrapper hands it" "v9.9.9" "$(cat "$TMP/reftest/braid/REF")"
 has "and doctor says so" "$(cat "$XDG_DATA_HOME/braid/REF")" "$("$BRAID" doctor 2>&1)"
 has "flagging an engine that is not a release" "not a release" "$("$BRAID" doctor 2>&1)"
 
