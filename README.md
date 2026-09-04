@@ -95,30 +95,24 @@ BRAID_AGENT_CMD='my-agent run --model {model} --prompt {prompt}'
 
 ### Which model runs what
 
-Seats and slices are named by **tier**, never by a vendor's model name — a slice says how
-much judgement its work needs, and the adapter says what that means here. The defaults
-for Claude Code:
+Seats and slices are named by **tier**, never by a vendor's model name: a slice says how
+much judgement its work needs, and the adapter says what that means here. For Claude Code
+the design seat is `fable`, the orchestrator `opus`, and a slice's `low` / `standard` /
+`high` are `haiku` / `sonnet` / `opus`.
 
-| | | |
-|---|---|---|
-| `design` | `fable` | grilling, PRDs, cutting slices |
-| `orchestrate` | `opus` | judging other agents' work against their diffs, and resolving conflicts |
-| a `low` slice | `haiku` | mechanical and fully specified |
-| a `standard` slice | `sonnet` | the default — an ordinary vertical slice |
-| a `high` slice | `opus` | cross-module, ambiguous, a migration over real rows |
-
-**These are the adapter's defaults, not a decision anybody made about your repository.**
-They are the largest lever on what a wave costs, so override whatever does not fit:
+**Those are the adapter's defaults, not a decision anybody made about your repository** —
+and they are the largest lever on what a wave costs, so override whatever does not fit:
 
 ```bash
 : "${BRAID_MODEL_DESIGN:=sonnet}"     # in braid.sh — committed, for everyone
-: "${BRAID_MODEL_HIGH:=sonnet}"
 braid setup --model sonnet            # or just this session
 braid spawn 04-migration --model opus # or just this slice
 ```
 
-`braid doctor` prints the whole resolved table — every seat, its model, and where that
-came from — and `braid setup` asks you to confirm it rather than assuming you agree.
+`braid doctor` prints the whole table resolved, and `braid setup` asks you to confirm it
+rather than assuming you agree. [`docs/configuration.md`](docs/configuration.md) has both
+families in full — the seats and the complexity levels are different variables and answer
+different questions.
 
 ### The repository decides which agents
 
@@ -266,10 +260,10 @@ braid upgrade              update the engine, keeping what you changed
 
 ## What you write
 
-**`braid.sh`** — four functions, all optional, all no-ops by default. braid has to work in
-a repository created twenty minutes ago that has no tests, no build and no `.env`, and
-this file is where that stops being true. If a project cannot be expressed in these four,
-the seam is in the wrong place.
+**`braid.sh`** — five hooks, all optional, all no-ops by default. braid has to work in a
+repository created twenty minutes ago that has no tests, no build and no `.env`, and this
+file is where that stops being true. If a project cannot be expressed in these, the seam
+is in the wrong place.
 
 ```bash
 braid_provision() {                  # $1 worktree  $2 slug  $3 base  $4 needs-setup
@@ -280,40 +274,36 @@ braid_provision() {                  # $1 worktree  $2 slug  $3 base  $4 needs-s
 braid_verify()           { (cd "$1" && npm run typecheck && npm test); }
 braid_teardown()         { docker rm -f "app-$2"; }   # one worker, at reap
 braid_teardown_feature() { dropdb "app_$2"; }         # the feature, at reap --feature
+
+: "${BRAID_WORKER_IGNORE:=.pytest_cache/}"            # junk a fresh worktree makes
+: "${BRAID_DESIGN_STEPS:=/grilling /to-spec}"         # what this house runs first
 ```
 
 **`docs/worker-rules.md`**, optionally. Every worker is told the same four things — never
 touch the remote, commit everything, stay inside the slice, write a report — from
-[`docs/worker-contract.md`](docs/worker-contract.md), which ships with the engine. A
-repository is in one of three states:
+[`docs/worker-contract.md`](docs/worker-contract.md), which ships with the engine. Your
+rules file is **appended** to it under a heading braid supplies, so upgrades keep reaching
+the part braid owns. Replacing it whole is possible and costs exactly that.
 
-| | | |
-|---|---|---|
-| **bundled** | nothing in the repository | upgrades reach it |
-| **bundled + rules** | `docs/worker-rules.md`, appended under a `## House rules` heading braid supplies | upgrades still reach the part braid owns. **Start here** |
-| **replaced** | your own `docs/worker-contract.md`, whole | nothing braid ships afterwards ever reaches these workers. `doctor` says so on every run |
-
-Composed once, at spawn, into `.braid/contract.md` — so the prompt an agent without hooks
-reads and the text a session hook injects are the same bytes, not two lookups that drift.
+**Nothing else.** The engine is not vendored into your repository.
 
 ## Configuration
 
-The environment wins over `braid.sh`, which wins over the defaults.
+The environment wins over `braid.sh`, which wins over the defaults. The ones most people
+set:
 
 | | |
 |---|---|
-| `BRAID_AGENTS` | supported here, best first (`claude codex generic`) |
-| `BRAID_AGENT_<SEAT>` | override for one seat: `DESIGN`, `ORCHESTRATE`, `WORK` |
-| `BRAID_MODEL_<LEVEL>` | what `low`, `standard`, `high` mean for this agent |
+| `BRAID_AGENTS` | which agents this repository supports, best first |
+| `BRAID_MODEL_DESIGN`<br>`BRAID_MODEL_ORCHESTRATE` | which model a seat runs |
+| `BRAID_MODEL_LOW`<br>`BRAID_MODEL_STANDARD`<br>`BRAID_MODEL_HIGH` | what a slice's `complexity` means here |
 | `BRAID_MAX_WORKERS` | how many run at once — a fact about your machine (`4`) |
-| `BRAID_LAUNCHER` | `orca` \| `herdr` \| `tmux` \| `detached`; pins one |
-| `BRAID_BRANCH_PREFIX` | worker branches (`agent`) |
-| `BRAID_PROTECTED_BRANCHES` | never pushed, never a worker's base (`main master`) |
-| `BRAID_WORKER_IGNORE` | what a worker's own build output leaves behind, ignored per worktree |
 | `BRAID_SLICE_SOURCE` | `files` \| `github` |
-| `BRAID_FEATURES_DIR` | where slices live in files mode (`braid/features`) |
-| `BRAID_WORKTREE_ROOT` | `~/.braid/worktrees/<repo>` |
-| `BRAID_PORT_BASE` | first port handed to a worker (`8100`) |
+| `BRAID_WORKER_IGNORE` | what a worker's own build output leaves behind |
+
+**[`docs/configuration.md`](docs/configuration.md) is the whole surface** — every variable,
+every hook, how a seat and a slice each resolve a model, and what `~/.config/braid/` can
+shadow. `braid doctor` prints all of it resolved, for this machine and this repository.
 
 ## Skills
 
@@ -328,8 +318,22 @@ that does not gets the text.
 
 ## More
 
-- [`DESIGN.md`](DESIGN.md) — every decision behind this, and why
-- [`AGENTS.md`](AGENTS.md) — house rules for working on braid itself
+- [`docs/configuration.md`](docs/configuration.md) — every variable and hook, in one place
 - [`docs/worker-contract.md`](docs/worker-contract.md) — what every worker is told
+- [`DESIGN.md`](DESIGN.md) — every decision behind this, and why
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — branches, commits, pull requests, running the tests
+- [`AGENTS.md`](AGENTS.md) — the invariants any change has to keep
+
+## Tests
+
+```bash
+./test.sh            # every suite
+./test.sh e2e        # one of them
+```
+
+Needs what braid needs and nothing more. No agent is ever launched and no network is ever
+used: a worker is simulated by committing in its worktree, a tracker by a `gh` that
+answers from files. Everything runs against a temporary `HOME`, so an installed braid is
+never touched.
 
 MIT.
