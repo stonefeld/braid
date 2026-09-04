@@ -126,6 +126,38 @@ The engine stays shell rather than a compiled binary: for a tool distributed by
 and reproducible builds nobody verifies, and dropping Windows removed the only real
 argument for one.
 
+### Which version, and installed by whom
+
+**The default is the latest release, never `main`.** An installer that defaults to a
+branch makes every new user a tester and every `braid upgrade` an unannounced jump. The
+tag is resolved with `git ls-remote --sort=-v:refname`: git is already a hard dependency,
+it needs no token and has no rate limit, and it does the version ordering — `sort -V` is
+not on a stock macOS.
+
+**The URL the script is fetched from does not decide which engine you get.** `--ref` does.
+Worth saying because the opposite is the natural guess: fetching
+`raw/.../v0.1.0/install.sh` looks like pinning and is not, since that file downloads
+whatever its own `REF` says.
+
+**Piped from curl, `install.sh` is a bootstrapper.** It checks the machine, resolves the
+ref, downloads it, and hands over to the `install.sh` *inside that tarball*. Run from a
+directory that already holds the engine, it is the installer itself.
+
+The split exists because the installer changes between versions. Without it, the file on
+`main` installs an older engine using a newer installer — a combination nobody tested and
+nothing declares. `braid upgrade` already had this property, because it runs the new
+version's `install.sh`; a fresh install did not, and two entry points with different
+guarantees is worse than either. The constraint that follows: the bootstrapper may pass
+the inner run **only flags that have always existed**, because that run may be any
+released version. Anything newer travels as an environment variable, which an older
+script ignores harmlessly.
+
+`REF` beside the engine records what it was installed from, and `doctor` reports it.
+`VERSION` cannot answer that: `0.1.0` says nothing about whether this came from the tag
+or from `main` a week later, which is exactly the question you have when something
+behaves unlike the changelog. It is deliberately outside the manifest — hashing it would
+make every install of the same version report as edited by whoever installed it.
+
 ### Updates
 
 `braid upgrade` updates one place; every repository gets it. Spawn records the resolved

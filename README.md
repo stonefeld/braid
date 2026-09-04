@@ -22,9 +22,20 @@ there in order.
 curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
 ```
 
+That installs **the latest release**. To pin a version, name it — the URL you fetch the
+script from never decides which engine you get:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh -s -- --ref v0.1.0
+curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh -s -- --ref main
+```
+
 The installer is mechanical — it detects the platform, copies the engine to
 `~/.local/share/braid`, and symlinks `braid` onto your `PATH`. It calls no model and
-needs no agent installed. Then, once per repository:
+needs no agent installed. Piped from curl it first resolves the version, downloads it,
+and hands over to the installer inside that tarball, so the installer that runs is always
+the one that shipped with the engine it installs. `braid doctor` says which release you
+are on, or warns when you are not on one. Then, once per repository:
 
 ```bash
 braid setup      # scaffolds braid.sh and the hooks, then opens a session to fill them in

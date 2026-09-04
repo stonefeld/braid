@@ -2,10 +2,11 @@
 # Install braid.
 #
 #   curl -fsSL https://raw.githubusercontent.com/stonefeld/braid/main/install.sh | sh
+#   curl -fsSL .../install.sh | sh -s -- --ref v0.1.0      pin a version
 #   ./install.sh                              from a clone
 #
 #     --prefix DIR     where the dispatcher is linked   (default: ~/.local/bin)
-#     --ref REF        which tag or branch to install   (default: main)
+#     --ref REF        which tag or branch to install   (default: the latest release)
 #     --no-symlink     install the engine, link nothing
 #
 # This half is deterministic and asks nothing: it puts the engine on the machine and
@@ -13,13 +14,30 @@
 # command, the language it writes issues in — is `braid setup`, which is a conversation
 # with an agent and is deliberately not in this pipe.
 #
+# **It is two programs in one file.** Piped from curl it is a bootstrapper: it checks the
+# machine, resolves which version you asked for, downloads it, and hands over to the
+# install.sh *inside that tarball*. From a directory that holds the engine it is the
+# installer itself.
+#
+# That split exists because the installer can change between versions. Without it, the
+# file on `main` installs an older engine using a newer installer — a combination nobody
+# tested and nothing declares. Delegating means the installer that runs is always the one
+# that shipped with the engine it is installing, which is the property `braid upgrade`
+# already had and a fresh install did not.
+#
+# The consequence to keep in mind when editing: **the inner run may be an old version**,
+# so the bootstrapper may only pass it flags that have always existed.
+#
 # POSIX sh on purpose. `curl | sh` runs under /bin/sh, which is dash on Debian and
 # busybox ash elsewhere; a bashism here fails on the very first thing a new user runs.
 
 set -eu
 
 REPO="stonefeld/braid"
-REF="main"
+# Empty means "resolve the latest release". Not `main`: main is where work in progress
+# lives, and defaulting an installer to it means every new user is a tester and every
+# `braid upgrade` is an unannounced jump.
+REF=""
 PREFIX="${HOME}/.local/bin"
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}/braid"
 SYMLINK=1
@@ -60,16 +78,37 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -h | --help)
-            sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) die "unknown argument: $1" ;;
     esac
 done
 
-say ""
-say "braid"
-say ""
+# --- which of the two programs this is ----------------------------------------
+
+# From a directory that holds the engine, this file *is* the installer — which is what
+# you want from a clone while working on braid itself. Read off stdin by `curl | sh`,
+# $0 has no directory in it, nothing is beside us, and this run is the bootstrapper.
+SOURCE=""
+case "$0" in
+    */*)
+        candidate=$(cd "$(dirname "$0")" && pwd)
+        [ -d "$candidate/lib" ] && [ -f "$candidate/bin/braid" ] && SOURCE="$candidate"
+        ;;
+esac
+
+# The bootstrapper stays quiet on success: everything it would print, the run it hands
+# over to prints properly a second later, and a doubled banner is the first thing a new
+# user sees.
+if [ -z "$SOURCE" ]; then
+    BOOTSTRAP=1
+else
+    BOOTSTRAP=0
+    say ""
+    say "braid"
+    say ""
+fi
 
 # --- the machine --------------------------------------------------------------
 
@@ -103,19 +142,9 @@ if [ "$git_major" -lt 2 ] || { [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 20 ]
     die "git $git_version is too old — braid needs 2.20 or newer for per-worktree config"
 fi
 
-ok "git $git_version, bash, python3"
+[ "$BOOTSTRAP" -eq 1 ] || ok "git $git_version, bash, python3"
 
 # --- the source ---------------------------------------------------------------
-
-# Two ways in. From a clone, install what is checked out — which is what you want while
-# working on braid itself. Piped from curl there is no clone, so fetch a tarball.
-SOURCE=""
-case "$0" in
-    */*)
-        candidate=$(cd "$(dirname "$0")" && pwd)
-        [ -d "$candidate/lib" ] && [ -f "$candidate/bin/braid" ] && SOURCE="$candidate"
-        ;;
-esac
 
 TMP=""
 # Written as an `if` rather than `[ … ] && …` on purpose: an EXIT trap whose last
@@ -128,19 +157,62 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-if [ -n "$SOURCE" ]; then
-    ok "installing from $SOURCE"
-else
+# Which ref an unpinned install means. Asked of git rather than of the GitHub API: git is
+# already a hard dependency, it needs no token and has no rate limit, and `--sort` makes
+# it do the version ordering — `sort -V` is not on a stock macOS.
+latest_release() {
+    git ls-remote --sort=-v:refname --tags --refs "https://github.com/$REPO" 'v*' 2>/dev/null |
+        sed -n 's#.*refs/tags/##p' | head -1
+}
+
+# What braid was installed from, next to what it is. Without it there is no way to tell
+# an engine that came from a release from one that came from main, which is exactly the
+# question you have when something behaves unlike the changelog.
+record_ref() {
+    printf '%s\n' "${1:?ref}" >"$DATA/REF" 2>/dev/null || true
+}
+
+if [ -z "$SOURCE" ]; then
+    # --- the bootstrapper ------------------------------------------------------
     command -v curl >/dev/null 2>&1 || die "curl is required to download braid"
+    [ -z "${BRAID_INSTALL_DELEGATED:-}" ] ||
+        die "the archive for $REF has no engine in it — not fetching again"
+
+    if [ -z "$REF" ]; then
+        REF=$(latest_release)
+        if [ -n "$REF" ]; then
+            ok "latest release: $REF"
+        else
+            REF="main"
+            meh "no release tag found — installing main, which is not a release"
+        fi
+    fi
+
     TMP=$(mktemp -d)
     [ -t 2 ] && printf '  %s…fetching %s@%s%s\r' "$D" "$REPO" "$REF" "$Z" >&2
     curl -fsSL "https://github.com/$REPO/archive/$REF.tar.gz" | tar -xzf - -C "$TMP" ||
         die "could not download $REPO@$REF"
     SOURCE=$(find "$TMP" -maxdepth 1 -type d -name 'braid-*' | head -1)
-    [ -n "$SOURCE" ] || die "the downloaded archive did not look like braid"
+    [ -n "$SOURCE" ] || die "could not find braid in the archive for $REF"
     ok "fetched $REPO@$REF"
+
+    # Hand over to the installer that shipped inside that tarball, so the installer
+    # that runs is always the one belonging to the engine being installed.
+    #
+    # Only --prefix and --no-symlink cross this line: the inner run may be any released
+    # version, and a flag it does not know is a `die` on the first thing a user runs.
+    # Anything newer travels as an environment variable instead, which an older script
+    # ignores harmlessly.
+    say ""
+    set -- --prefix "$PREFIX"
+    [ "$SYMLINK" -eq 1 ] || set -- "$@" --no-symlink
+    BRAID_INSTALL_DELEGATED=1 BRAID_INSTALL_REF="$REF" sh "$SOURCE/install.sh" "$@" || exit $?
+    # Written here as well as inside, because an older inner run does not know to.
+    record_ref "$REF"
+    exit 0
 fi
 
+ok "installing from $SOURCE"
 VERSION=$(cat "$SOURCE/VERSION" 2>/dev/null || echo "unknown")
 
 # --- the engine ---------------------------------------------------------------
@@ -193,7 +265,15 @@ hash_file() {
 }
 
 write_manifest "$DATA"
-ok "engine $VERSION in $DATA ($(wc -l <"$DATA/manifest" | tr -d ' ') files hashed)"
+# Whatever the bootstrapper resolved; from a clone, what git calls this checkout. The
+# manifest does not cover it, deliberately — it is a fact about the install, not a file
+# braid shipped.
+INSTALLED_REF="${BRAID_INSTALL_REF:-}"
+if [ -z "$INSTALLED_REF" ]; then
+    INSTALLED_REF=$(git -C "$SOURCE" describe --tags --always --dirty 2>/dev/null || echo local)
+fi
+record_ref "$INSTALLED_REF"
+ok "engine $VERSION ($INSTALLED_REF) in $DATA ($(wc -l <"$DATA/manifest" | tr -d ' ') files hashed)"
 
 if [ "$SYMLINK" -eq 1 ]; then
     mkdir -p "$PREFIX"

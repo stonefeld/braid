@@ -72,6 +72,12 @@ sh "$SOURCE/install.sh" --prefix "$TMP/bin" >/dev/null 2>&1
 BRAID="$TMP/bin/braid"
 check "installs onto PATH" test -x "$BRAID"
 is "reports its version" "$(cat "$SOURCE/VERSION")" "$("$BRAID" version)"
+# Which VERSION alone cannot answer: 0.1.0 says nothing about whether this engine came
+# from the v0.1.0 tag or from main a week after it. Installed from a working copy here,
+# so it is whatever git calls this checkout — the point is that something is recorded.
+check "records what it was installed from" test -s "$XDG_DATA_HOME/braid/REF"
+has "and doctor says so" "$(cat "$XDG_DATA_HOME/braid/REF")" "$("$BRAID" doctor 2>&1)"
+has "flagging an engine that is not a release" "not a release" "$("$BRAID" doctor 2>&1)"
 
 # --- a repository with nothing in it ------------------------------------------
 

@@ -63,7 +63,19 @@ if [[ "$(printf '%s\n2.20\n' "${GIT_VERSION%%[!0-9.]*}" | sort -t. -k1,1n -k2,2n
 else
     meh "git $GIT_VERSION — 2.20+ is needed for the per-worktree push guard; workers would have none"
 fi
-info "engine: $BRAID_HOME"
+# What it was installed from, not just what it calls itself. A VERSION of 0.1.0 says
+# nothing about whether this came from the v0.1.0 tag or from main a week later.
+ENGINE_REF=$(cat "$BRAID_HOME/REF" 2>/dev/null || echo unknown)
+# A release tag exactly, not merely something starting with v: `git describe` answers
+# v0.1.0-6-gabc1234-dirty for a working copy six commits past the tag, and calling that
+# a release is the confusion this line exists to remove.
+if [[ "$ENGINE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    info "engine: $BRAID_HOME (from $ENGINE_REF)"
+elif [[ "$ENGINE_REF" == unknown ]]; then
+    info "engine: $BRAID_HOME (installed before braid recorded where from)"
+else
+    meh "engine: $BRAID_HOME (from $ENGINE_REF — not a release)"
+fi
 echo
 
 # --- integrity ----------------------------------------------------------------

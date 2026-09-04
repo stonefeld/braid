@@ -126,11 +126,16 @@ rm -rf "$TMPPREFIX"
 
 # It has to cover everything and be reproducible, or upgrade cannot tell an edit from a
 # delivery — and its whole job is telling those apart.
+#
+# Two files are outside it, for the same reason: `manifest` cannot hash itself, and `REF`
+# records where this install came from rather than something braid shipped. Hashing REF
+# would make every install of the same version report as edited by whoever installed it.
 TMPMAN=$(mktemp -d)
 XDG_DATA_HOME="$TMPMAN/share" sh ./install.sh --prefix "$TMPMAN/bin" >/dev/null 2>&1
 MAN="$TMPMAN/share/braid/manifest"
 if [[ -s "$MAN" ]]; then
-    installed=$(cd "$TMPMAN/share/braid" && find . -type f ! -path './manifest' | wc -l | tr -d ' ')
+    installed=$(cd "$TMPMAN/share/braid" &&
+        find . -type f ! -path './manifest' ! -path './REF' | wc -l | tr -d ' ')
     listed=$(wc -l <"$MAN" | tr -d ' ')
     if [[ "$installed" == "$listed" ]]; then
         ok "manifest covers all $listed installed files"

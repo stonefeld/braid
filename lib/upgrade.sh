@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Update the engine, without losing what you changed to unblock yourself.
 #
-#   braid upgrade
+#   braid upgrade               to the latest release
 #   braid upgrade --check       say what would happen, change nothing
-#   braid upgrade --ref v0.4.0  a particular tag or branch
+#   braid upgrade --ref v0.4.0  a particular tag; --ref main for the unreleased tip
 #   braid upgrade --from DIR    a working copy, for developing braid itself
 #
 #     --take PATH   resolve one conflict in the new version's favour (repeatable)
@@ -25,7 +25,9 @@ set -uo pipefail
 source "$BRAID_HOME/lib/core.sh"
 
 CHECK=0
-REF="main"
+# Empty means the latest release, resolved below. It used to be `main`, which made the
+# documented way to update braid an unannounced jump to whatever was mid-flight.
+REF=""
 FROM=""
 TAKE=""
 KEEP=""
@@ -79,6 +81,20 @@ if [[ -n "$FROM" ]]; then
     [[ -f "$NEW/install.sh" && -d "$NEW/lib" ]] || die "$NEW does not look like braid's repository"
 else
     require_cmd curl
+    # Asked of git rather than the GitHub API: no token, no rate limit, and `--sort` does
+    # the version ordering, which `sort -V` cannot be relied on to do. Same resolution as
+    # install.sh, in the one other place that downloads an engine.
+    if [[ -z "$REF" ]]; then
+        progress "resolving the latest release…"
+        REF=$(git ls-remote --sort=-v:refname --tags --refs \
+            https://github.com/stonefeld/braid 'v*' 2>/dev/null |
+            sed -n 's#.*refs/tags/##p' | head -1)
+        progress_done
+        if [[ -z "$REF" ]]; then
+            REF=main
+            warn "no release tag found — upgrading to main, which is not a release"
+        fi
+    fi
     TMP=$(mktemp -d)
     progress "fetching stonefeld/braid@${REF}…"
     curl -fsSL "https://github.com/stonefeld/braid/archive/$REF.tar.gz" |
