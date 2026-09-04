@@ -193,6 +193,8 @@ contract_compose "$CHECKOUT" >"$WORKTREE/.braid/contract.md"
 
 # The only thing standing between an agent with no hooks and the remote.
 install_push_guard "$WORKTREE"
+# Before provisioning, because provisioning is what creates most of what this hides.
+install_worker_ignore "$WORKTREE"
 
 # Materialising the slice here is what lets the no-network rule be absolute: a worker
 # never needs the tracker, or anything else, to know what it is building.

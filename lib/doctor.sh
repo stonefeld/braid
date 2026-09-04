@@ -161,6 +161,11 @@ info "worktrees: $BRAID_WORKTREE_ROOT"
 info "features:  $(slice_dir "$(branch_slug "$BRANCH")")"
 info "capacity:  $BRAID_MAX_WORKERS workers at once"
 info "protected: $BRAID_PROTECTED_BRANCHES"
+if [[ -n "${BRAID_WORKER_IGNORE:-}" ]]; then
+    ok "worker ignores: $(printf '%s' "$BRAID_WORKER_IGNORE" | grep -c . | tr -d ' ') patterns, per worktree"
+else
+    info "worker ignores: none — a worker's own build output is the project's .gitignore to handle"
+fi
 echo
 
 # --- agents -------------------------------------------------------------------

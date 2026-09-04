@@ -502,6 +502,33 @@ and a tool that goes to the network to decide whether it may delete something de
 a stale answer. It also removes the feature's `refs/braid/landed/*`, the last
 braid-owned state a finished feature leaves behind.
 
+### What a worker's own run leaves behind
+
+The contract's second rule is **commit everything**, and a worker's worktree is a fresh
+checkout where a full install and a full test run happen. Those two facts together are a
+hazard: the run produces files a repository may genuinely not ignore, because in the
+human's checkout they never appear — `.pytest_cache/` where the suite only runs in CI, a
+coverage file, a build cache for a target nobody builds locally. A `git add -A` over that
+puts them on the branch, and every integration afterwards carries them.
+
+`BRAID_WORKER_IGNORE` is the project naming them, applied per worktree through
+`core.excludesFile`. Three properties, and each is why it is not something simpler:
+
+- **Not the project's `.gitignore`.** These files are an artefact of how braid works, not
+  of how the project works, and braid editing somebody's `.gitignore` to make its own
+  mechanism survivable is the wrong direction. A project that wants them ignored
+  everywhere can put them there itself.
+- **Not `info/exclude`.** git reads that only from the shared git dir, never from a
+  linked worktree's own, so it cannot be scoped to one worker.
+- **Not braid guessing per ecosystem.** A table of "what npm leaves behind" is glue: it
+  would exist only because braid exists, it rots, and every Node repository already
+  ignores what it needs to. `braid setup` reads the `.gitignore` and the CI and
+  *proposes*; a human says yes. Proposing is judgement, generating is a table.
+
+Empty by default, so a repository that never mentions it keeps the git configuration it
+had. When it is set, the person's global excludes are copied in first — otherwise braid
+would silently un-ignore somebody's `.DS_Store` inside every worker.
+
 ### The contract — three states
 
 | State | The repository has | Upgrades |

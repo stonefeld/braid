@@ -167,6 +167,49 @@ ensure_seat_dir() {
     exclude_braid_dir "$worktree"
 }
 
+# What a worker's own run leaves behind that the project never ignores, because in the
+# human's checkout it never appears.
+#
+# A worker's worktree is a fresh checkout where a full install and a full test run
+# happen. That produces things a repository may genuinely not have in its .gitignore —
+# `.pytest_cache/` in a project whose tests only ever run in CI, a coverage file, a build
+# cache for a target nobody runs locally. And the contract tells every worker to **commit
+# everything**, so a `git add -A` over that sweeps it onto the branch, and every
+# integration afterwards carries it.
+#
+# Per worktree, through core.excludesFile, so the project's own .gitignore is not edited
+# and the human's checkout is not touched. `info/exclude` cannot do this: git reads it
+# only from the shared git dir, never from a linked worktree's own.
+#
+# It replaces the person's *global* excludes for this worktree, so those are copied in
+# first — otherwise braid would silently un-ignore somebody's .DS_Store inside every
+# worker. And it does nothing at all unless the project asked, which keeps the git
+# configuration of a repository that never mentions this exactly as it was.
+install_worker_ignore() {
+    local worktree="${1:?worktree}" global
+    [[ -n "${BRAID_WORKER_IGNORE:-}" ]] || return 0
+
+    mkdir -p "$worktree/.braid"
+    {
+        global=$(git config --get core.excludesFile 2>/dev/null) ||
+            global="${XDG_CONFIG_HOME:-$HOME/.config}/git/ignore"
+        # shellcheck disable=SC2088  # a literal ~ in a config value is not ours to expand
+        global="${global/#\~\//$HOME/}"
+        if [[ -f "$global" ]]; then
+            printf '# from %s\n' "$global"
+            cat "$global"
+            printf '\n'
+        fi
+        printf '# BRAID_WORKER_IGNORE, from braid.sh\n'
+        printf '%s\n' "$BRAID_WORKER_IGNORE"
+    } >"$worktree/.braid/ignore"
+
+    git -C "$worktree" config --worktree core.excludesFile .braid/ignore 2>/dev/null || {
+        warn "could not set a per-worktree excludesFile — BRAID_WORKER_IGNORE has no effect here"
+        return 0
+    }
+}
+
 # --- the push guard -----------------------------------------------------------
 
 # An agent without a PreToolUse hook cannot be stopped mid-session from running

@@ -42,3 +42,15 @@ braid_teardown() {
 braid_teardown_feature() {
     : # e.g. dropdb "app_$2"
 }
+
+# What a worker's own install and test run leaves behind that this project does not
+# already ignore — because in your checkout it never appears. Applied per worktree
+# through core.excludesFile, so neither this repository's .gitignore nor your own
+# checkout is touched, and your global ignores are kept.
+#
+# It matters because the contract tells every worker to commit everything: whatever is
+# left lying about in a worktree is one `git add -A` away from the feature branch.
+#
+#   : "${BRAID_WORKER_IGNORE:=.pytest_cache/
+#   .ruff_cache/
+#   .coverage}"

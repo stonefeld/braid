@@ -42,6 +42,14 @@ go wrong:
 - **Does anything need isolating per worker?** A database, a port, a container name. If
   so, `provision_env` gives each worker its own `.env` with its own `BRAID_PORT`, and
   `worker_suffix` gives a short unique string for naming anything else.
+- **What does a full test run leave lying about?** A worker's worktree is a fresh
+  checkout where the install and the suite both run, so it produces things this
+  repository may not ignore — a `.pytest_cache/` in a project whose tests only run in
+  CI, a coverage file, a build cache. The contract tells every worker to commit
+  everything, so those are one `git add -A` from the feature branch. Read the
+  `.gitignore`, name what you think is missing, and **propose it** for
+  `BRAID_WORKER_IGNORE` — do not add it silently, and do not edit the `.gitignore`:
+  braid applies these per worktree, so the human's checkout keeps whatever it had.
 
 ## 2. Where the work is tracked, and in what language
 

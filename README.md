@@ -270,6 +270,7 @@ The environment wins over `braid.sh`, which wins over the defaults.
 | `BRAID_LAUNCHER` | `orca` \| `herdr` \| `tmux` \| `detached`; pins one |
 | `BRAID_BRANCH_PREFIX` | worker branches (`agent`) |
 | `BRAID_PROTECTED_BRANCHES` | never pushed, never a worker's base (`main master`) |
+| `BRAID_WORKER_IGNORE` | what a worker's own build output leaves behind, ignored per worktree |
 | `BRAID_SLICE_SOURCE` | `files` \| `github` |
 | `BRAID_FEATURES_DIR` | where slices live in files mode (`braid/features`) |
 | `BRAID_WORKTREE_ROOT` | `~/.braid/worktrees/<repo>` |

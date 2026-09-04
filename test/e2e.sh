@@ -148,6 +148,40 @@ check "ports differ between workers" test "$P1" != "$P2"
 STAGED=$(git -C "$(W 01-login)" status --porcelain | grep '\.braid' || true)
 is "a worker cannot commit .braid/" "" "$STAGED"
 
+# --- what a worker's own run leaves behind ------------------------------------
+
+phase "junk a fresh worktree makes and the project never ignores"
+# The contract tells every worker to commit everything. A worktree is a fresh checkout
+# where a full install and test run happen, and that produces things a repository may
+# genuinely not ignore, because in the human's checkout they never appear. One `git add
+# -A` and every integration afterwards carries them.
+cat >>braid.sh <<'TXT'
+BRAID_WORKER_IGNORE='.pytest_cache/
+*.coverage'
+TXT
+printf '.DS_Store
+' >"$HOME/.gitignore-global"
+git config --global core.excludesFile "$HOME/.gitignore-global"
+slice 96-junk low no "" "Do nothing."
+"$BRAID" spawn "$D/96-junk.md" --no-launch >/dev/null 2>&1
+mkdir -p "$(W 96-junk)/.pytest_cache"
+touch "$(W 96-junk)/.pytest_cache/x" "$(W 96-junk)/run.coverage" \
+    "$(W 96-junk)/.DS_Store" "$(W 96-junk)/real.txt"
+DIRTY=$(git -C "$(W 96-junk)" status --porcelain)
+has "the real file still shows" "real.txt" "$DIRTY"
+hasnt "the project's declared junk does not" "pytest_cache" "$DIRTY"
+hasnt "nor the glob" "run.coverage" "$DIRTY"
+# Setting core.excludesFile per worktree replaces the person's global one, so braid seeds
+# it with theirs — otherwise it would silently un-ignore their .DS_Store in every worker.
+hasnt "and their own global ignores survive it" ".DS_Store" "$DIRTY"
+# Nothing about the repository or the human's checkout changed to make that true.
+touch "$REPO/run.coverage"
+has "the human's checkout is untouched" "run.coverage" "$(git status --porcelain)"
+rm -f "$REPO/run.coverage"
+hasnt "and the project's .gitignore was not edited" "coverage" "$(cat .gitignore)"
+"$BRAID" reap 96-junk --force >/dev/null 2>&1
+git config --global --unset core.excludesFile
+
 # --- the contract reaches an agent that has no hooks --------------------------
 
 phase "the contract, for an agent with no hooks"

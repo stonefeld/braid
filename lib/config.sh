@@ -121,6 +121,12 @@ braid_config() {
     # from either, which is what lets a slice move between them unchanged.
     : "${BRAID_SLICE_SOURCE:=files}"
 
+    # What a worker's own test and install run leaves behind that this project does not
+    # already ignore — because in your checkout it never appears. Applied per worktree,
+    # so neither the project's .gitignore nor your own checkout is touched. Empty by
+    # default: a repository that never mentions this keeps the git configuration it had.
+    : "${BRAID_WORKER_IGNORE:=}"
+
     : "${BRAID_PORT_BASE:=8100}"
     : "${BRAID_PORT_RANGE:=400}"
     : "${BRAID_STALE_SECONDS:=1200}"
@@ -134,4 +140,5 @@ braid_config() {
     export BRAID_PROJECT_FILE
     export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
     export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS BRAID_FEATURES_DIR BRAID_SLICE_SOURCE
+    export BRAID_WORKER_IGNORE
 }
