@@ -8,6 +8,7 @@
 #     --model NAME   which model runs the session   (default: the `design` tier)
 #     --agent NAME   which agent runs it            (default: this repository's first)
 #     --preset NAME  node, python or minimal
+#     --yes          do not ask before opening the session
 #
 # Two halves, deliberately separated. The scaffolding — hooks registered, .gitignore,
 # a braid.sh from the right preset — is mechanical and asks nothing. Learning what this
@@ -28,6 +29,7 @@ SCAFFOLD_ONLY=0
 ADD_AGENT=""
 PRESET=""
 MODEL=""
+ASSUME_YES=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -47,13 +49,17 @@ while [[ $# -gt 0 ]]; do
             MODEL="${2:?--model needs a name}"
             shift 2
             ;;
+        -y | --yes)
+            ASSUME_YES=1
+            shift
+            ;;
         --agent)
             # Read back by agent_resolve through indirect expansion of the seat name.
             export BRAID_AGENT_DESIGN="${2:?--agent needs a name}"
             shift 2
             ;;
         -h | --help)
-            sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         *) die "unknown argument: $1" ;;
@@ -183,10 +189,29 @@ agent_check_model "$MODEL"
 # a person runs before they know anything about braid, so "it opened an expensive model
 # and nobody told me I could change it" is a real way to lose someone — and the tier is a
 # default from the adapter, which is a guess about somebody else's budget.
-note "opening $BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — the tier this repository calls 'design'"
-note "it will ask a handful of questions and write braid.sh and docs/agents/"
-info "not what you want?  braid setup --model <name>  |  --agent <name>"
-info "every seat's tier, and where it came from:  braid doctor"
+# Asked, not announced. Everything above scrolls past the instant the agent takes the
+# terminal, so a line saying which model is about to run is a line nobody reads until
+# they are already in the session and it is already running. A prompt is the only form
+# of this that arrives before the thing it describes.
+note "about to open a session to learn about this repository:"
+info "agent:  $BRAID_AGENT_RESOLVED${MODEL:+  model: $MODEL   (the tier this repository calls 'design')}"
+info "it will ask a handful of questions and write braid.sh and docs/agents/"
+info "another:  braid setup --model <name>  |  --agent <name>   —  the whole table: braid doctor"
+
+# Only where somebody is there to answer. Piped, or run from a script, it proceeds:
+# blocking on a prompt nobody can see is worse than the thing the prompt guards against.
+if [[ "$ASSUME_YES" -eq 0 && -t 0 ]]; then
+    printf '\n  open it? [Y/n] ' >&2
+    read -r ANSWER || ANSWER=""
+    case "$ANSWER" in
+        [nN]*)
+            echo >&2
+            note "nothing opened. the scaffolding above is done and committable."
+            note "when you want the rest:  braid setup${MODEL:+ --model $MODEL}"
+            exit 0
+            ;;
+    esac
+fi
 echo
 
 PROMPT="$(

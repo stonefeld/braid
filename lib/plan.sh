@@ -71,6 +71,11 @@ if [[ "$BRAID_SLICE_SOURCE" == github ]]; then
     fi
 fi
 if [[ "$BRAID_SLICE_SOURCE" == files ]]; then
+    # Accepted and quietly ignored is how a flag becomes folklore. In files mode there is
+    # no PRD issue for it to name.
+    if [[ -n "$PRD" ]]; then
+        die "--prd is for BRAID_SLICE_SOURCE=github; this repository reads slices from files"
+    fi
     [[ -d "$DIR" ]] || die "$(printf '%s\n' \
         "no feature at $DIR" \
         "  a feature is a folder: its slices are the files in it, and the folder is their parent." \
@@ -130,17 +135,20 @@ EXISTING=$(fetch_plan "$FEATURE" 2>/dev/null || true)
 # so a heredoc and a pipe cannot both be there — the heredoc wins and the document
 # silently arrives empty, which would rewrite somebody's PRD body as a bare template.
 UPDATED=$(BRAID_PLAN_DOCUMENT="$EXISTING" \
-    python3 - "$FEATURE" "$WAVES" "${PRD:-}" <<'PYEOF'
+    python3 - "$FEATURE" "$WAVES" <<'PYEOF'
 import os
 import re
 import sys
 
 feature, waves = sys.argv[1], sys.argv[2]
-prd = sys.argv[3] if len(sys.argv) > 3 else ""
 document = os.environ.get("BRAID_PLAN_DOCUMENT", "")
 
-body = (f"prd: #{prd}\n" if prd else "") + waves.strip()
-fence = "```braid\n" + body + "\n```"
+# Waves and nothing else. `prd: #N` used to sit here as the pointer back to the tracker,
+# and nothing reads it any more: with files there is no PRD issue to point at, and with a
+# tracker this document *is* that issue, so the line said `prd: #100` inside issue #100.
+# A field nothing reads is worse than an absent one — it is the same argument that
+# removed `files:`.
+fence = "```braid\n" + waves.strip() + "\n```"
 
 SECTIONS = """
 ## Contracts

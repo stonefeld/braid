@@ -105,10 +105,13 @@ has "registered hooks by name, not by path" "braid hook guard-remote" "$(cat .cl
 # The one command somebody runs before they know anything about braid. It used to open
 # whatever tier the adapter names for `design` — for Claude that is the most expensive
 # model there is — with no flag to change it and nothing on screen saying you could.
-OUT=$(BRAID_AGENT_CMD='echo model={model}' "$BRAID" setup --model haiku 2>&1)
+OUT=$(BRAID_AGENT_CMD='echo model={model}' "$BRAID" setup --model haiku </dev/null 2>&1)
 has "setup takes a model, like the seats that always could" "model=haiku" "$OUT"
 has "and names the escape hatch before opening anything" "braid setup --model" "$OUT"
 has "and points at where the whole table is" "braid doctor" "$OUT"
+# With nobody there to answer, it proceeds. Blocking on a prompt that cannot be seen is
+# worse than the thing the prompt guards against — it would hang every CI run.
+hasnt "and does not stop to ask when no one is there" "open it?" "$OUT"
 git add -A
 git commit -qm "chore: braid"
 
@@ -615,9 +618,16 @@ issue 102 "Refund a payment" "$SLICEBODY"
 git checkout -q -b feat/payments
 export PATH="$GH/bin:$PATH" BRAID_SLICE_SOURCE=github
 
+# A flag accepted and quietly ignored is how a flag becomes folklore.
+OUT=$(BRAID_SLICE_SOURCE=files "$BRAID" plan --prd 100 2>&1)
+has "--prd is refused where there is no PRD issue to name" "BRAID_SLICE_SOURCE=github" "$OUT"
+
 "$BRAID" plan --prd 100 >/dev/null 2>&1
 BODY=$(cat "$GH_STATE/100.body")
 has "the schedule is written into the PRD issue" "wave 1: 101, 102" "$BODY"
+# The fence used to carry `prd: #100`, which inside issue #100 says nothing, and which
+# nothing read once the pointer moved to disk.
+hasnt "and carries no pointer back to itself" "prd: #100" "$BODY"
 has "and the PRD it was written under survives it" "written by a person" "$BODY"
 has "the sections only the plan can hold are added once" "## Contracts" "$BODY"
 refute "and no plan.md is left in the repository" test -f braid/features/payments/plan.md

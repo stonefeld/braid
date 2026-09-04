@@ -337,7 +337,6 @@ The plan holds only what nothing else can hold. Waves and cross-slice contracts 
 the glue test; a restatement of the PRD does not.
 
     ```braid
-    prd: #279
     wave 1: 280, 281, 282
     wave 2: 283
     ```
