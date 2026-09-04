@@ -101,6 +101,14 @@ check "gitignored .braid/" grep -qx '.braid/' .gitignore
 # -A` away from the branch.
 check "and the stray logs an agent writes beside it" grep -qx '.braid-\*.log' .gitignore
 has "registered hooks by name, not by path" "braid hook guard-remote" "$(cat .claude/settings.json)"
+
+# The one command somebody runs before they know anything about braid. It used to open
+# whatever tier the adapter names for `design` — for Claude that is the most expensive
+# model there is — with no flag to change it and nothing on screen saying you could.
+OUT=$(BRAID_AGENT_CMD='echo model={model}' "$BRAID" setup --model haiku 2>&1)
+has "setup takes a model, like the seats that always could" "model=haiku" "$OUT"
+has "and names the escape hatch before opening anything" "braid setup --model" "$OUT"
+has "and points at where the whole table is" "braid doctor" "$OUT"
 git add -A
 git commit -qm "chore: braid"
 

@@ -93,6 +93,35 @@ BRAID_AGENT=generic                  # anything else
 BRAID_AGENT_CMD='my-agent run --model {model} --prompt {prompt}'
 ```
 
+### Which model runs what
+
+Seats and slices are named by **tier**, never by a vendor's model name — a slice says how
+much judgement its work needs, and the adapter says what that means here. The defaults
+for Claude Code:
+
+| | | |
+|---|---|---|
+| `design` | `fable` | grilling, PRDs, cutting slices |
+| `orchestrate` | `opus` | judging other agents' work against their diffs, and resolving conflicts |
+| a `low` slice | `haiku` | mechanical and fully specified |
+| a `standard` slice | `sonnet` | the default — an ordinary vertical slice |
+| a `high` slice | `opus` | cross-module, ambiguous, a migration over real rows |
+
+**These are the adapter's defaults, not a decision anybody made about your repository.**
+They are the largest lever on what a wave costs, so override whatever does not fit:
+
+```bash
+: "${BRAID_MODEL_DESIGN:=sonnet}"     # in braid.sh — committed, for everyone
+: "${BRAID_MODEL_HIGH:=sonnet}"
+braid setup --model sonnet            # or just this session
+braid spawn 04-migration --model opus # or just this slice
+```
+
+`braid doctor` prints the whole resolved table — every seat, its model, and where that
+came from — and `braid setup` asks you to confirm it rather than assuming you agree.
+
+### The repository decides which agents
+
 Which agents are installed is a fact about a machine; which agents a repository supports
 is a committed decision. A preference outside the repository's list is an error rather
 than a silent fallback — adding one means confirming the table above holds *here*, so it

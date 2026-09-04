@@ -81,10 +81,21 @@ status from `.braid/finish.sh` instead of a stop hook. Both work. But if a cowor
 run Codex while they run Claude, the list has to say so, and somebody has to be willing
 to say it works here.
 
-For any agent whose adapter maps no models — Codex is one — ask which model each
-complexity level means, and record it in `braid.sh`:
+### What each seat and each complexity costs
 
+Run `braid doctor` and **show them the resolved table** — which model each seat gets and
+which model a `low`, `standard` and `high` slice gets. Do not skip this because the
+adapter already has an answer: that answer is a default somebody else chose, it is the
+single biggest lever on what a wave costs, and this is the only moment anyone is looking.
+
+Ask one question: *is that the right shape for this repository?* Then record only what
+they want changed, in `braid.sh`:
+
+    : "${BRAID_MODEL_DESIGN:=…}"  : "${BRAID_MODEL_ORCHESTRATE:=…}"
     : "${BRAID_MODEL_LOW:=…}"  : "${BRAID_MODEL_STANDARD:=…}"  : "${BRAID_MODEL_HIGH:=…}"
+
+For an agent whose adapter maps nothing — Codex is one — there is no default to show and
+the same question has to be answered from scratch.
 
 ## 4. House rules for workers
 

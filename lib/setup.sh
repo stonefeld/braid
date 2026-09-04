@@ -5,6 +5,10 @@
 #   braid setup --scaffold       the deterministic half only, no agent, no questions
 #   braid setup --add-agent NAME add an agent to the ones this repository supports
 #
+#     --model NAME   which model runs the session   (default: the `design` tier)
+#     --agent NAME   which agent runs it            (default: this repository's first)
+#     --preset NAME  node, python or minimal
+#
 # Two halves, deliberately separated. The scaffolding — hooks registered, .gitignore,
 # a braid.sh from the right preset — is mechanical and asks nothing. Learning what this
 # repository *is* is a conversation: the right answer to "what is your verify command"
@@ -23,6 +27,7 @@ source "$BRAID_HOME/lib/agent.sh"
 SCAFFOLD_ONLY=0
 ADD_AGENT=""
 PRESET=""
+MODEL=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -38,8 +43,17 @@ while [[ $# -gt 0 ]]; do
             PRESET="${2:?--preset needs node, python or minimal}"
             shift 2
             ;;
+        --model)
+            MODEL="${2:?--model needs a name}"
+            shift 2
+            ;;
+        --agent)
+            # Read back by agent_resolve through indirect expansion of the seat name.
+            export BRAID_AGENT_DESIGN="${2:?--agent needs a name}"
+            shift 2
+            ;;
         -h | --help)
-            sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         *) die "unknown argument: $1" ;;
@@ -162,10 +176,17 @@ fi
 # --- the half that needs judgement --------------------------------------------
 
 agent_load design || exit 1
-MODEL=$(agent_model design)
+MODEL="${MODEL:-$(agent_model design)}"
+agent_check_model "$MODEL"
 
-note "opening $BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} to learn about this repository"
+# Said before the session opens, and it names the escape hatch. This is the one command
+# a person runs before they know anything about braid, so "it opened an expensive model
+# and nobody told me I could change it" is a real way to lose someone — and the tier is a
+# default from the adapter, which is a guess about somebody else's budget.
+note "opening $BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — the tier this repository calls 'design'"
 note "it will ask a handful of questions and write braid.sh and docs/agents/"
+info "not what you want?  braid setup --model <name>  |  --agent <name>"
+info "every seat's tier, and where it came from:  braid doctor"
 echo
 
 PROMPT="$(
