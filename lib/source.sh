@@ -96,7 +96,7 @@ slice_display_id() {
 # Every slice in a feature, in a stable order, so a re-run of plan produces the same
 # schedule and an unchanged plan produces no diff.
 list_slices() {
-    local feature="${1:?feature}" dir file id prd
+    local feature="${1:?feature}" dir file id prd ids skipped
 
     case "$BRAID_SLICE_SOURCE" in
         files)
@@ -125,13 +125,26 @@ list_slices() {
             #
             # Open is necessary and not sufficient — a spike, or an issue still waiting
             # on an answer, is open and not launchable, and only the tracker's own
-            # vocabulary can say which. That needs a project hook, and a project hook
-            # needs braid.sh to be read from the branch that defines it, which is not
-            # true yet.
-            gh issue view "$prd" --json subIssues \
-                --jq '.subIssues.nodes[] | select(.state == "OPEN") | .number' 2>/dev/null ||
+            # vocabulary can say which. `braid_slice_launchable` is the project saying
+            # it; undefined, it returns 0 and everything open is work.
+            ids=$(gh issue view "$prd" --json subIssues \
+                --jq '.subIssues.nodes[] | select(.state == "OPEN") | .number' 2>/dev/null) ||
                 die "could not read the sub-issues of #$prd"
             progress_done
+            # Counted and said once, not announced per issue: the PRD this was written
+            # for has thirty-nine of them, and a line each turns every `braid next` into
+            # a page of things that are deliberately not happening.
+            skipped=0
+            while read -r id; do
+                [[ -n "$id" ]] || continue
+                if braid_slice_launchable "$id"; then
+                    printf '%s\n' "$id"
+                else
+                    skipped=$((skipped + 1))
+                fi
+            done <<<"$ids"
+            [[ "$skipped" -eq 0 ]] ||
+                note "$skipped open sub-issues withdrawn by braid_slice_launchable"
             ;;
     esac
 }

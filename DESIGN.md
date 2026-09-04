@@ -454,7 +454,9 @@ Everything a project says about itself lives in two files, and both follow one r
 replacement forces a project to own the general case too, and then upgrades stop
 reaching it.
 
-### braid.sh — four hooks
+### braid.sh — the hooks
+
+Four on a worker's lifecycle:
 
 ```
 braid_provision         <worktree> <slug> <base> <needs-setup>    at spawn
@@ -463,11 +465,28 @@ braid_teardown          <worktree> <slug>                         at reap
 braid_teardown_feature  <feature-worktree> <feature-slug> <trunk> at reap --feature
 ```
 
+and two on where slices come from, which only a project can answer:
+
+```
+braid_fetch_slice       <id>    given an id, print the slice's markdown
+braid_slice_launchable  <id>    is this open issue work a worker could start?
+```
+
+The second of those exists because *open* is necessary and not sufficient. A PRD keeps
+every slice ever built under it as a child, so closed ones are filtered by braid; but a
+spike, or an issue waiting on an answer, is open and not launchable, and only the
+tracker's own label vocabulary can tell. braid cannot know that vocabulary and must not
+invent one, so it asks.
+
 All optional, all no-ops, because braid has to work in a repository created twenty
 minutes ago that has no tests and no `.env`. Whether one is *defined* is decided by
 comparing its body against the no-op body, not by `declare -F` — which is true of the
 defaults too, and a tool that reports a gate it does not have is worse than one that
 reports no gate at all.
+
+A hook is only as good as the tree it is read from: `braid_slice_launchable` was written
+mid-feature, on the feature's own branch, and did nothing at all until `braid.sh` stopped
+being read from the primary checkout (§10).
 
 The fourth exists because the other three are scoped to one worker and some resources
 are not: a database created by a feature's first `setup: yes` worker and reused

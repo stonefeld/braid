@@ -132,7 +132,7 @@ if [[ -f "$BRAID_PROJECT_FILE" ]]; then
 else
     meh "no braid.sh — no provisioning and no gate. Fine for a first spawn."
 fi
-for hook in provision verify teardown teardown_feature; do
+for hook in provision verify teardown teardown_feature slice_launchable; do
     if braid_overridden "braid_$hook"; then
         ok "braid_$hook defined"
     else

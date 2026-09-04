@@ -60,10 +60,19 @@ braid_machine_config() {
 #   braid_fetch_slice <id>
 #       Where slices come from, when they come from neither files nor GitHub issues.
 #       Given an id, print the slice's markdown.
+#
+#   braid_slice_launchable <id>
+#       Whether an open sub-issue is work a worker could start. Non-zero withdraws it
+#       from the schedule. Open is necessary and not sufficient — a spike, or an issue
+#       waiting on an answer, is open and not launchable — and only the tracker's own
+#       vocabulary can say which, which is why braid cannot.
 braid_provision() { :; }
 braid_verify() { :; }
 braid_teardown() { :; }
 braid_teardown_feature() { :; }
+# Returns 0, so the default is "everything open is work" and the loop that calls it needs
+# no branch for the case where nobody defined it.
+braid_slice_launchable() { :; }
 
 # Whether the repository actually replaced one of them. Compared against the no-op body
 # rather than asked with `declare -F`, which is true of the defaults too — and a tool

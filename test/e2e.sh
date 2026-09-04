@@ -470,6 +470,10 @@ phase "what outlives every worker"
 # a tree that already holds the previous one's migrations. So it comes down here, once.
 info_hook() { "$BRAID" doctor 2>&1 | grep 'braid_teardown_feature'; }
 has "undefined, doctor says so" "braid_teardown_feature is a no-op" "$(info_hook)"
+# The other project hook that arrived with it, and the reason doctor lists them at all:
+# a hook braid does not know about is a hook nobody can tell is being ignored.
+has "and lists the slice filter beside it" "braid_slice_launchable is a no-op" \
+    "$("$BRAID" doctor 2>&1)"
 
 export MARK="$TMP/torn-down"
 cat >>braid.sh <<'TXT'
