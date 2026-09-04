@@ -116,7 +116,17 @@ list_slices() {
                     "this feature has no PRD issue recorded." \
                     "  braid plan --prd <number>    say it once; it is kept in plan.md")"
             progress "reading the sub-issues of #${prd}…"
-            gh issue view "$prd" --json subIssues --jq '.subIssues.nodes[].number' 2>/dev/null ||
+            # A closed sub-issue is not work, whatever it once was. A PRD that has
+            # shipped three waves keeps every one of them as a child, and scheduling
+            # them again would be wrong once per slice ever built under it.
+            #
+            # Open is necessary and not sufficient — a spike, or an issue still waiting
+            # on an answer, is open and not launchable, and only the tracker's own
+            # vocabulary can say which. That needs a project hook, and a project hook
+            # needs braid.sh to be read from the branch that defines it, which is not
+            # true yet.
+            gh issue view "$prd" --json subIssues \
+                --jq '.subIssues.nodes[] | select(.state == "OPEN") | .number' 2>/dev/null ||
                 die "could not read the sub-issues of #$prd"
             progress_done
             ;;
