@@ -287,9 +287,9 @@ if [ "$SYMLINK" -eq 1 ]; then
 fi
 
 # The skills go into the shared ~/.agents/skills/, which is the convention the agents
-# already use between them — ~/.claude/skills and ~/.codex/skills hold relative links
-# into it. braid joins that rather than inventing a third place, so installing once is
-# enough however many agents are on the machine.
+# already use between them — ~/.claude/skills, ~/.codex/skills and ~/.cursor/skills
+# hold relative links into it. braid joins that rather than inventing a third place, so
+# installing once is enough however many agents are on the machine.
 #
 # Linked, not copied, so `braid upgrade` updates them with everything else. A directory
 # that is not a symlink is somebody's own version and is left alone.
@@ -317,7 +317,7 @@ if [ -d "$DATA/lib/skills" ]; then
         # do it — relative, so the chain survives the home directory moving. Only where
         # the directory exists: creating one would be braid configuring an agent nobody
         # installed.
-        for agent_dir in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+        for agent_dir in "$HOME/.claude/skills" "$HOME/.codex/skills" "$HOME/.cursor/skills"; do
             [ -d "$(dirname "$agent_dir")" ] || continue
             mkdir -p "$agent_dir"
             link_skill "../../.agents/skills/$name" "$agent_dir/$name" >/dev/null 2>&1 || true
@@ -330,7 +330,7 @@ fi
 # Reported, not decided. Which agents a *repository* supports is a committed decision
 # made in `braid setup`; what happens to be on this PATH is not it.
 found=""
-for agent in claude codex; do
+for agent in claude codex cursor-agent; do
     command -v "$agent" >/dev/null 2>&1 && found="$found $agent"
 done
 if [ -n "$found" ]; then
