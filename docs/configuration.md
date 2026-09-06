@@ -45,7 +45,7 @@ checkout, so a hook a feature adds mid-flight governs that feature's own run.
 
 | | |
 |---|---|
-| `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex generic`). A committed decision: `braid setup` asks for it when it first writes `braid.sh`, `braid setup --agents "codex claude"` restates it, `braid setup --add-agent NAME` appends to it |
+| `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex cursor-agent generic`). A committed decision: `braid setup` asks for it when it first writes `braid.sh`, `braid setup --agents "codex claude"` restates it, `braid setup --add-agent NAME` appends to it |
 | `BRAID_AGENT` | one machine's or one session's preference |
 | `BRAID_AGENT_DESIGN`<br>`BRAID_AGENT_ORCHESTRATE`<br>`BRAID_AGENT_WORK` | pin one seat. In `braid.sh` it is a repository decision — the orchestrator on the agent with hooks, workers on another — and `braid setup` offers to write them |
 | `BRAID_AGENT_CMD` | for `BRAID_AGENT=generic`: the command line, with `{model}` and `{prompt}` |

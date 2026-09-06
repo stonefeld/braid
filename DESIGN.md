@@ -249,7 +249,7 @@ winner into a committed file lets one person's laptop decide a team's configurat
 **Repository** declares what it supports, in preference order, committed:
 
 ```bash
-: "${BRAID_AGENTS:=claude codex}"    # supported here, best first
+: "${BRAID_AGENTS:=claude codex cursor-agent}"    # supported here, best first
 ```
 
 **Machine** declares a preference in `~/.config/braid/config`. **Resolution**, highest
@@ -264,7 +264,8 @@ priority first:
 ```
 
 **A preference outside the repository's list never silently falls back.** Adding an
-agent is a decision, not a discovery: Codex has no hooks, so the contract moves into
+agent is a decision, not a discovery: Codex and Cursor have no hooks braid installs
+into, so the contract moves into
 the prompt and status comes from `finish.sh` — someone has to confirm that is enough
 *here*. So it says so, and points at `braid setup --add-agent codex`, which commits.
 

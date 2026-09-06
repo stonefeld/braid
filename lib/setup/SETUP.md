@@ -79,10 +79,10 @@ session — it had to, because you are the first agent on it. Read `BRAID_AGENTS
 changed. Do not ask it again from scratch.
 
 What is worth adding, once, if the list holds one name: a coworker running a different
-agent needs to appear here, and that costs something — an agent without hooks takes its
-contract from the prompt instead of from a session hook, and its status from
-`.braid/finish.sh` instead of a stop hook. Both work. `braid setup --add-agent <name>`
-is how it gets added later.
+agent needs to appear here, and that costs something — an agent without hooks braid
+installs into takes its contract from the prompt instead of from a session hook, and its
+status from `.braid/finish.sh` instead of a stop hook. Both work.
+`braid setup --add-agent <name>` is how it gets added later.
 
 ### What each seat and each complexity costs
 

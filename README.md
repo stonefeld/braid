@@ -91,6 +91,7 @@ command-line template, is a first-class option rather than a fallback.
 |---|---|---|---|---|
 | **Claude Code** | `SessionStart` hook | `Stop` hook, which can push back on a dirty tree | `PreToolUse` guard **and** `pre-push` | a whole feature |
 | **Codex** | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | a whole feature |
+| **Cursor** | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | a whole feature |
 | **`generic`** | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | the test suite, every CI run. No real agent |
 
 Status is written **for** the agent, never by it, so it happens whether the agent
@@ -110,7 +111,9 @@ BRAID_AGENT_CMD='my-agent run --model {model} --prompt {prompt}'
 Seats and slices are named by **tier**, never by a vendor's model name: a slice says how
 much judgement its work needs, and the adapter says what that means here. For Claude Code
 the design seat is `fable`, the orchestrator `opus`, and a slice's `low` / `standard` /
-`high` are `haiku` / `sonnet` / `opus`.
+`high` are `haiku` / `sonnet` / `opus`. For Cursor the design and orchestrate seats are
+`grok-4.6`, the work seat is `composer-2.5`, and a slice's `low` / `standard` / `high`
+are `composer-2.5-fast` / `composer-2.5` / `grok-4.6`.
 
 **Those are the adapter's defaults, not a decision anybody made about your repository** —
 and they are the largest lever on what a wave costs, so override whatever does not fit:
@@ -331,8 +334,8 @@ shadow. `braid doctor` prints all of it resolved, for this machine and this repo
 
 ## Skills
 
-Two, installed into the shared `~/.agents/skills/` and linked from `~/.claude/skills` and
-`~/.codex/skills`. They are markdown, so an agent that loads skills gets the name and one
+Two, installed into the shared `~/.agents/skills/` and linked from `~/.claude/skills`,
+`~/.codex/skills` and `~/.cursor/skills`. They are markdown, so an agent that loads skills gets the name and one
 that does not gets the text.
 
 | | |
