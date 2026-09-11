@@ -28,17 +28,25 @@
 # the specific name is the honest one. If only `agent` exists here, symlink it.
 #
 # First-party models are pinned, Claude-style: Composer for the cheap seats, Grok
-# for the expensive ones. They will drift — that is what BRAID_MODEL_* is for:
+# for the expensive ones. Cursor's IDs are namespaced and tiered, so it is
+# `cursor-grok-4.6-high` and never the bare `grok-4.6` — get that wrong and the CLI
+# prints "Cannot use this model", does nothing, and exits 0, which reaches braid as
+# a worker with no diff and a finish.sh recording a success. No list here catches
+# that (see agent_models); `cursor-agent --list-models` does, and is worth a run
+# after a CLI upgrade. They drift, which is what BRAID_MODEL_* is for:
 #
 #   BRAID_MODEL_ORCHESTRATE=…    BRAID_MODEL_HIGH=…
 #
 # Flags move between versions. `braid doctor` probes whichever flags are set here
-# against the installed CLI's own help, so a rename is reported before a wave
-# rather than discovered as eight workers that died at launch. When yours disagrees:
+# against the installed CLI's own help, so a rename is reported before a wave rather
+# than discovered as eight workers that died at launch. When yours disagrees:
 #
 #   BRAID_CURSOR_AGENT_ARGS="--force"
 #
-# or drop to the generic adapter and give it the whole command line.
+# or drop to the generic adapter and give it the whole command line. Namespaced,
+# unlike Codex's plain BRAID_AGENT_ARGS: that one came first and stays for
+# compatibility, but every adapter from here on takes BRAID_<ADAPTER>_ARGS, so two
+# agents configured on one machine cannot read each other's flags.
 #
 # Never pass `-w` / `--worktree`: braid already checked out its own worktree and
 # runs the agent inside it. Cursor's own flag would open a second worktree under
@@ -53,10 +61,13 @@ agent_version() { cursor-agent --version 2>/dev/null | head -1; }
 # What a seat costs here. The seat says which role runs; the adapter says which
 # model that is. Grok 4.6 is the flagship for the seats where judgement matters
 # most; Composer 2.5 is the fast everyday model for the work seat.
+#
+# `-high` is Cursor's default tier for Grok rather than an upgrade — the CLI lists
+# `cursor-grok-4.6-high` as plain "Cursor Grok 4.6".
 agent_seat_model() {
     case "${1:?seat}" in
-        design) echo grok-4.6 ;;
-        orchestrate) echo grok-4.6 ;;
+        design) echo cursor-grok-4.6-high ;;
+        orchestrate) echo cursor-grok-4.6-high ;;
         work | *) echo composer-2.5 ;;
     esac
 }
@@ -67,12 +78,19 @@ agent_seat_model() {
 agent_complexity_model() {
     case "${1:?complexity}" in
         low) echo composer-2.5-fast ;;
-        high) echo grok-4.6 ;;
+        high) echo cursor-grok-4.6-high ;;
         standard | *) echo composer-2.5 ;;
     esac
 }
 
-agent_models() { echo "grok-4.6 grok-4.5 composer-2.5 composer-2.5-fast"; }
+# Nothing to validate against. `--list-models` answers with hundreds of names: every
+# Claude, GPT, Gemini, Grok, Kimi and GLM tier the account can reach, plus `auto`.
+# Any list written down here would be a snapshot that goes stale at the next release
+# and refuses working configurations — the mapping above is this adapter's defaults,
+# not the permitted set — so the escape hatches keep working:
+#
+#   BRAID_MODEL_HIGH=claude-opus-5-high     braid spawn --model gpt-5.2
+agent_models() { :; }
 
 agent_injects_contract() { return 1; }
 
@@ -83,40 +101,53 @@ agent_injects_contract() { return 1; }
 agent_loads_skills() { return 0; }
 agent_skill_prefix() { printf '/'; }
 
-# --force rather than nothing. Without it a print-mode run proposes changes and
-# applies none — a worker that finishes with an empty diff and a glowing report.
-# --trust skips the workspace-trust prompt, which has nobody to answer it in a
-# detached run. A worker is already confined to its own worktree, and its
-# dependencies were installed by braid_provision before it started.
+# --force rather than nothing, and not for the reason it looks like: print mode
+# already holds the write tool, so --trust alone does edit files. What --force buys
+# is the shell — "force allow commands unless explicitly denied". Denied, a worker
+# cannot run the verify command or `git add`, and improvises around the wall instead
+# of reporting it. --trust answers the workspace-trust prompt, which has nobody to
+# answer it in a detached run; the worker is confined to its own worktree already,
+# and braid_provision installed its dependencies before it started.
 agent_auto_mode() { printf '%s' "$BRAID_CURSOR_AGENT_ARGS"; }
+
+# --print as well as the configured flags: it is hardcoded into the headless command
+# rather than living in BRAID_CURSOR_AGENT_ARGS, so nothing else would notice it
+# being renamed, and the whole detached path rests on it. One --help, because the
+# agent run is cursor-agent's top-level command — there is no subcommand whose own
+# help could disagree, the way `codex exec --help` does.
 agent_auto_mode_probe() {
-    local flag
+    local flag help
+    help=$(cursor-agent --help 2>/dev/null) || return 1
+    grep -q -- '--print' <<<"$help" || return 1
     for flag in $BRAID_CURSOR_AGENT_ARGS; do
         [[ "$flag" == -* ]] || continue
-        cursor-agent --help 2>/dev/null | grep -q -- "$flag" || return 1
+        grep -q -- "$flag" <<<"$help" || return 1
     done
     return 0
 }
 
 agent_command() {
-    # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
+    # shellcheck disable=SC2034  # fixed adapter signature; no worktree needed here
     local worktree="$1" model="$2" prompt="$3"
     # shellcheck disable=SC2086  # BRAID_CURSOR_AGENT_ARGS is a flag list on purpose
     if [[ -n "$model" ]]; then
-        printf 'cursor-agent %s --model %q %q' "$BRAID_CURSOR_AGENT_ARGS" "$model" "$prompt"
+        printf 'cursor-agent %s --model %q %q' \
+            "$BRAID_CURSOR_AGENT_ARGS" "$model" "$prompt"
     else
         printf 'cursor-agent %s %q' "$BRAID_CURSOR_AGENT_ARGS" "$prompt"
     fi
 }
 
-# -p, because a detached launcher has no tty and the TUI needs one. --force is
-# what makes print mode write files rather than describe them.
+# -p, because a detached launcher has no tty and the TUI needs one. --force and
+# --trust arrive with BRAID_CURSOR_AGENT_ARGS; both are global flags rather than
+# print-mode ones, so the interactive command above carries them too.
 agent_command_headless() {
-    # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
+    # shellcheck disable=SC2034  # fixed adapter signature; no worktree needed here
     local worktree="$1" model="$2" prompt="$3"
     # shellcheck disable=SC2086  # BRAID_CURSOR_AGENT_ARGS is a flag list on purpose
     if [[ -n "$model" ]]; then
-        printf 'cursor-agent -p %s --model %q %q' "$BRAID_CURSOR_AGENT_ARGS" "$model" "$prompt"
+        printf 'cursor-agent -p %s --model %q %q' \
+            "$BRAID_CURSOR_AGENT_ARGS" "$model" "$prompt"
     else
         printf 'cursor-agent -p %s %q' "$BRAID_CURSOR_AGENT_ARGS" "$prompt"
     fi

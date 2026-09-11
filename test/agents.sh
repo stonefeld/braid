@@ -8,8 +8,9 @@
 # here, along with the two mistakes that cost a wave:
 #
 #   a headless command without `-p` hangs without a tty, and one without
-#   `--force` (for Cursor) proposes changes without applying them — a worker
-#   that finishes with an empty diff and a glowing report.
+#   `--force` (for Cursor) runs with its shell denied — a worker that cannot
+#   run the verify command or `git add`, and works around it rather than
+#   saying so.
 #
 # No agent is ever launched and no network is used. A stub `cursor-agent` on
 # PATH stands in for the CLI wherever one is needed.
@@ -30,15 +31,27 @@ bad() {
 }
 is() {
     local label="$1" want="$2" got="$3"
-    if [[ "$got" == "$want" ]]; then ok "$label"; else bad "$label — wanted '$want', got '$got'"; fi
+    if [[ "$got" == "$want" ]]; then
+        ok "$label"
+    else
+        bad "$label — wanted '$want', got '$got'"
+    fi
 }
 has() {
     local label="$1" needle="$2" hay="$3"
-    if [[ "$hay" == *"$needle"* ]]; then ok "$label"; else bad "$label — no '$needle' in: $hay"; fi
+    if [[ "$hay" == *"$needle"* ]]; then
+        ok "$label"
+    else
+        bad "$label — no '$needle' in: $hay"
+    fi
 }
 hasnt() {
     local label="$1" needle="$2" hay="$3"
-    if [[ "$hay" == *"$needle"* ]]; then bad "$label — found '$needle' in: $hay"; else ok "$label"; fi
+    if [[ "$hay" == *"$needle"* ]]; then
+        bad "$label — found '$needle' in: $hay"
+    else
+        ok "$label"
+    fi
 }
 check() {
     local label="$1"
@@ -66,6 +79,17 @@ with_agent() {
     (
         # shellcheck disable=SC1090  # BRAID_HOME is this checkout
         source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
+        "$@"
+    )
+}
+
+# The engine with an adapter loaded through resolution, which is the path a model
+# check actually travels: agent_check_model asks the adapter what it accepts.
+with_engine() {
+    (
+        # shellcheck disable=SC1090  # BRAID_HOME is this checkout
+        source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
+        agent_load work >/dev/null 2>&1 || exit 1
         "$@"
     )
 }
@@ -136,16 +160,42 @@ done
 ADAPTER="$BRAID_HOME/lib/agents/cursor-agent.sh"
 check "cursor-agent adapter exists" test -f "$ADAPTER"
 
-# Pinned first-party models: Grok for judgement, Composer for the everyday.
-is "design seat" "grok-4.6" "$( ( with_adapter agent_seat_model design ) )"
-is "orchestrate seat" "grok-4.6" "$( ( with_adapter agent_seat_model orchestrate ) )"
+# Pinned first-party models: Grok for judgement, Composer for the everyday. Spelled
+# the way Cursor spells them — namespaced and tiered. The bare `grok-4.6` is not a
+# model ID: the CLI answers "Cannot use this model", writes nothing, and exits 0, so
+# a wave on a wrong name reads as a wave of empty successes. Hence the exact strings.
+GROK="cursor-grok-4.6-high"
+is "design seat" "$GROK" "$( ( with_adapter agent_seat_model design ) )"
+is "orchestrate seat" "$GROK" "$( ( with_adapter agent_seat_model orchestrate ) )"
+is "high complexity" "$GROK" "$( ( with_adapter agent_complexity_model high ) )"
 is "work seat" "composer-2.5" "$( ( with_adapter agent_seat_model work ) )"
-is "low complexity" "composer-2.5-fast" "$( ( with_adapter agent_complexity_model low ) )"
-is "standard complexity" "composer-2.5" "$( ( with_adapter agent_complexity_model standard ) )"
-is "high complexity" "grok-4.6" "$( ( with_adapter agent_complexity_model high ) )"
-MODELS="$( ( with_adapter agent_models ) )"
-for model in grok-4.6 composer-2.5 composer-2.5-fast; do
-    has "accepts its own $model" "$model" "$MODELS"
+is "standard complexity" "composer-2.5" \
+    "$( ( with_adapter agent_complexity_model standard ) )"
+is "low complexity" "composer-2.5-fast" \
+    "$( ( with_adapter agent_complexity_model low ) )"
+# Cursor's own Grok IDs all carry the `cursor-` namespace. A bare `grok-*` is the
+# exact mistake that reads as a successful empty wave, so no mapping may emit one.
+for seat in design orchestrate work; do
+    case "$( ( with_adapter agent_seat_model "$seat" ) )" in
+        grok-*) bad "$seat seat uses a bare vendor model name" ;;
+        *) ok "$seat seat is spelled the way Cursor spells it" ;;
+    esac
+done
+for level in low standard high; do
+    case "$( ( with_adapter agent_complexity_model "$level" ) )" in
+        grok-*) bad "complexity $level uses a bare vendor model name" ;;
+        *) ok "complexity $level is spelled the way Cursor spells it" ;;
+    esac
+done
+
+# Nothing is validated, on purpose. The CLI reaches hundreds of models and the list
+# braid could write down would reject working configurations a release later — so
+# BRAID_MODEL_* and `--model` stay the escape hatches DESIGN.md §5 promises.
+is "names no closed model set" "" "$( ( with_adapter agent_models ) )"
+for model in claude-opus-5-high gpt-5.2 auto; do
+    PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
+        check "a model braid never heard of survives --model $model" \
+        with_engine agent_check_model "$model"
 done
 
 # The contract arrives in the prompt, never through a hook: CLI hook support is
@@ -154,29 +204,32 @@ refute "contract is not injected" with_adapter agent_injects_contract
 check "skills load natively" with_adapter agent_loads_skills
 is "skill prefix" "/" "$( ( with_adapter agent_skill_prefix ) )"
 
-# Unattended means --force (print mode writes nothing without it) and --trust
-# (nobody answers the trust prompt in a detached run).
+# Unattended means --force (the agent's shell is denied without it, so a worker
+# cannot run the verify command) and --trust (nobody answers the trust prompt in a
+# detached run).
 has "auto mode forces" "--force" "$( ( with_adapter agent_auto_mode ) )"
 has "auto mode trusts" "--trust" "$( ( with_adapter agent_auto_mode ) )"
 
-CMD="$( ( with_adapter agent_command "/tmp/wt" "grok-4.6" "do the thing" ) )"
+CMD="$( ( with_adapter agent_command "/tmp/wt" "$GROK" "do the thing" ) )"
 has "interactive runs cursor-agent" "cursor-agent" "$CMD"
-has "interactive passes the model" "grok-4.6" "$CMD"
+has "interactive passes the model" "$GROK" "$CMD"
 has "interactive carries the prompt" 'do\ the\ thing' "$CMD"
 hasnt "interactive is not print mode" " -p " " $CMD "
 hasnt "interactive makes no worktree of its own" "worktree" "$CMD"
 
-HEADLESS="$( ( with_adapter agent_command_headless "/tmp/wt" "grok-4.6" "do the thing" ) )"
+HEADLESS="$( ( with_adapter agent_command_headless \
+    "/tmp/wt" "$GROK" "do the thing" ) )"
 has "headless runs cursor-agent in print mode" "cursor-agent -p" "$HEADLESS"
-has "headless forces writes" "--force" "$HEADLESS"
+has "headless allows its shell" "--force" "$HEADLESS"
 has "headless trusts the workspace" "--trust" "$HEADLESS"
-has "headless passes the model" "grok-4.6" "$HEADLESS"
+has "headless passes the model" "$GROK" "$HEADLESS"
 has "headless carries the prompt" 'do\ the\ thing' "$HEADLESS"
 hasnt "headless makes no worktree of its own" "worktree" "$HEADLESS"
 
 NOMODEL="$( ( with_adapter agent_command "/tmp/wt" "" "do the thing" ) )"
 hasnt "empty model omits the flag" "--model" "$NOMODEL"
-NOMODEL_HEADLESS="$( ( with_adapter agent_command_headless "/tmp/wt" "" "do the thing" ) )"
+NOMODEL_HEADLESS="$( ( with_adapter agent_command_headless \
+    "/tmp/wt" "" "do the thing" ) )"
 hasnt "empty model omits the flag headless" "--model" "$NOMODEL_HEADLESS"
 has "and still prints" "cursor-agent -p" "$NOMODEL_HEADLESS"
 
@@ -191,7 +244,12 @@ fi
 PATH="$TMP/bin:$PATH" \
     check "probe passes when the CLI has the flags" with_adapter agent_auto_mode_probe
 PATH="$TMP/bin:$PATH" CURSOR_STUB_HELP="--model" \
-    refute "probe fails when a flag is renamed upstream" with_adapter agent_auto_mode_probe
+    refute "probe fails when a flag is renamed upstream" \
+    with_adapter agent_auto_mode_probe
+# --print is not in BRAID_CURSOR_AGENT_ARGS — it is hardcoded into the headless
+# command — so it needs covering by name or a rename lands as a hung wave.
+PATH="$TMP/bin:$PATH" CURSOR_STUB_HELP="--force --trust --model" \
+    refute "probe fails when --print is gone" with_adapter agent_auto_mode_probe
 
 # Wired in, not just written: the adapter's name is what resolution looks up.
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent generic" \

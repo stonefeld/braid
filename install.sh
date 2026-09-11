@@ -317,7 +317,8 @@ if [ -d "$DATA/lib/skills" ]; then
         # do it — relative, so the chain survives the home directory moving. Only where
         # the directory exists: creating one would be braid configuring an agent nobody
         # installed.
-        for agent_dir in "$HOME/.claude/skills" "$HOME/.codex/skills" "$HOME/.cursor/skills"; do
+        for agent_dir in "$HOME/.claude/skills" "$HOME/.codex/skills" \
+            "$HOME/.cursor/skills"; do
             [ -d "$(dirname "$agent_dir")" ] || continue
             mkdir -p "$agent_dir"
             link_skill "../../.agents/skills/$name" "$agent_dir/$name" >/dev/null 2>&1 || true
