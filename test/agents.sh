@@ -54,9 +54,20 @@ refute() {
 # Source an adapter and run a command with its functions. Adapters all define
 # the same agent_* names, so they are sourced in a subshell, never here.
 with_adapter() {
-    # shellcheck disable=SC1090,SC1091  # resolved at runtime, one file per case
-    source "$ADAPTER"
-    "$@"
+    (
+        # shellcheck disable=SC1090,SC1091  # resolved at runtime, one file per case
+        source "$ADAPTER"
+        "$@"
+    )
+}
+
+# Same isolation for the engine: agent.sh's names must not land in this shell.
+with_agent() {
+    (
+        # shellcheck disable=SC1090  # BRAID_HOME is this checkout
+        source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
+        "$@"
+    )
 }
 
 echo
@@ -139,8 +150,8 @@ done
 
 # The contract arrives in the prompt, never through a hook: CLI hook support is
 # partial and version-dependent, so SessionStart delivery cannot be relied on.
-refute "contract is not injected" bash -c 'source "$0" && agent_injects_contract' "$ADAPTER"
-check "skills load natively" bash -c 'source "$0" && agent_loads_skills' "$ADAPTER"
+refute "contract is not injected" with_adapter agent_injects_contract
+check "skills load natively" with_adapter agent_loads_skills
 is "skill prefix" "/" "$( ( with_adapter agent_skill_prefix ) )"
 
 # Unattended means --force (print mode writes nothing without it) and --trust
@@ -177,19 +188,16 @@ fi
 
 # The probe is what `braid doctor` reports, so it has to be honest in both
 # directions: flags present means usable, a renamed flag means warned.
-check "probe passes when the CLI has the flags" \
-    env "PATH=$TMP/bin:$PATH" bash -c 'source "$0" && agent_auto_mode_probe' "$ADAPTER"
-refute "probe fails when a flag is renamed upstream" \
-    env "PATH=$TMP/bin:$PATH" "CURSOR_STUB_HELP=--model" \
-        bash -c 'source "$0" && agent_auto_mode_probe' "$ADAPTER"
+PATH="$TMP/bin:$PATH" \
+    check "probe passes when the CLI has the flags" with_adapter agent_auto_mode_probe
+PATH="$TMP/bin:$PATH" CURSOR_STUB_HELP="--model" \
+    refute "probe fails when a flag is renamed upstream" with_adapter agent_auto_mode_probe
 
 # Wired in, not just written: the adapter's name is what resolution looks up.
-check "usable with the CLI on PATH" \
-    env "PATH=$TMP/bin:$PATH" "BRAID_AGENTS=cursor-agent generic" "BRAID_HOME=$BRAID_HOME" \
-        bash -c 'source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1 && agent_usable cursor-agent'
-refute "unusable without the CLI" \
-    env "PATH=/usr/bin:/bin" "BRAID_AGENT_CMD=" "BRAID_HOME=$BRAID_HOME" \
-        bash -c 'source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1 && agent_usable cursor-agent'
+PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent generic" \
+    check "usable with the CLI on PATH" with_agent agent_usable cursor-agent
+PATH="/usr/bin:/bin" BRAID_AGENT_CMD='' \
+    refute "unusable without the CLI" with_agent agent_usable cursor-agent
 
 echo
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
