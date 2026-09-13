@@ -7,8 +7,8 @@
 #   BRAID_AGENT=generic
 #   BRAID_AGENT_CMD='my-agent run --model {model} --prompt {prompt}'
 #
-# {prompt}, {model} and {worktree} are substituted with properly quoted values. The
-# command runs with the worktree as its working directory.
+# {prompt}, {model}, {effort} and {worktree} are substituted with properly quoted
+# values. The command runs with the worktree as its working directory.
 #
 # Nothing is lost by using it. The contract is in the prompt and status is written by
 # .braid/finish.sh when the process exits — neither needs the agent to cooperate, or
@@ -40,9 +40,11 @@ agent_loads_skills() { return 1; }
 # you gave BRAID_AGENT_CMD.
 agent_auto_mode() { printf 'in BRAID_AGENT_CMD'; }
 agent_auto_mode_probe() { return 0; }
+agent_effort_mode() { printf '{effort} in BRAID_AGENT_CMD'; }
+agent_effort_probe() { return 0; }
 
 agent_command() {
-    local worktree="$1" model="$2" prompt="$3" template="$BRAID_AGENT_CMD"
+    local worktree="$1" model="$2" prompt="$3" effort="${4:-}" template="$BRAID_AGENT_CMD"
     [[ -n "$template" ]] ||
         die "BRAID_AGENT=generic needs BRAID_AGENT_CMD (see lib/agents/generic.sh)"
     # Bash >=5.2's patsub_replacement turns an unescaped '&' in the replacement below
@@ -50,6 +52,7 @@ agent_command() {
     shopt -u patsub_replacement 2>/dev/null || true
     template="${template//\{prompt\}/$(printf '%q' "$prompt")}"
     template="${template//\{model\}/$(printf '%q' "$model")}"
+    template="${template//\{effort\}/$(printf '%q' "$effort")}"
     template="${template//\{worktree\}/$(printf '%q' "$worktree")}"
     printf '%s' "$template"
 }

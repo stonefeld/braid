@@ -39,7 +39,7 @@ checkout, so a hook a feature adds mid-flight governs that feature's own run.
 
 ---
 
-## Agents and models
+## Agents, models and reasoning effort
 
 ### Which agent
 
@@ -48,7 +48,7 @@ checkout, so a hook a feature adds mid-flight governs that feature's own run.
 | `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex cursor-agent generic`). A committed decision: `braid setup` asks for it when it first writes `braid.sh`, `braid setup --agents "codex claude"` restates it, `braid setup --add-agent NAME` appends to it |
 | `BRAID_AGENT` | one machine's or one session's preference |
 | `BRAID_AGENT_DESIGN`<br>`BRAID_AGENT_ORCHESTRATE`<br>`BRAID_AGENT_WORK` | pin one seat. In `braid.sh` it is a repository decision — the orchestrator on the agent with hooks, workers on another — and `braid setup` offers to write them |
-| `BRAID_AGENT_CMD` | for `BRAID_AGENT=generic`: the command line, with `{model}` and `{prompt}` |
+| `BRAID_AGENT_CMD` | for `BRAID_AGENT=generic`: the command line, with `{worktree}`, `{model}`, `{effort}` and `{prompt}` |
 
 Resolution, highest priority first:
 
@@ -98,6 +98,40 @@ CLI's own picker rather than from memory.
 
 `braid doctor` prints the resolved table for every seat and every level.
 
+### Which reasoning effort
+
+Effort is separate from model selection. The portable values are `low`, `medium`, `high`
+and `xhigh`: the intersection supported by the bundled Codex and Claude Code adapters.
+Braid translates them at launch (`model_reasoning_effort` for Codex, `--effort` for
+Claude Code).
+
+| | Answers |
+|---|---|
+| `BRAID_EFFORT_DESIGN` | how hard the design seat reasons |
+| `BRAID_EFFORT_ORCHESTRATE` | how hard the orchestrator reasons |
+| `BRAID_EFFORT_LOW` | effort for a `complexity: low` worker |
+| `BRAID_EFFORT_STANDARD` | effort for a `complexity: standard` worker |
+| `BRAID_EFFORT_HIGH` | effort for a `complexity: high` worker |
+
+```bash
+: "${BRAID_EFFORT_DESIGN:=high}"       # in braid.sh — committed, for everyone
+: "${BRAID_EFFORT_STANDARD:=medium}"   # the normal worker tier
+braid design --effort xhigh             # this session
+braid spawn 04-migration --effort high  # this one slice
+```
+
+There is deliberately no effort field in a slice. Its `complexity` selects the model
+and effort together, while the repository decides what that tier costs. An unset effort
+is also deliberate: braid passes no effort flag and the agent CLI keeps its configured
+default. That makes every existing `braid.sh` backwards compatible. Run
+`braid setup --costs` to opt an existing repository into explicit values without
+scaffolding again or opening a setup session.
+
+Provider-only levels remain provider configuration, not portable braid values. For
+example, Codex's `minimal` and Claude Code's `max` are available when the CLI chooses its
+own default or through a custom launch command; committing either as a braid effort
+would make the same repository mean different things when a seat changes agents.
+
 ### How the agent is launched
 
 Every agent CLI has at least two of them: the one a person sits in front of, and the one
@@ -120,10 +154,15 @@ If your CLI has moved further than a flag, replace the launch command outright f
 `braid.sh` rather than editing an adapter that `braid upgrade` will overwrite:
 
 ```bash
-braid_agent_command() {           # $1 worktree  $2 model  $3 prompt
-    printf 'my-agent --prompt %q' "$3"
+braid_agent_command() {           # $1 worktree  $2 model  $3 prompt  $4 effort
+    local effort=""
+    [[ -z "${4:-}" ]] || effort="--effort $(printf '%q' "$4")"
+    printf 'my-agent %s --prompt %q' "$effort" "$3"
 }
 ```
+
+The first three arguments are unchanged. Existing overrides keep working; `$4` is empty
+when no effort is configured.
 
 ---
 

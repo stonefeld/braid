@@ -203,19 +203,25 @@ for seat in design orchestrate work; do
             # so what is shown is what a standard one would get.
             if [[ "$seat" == work ]]; then
                 model=$(agent_complexity standard)
+                effort=$(agent_complexity_effort standard)
             else
                 model=$(agent_model "$seat")
+                effort=$(agent_effort "$seat")
             fi
-            printf '  %sok%s    %-12s %-8s via %-24s %s\n' \
-                "$_C_GREEN" "$_C_OFF" "$seat" "$name" "$why" "${model:-(the CLI chooses)}"
+            printf '  %sok%s    %-12s %-8s via %-24s %s  effort: %s\n' \
+                "$_C_GREEN" "$_C_OFF" "$seat" "$name" "$why" \
+                "${model:-(the CLI chooses)}" "${effort:-(the CLI chooses)}"
         ) >&2
     else
         fail "$seat: no usable agent"
     fi
 done
 
-# The flag that lets a worker run unattended. If it is renamed upstream, every worker in
-# a wave dies at launch, and the cause is one line inside a log nobody is reading yet.
+# Flags whose upstream names can move. If one is renamed, every worker in a wave dies at
+# launch, and the cause is one line inside a log nobody is reading yet.
+CONFIGURED_EFFORTS="${BRAID_EFFORT_DESIGN:-}${BRAID_EFFORT_ORCHESTRATE:-}"
+CONFIGURED_EFFORTS="$CONFIGURED_EFFORTS${BRAID_EFFORT_LOW:-}"
+CONFIGURED_EFFORTS="$CONFIGURED_EFFORTS${BRAID_EFFORT_STANDARD:-}${BRAID_EFFORT_HIGH:-}"
 for name in $BRAID_AGENTS; do
     agent_usable "$name" || continue
     (
@@ -226,6 +232,13 @@ for name in $BRAID_AGENTS; do
             ok "$name unattended mode: $(agent_auto_mode)"
         else
             meh "$name does not seem to accept '$(agent_auto_mode)' — workers would die at launch"
+        fi
+        if [[ -n "$CONFIGURED_EFFORTS" ]] && declare -F agent_effort_probe >/dev/null; then
+            if agent_effort_probe; then
+                ok "$name reasoning effort: $(agent_effort_mode)"
+            else
+                meh "$name does not seem to accept '$(agent_effort_mode)' — configured efforts would fail"
+            fi
         fi
     ) >&2
 done

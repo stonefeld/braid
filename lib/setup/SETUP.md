@@ -86,25 +86,39 @@ status from `.braid/finish.sh` instead of a stop hook. Both work.
 
 ### What each seat and each complexity costs
 
-**Also already asked.** `braid setup` showed the resolved table and offered to change it
-before this session opened — it had to, because the model running this session is one of
-the rows. Run `braid doctor`, show them where it landed, and confirm it in one line.
+**Also already asked.** `braid setup` showed the resolved model and reasoning effort and
+offered to change them before this session opened — it had to, because this session is
+already spending one of the rows. Run `braid doctor`, show them where it landed, and
+confirm it in one line. In a repository created by an older braid, the values remain the
+CLI's defaults until somebody explicitly runs `braid setup --costs`.
 
 Two things are worth checking rather than restating:
 
-- **Rows that say "the CLI chooses".** For an agent whose adapter maps nothing — Codex is
-  one — that means every seat and every complexity level runs the same model, whatever
-  their CLI is configured for, so `complexity: low` and `complexity: high` cost the same.
-  That is a fine answer for a repository that does not care, and a surprise for one that
-  thought it had tiers. Say which of the two this is.
-- **Names.** Only offer a model name you have seen the installed CLI list. Each supported
-  agent has its own picker. Do not recall one from training; those move, and a wrong one
-  fails at launch rather than at the moment you wrote it.
+- **Rows that say "the CLI chooses".** Model and effort choose independently. For an
+  agent whose model adapter maps nothing — Codex is one — every seat and complexity uses
+  the CLI's configured model until the repository says otherwise. An unset effort also
+  passes no flag for either bundled agent. That is a fine answer for a repository that
+  wants personal CLI defaults, and a surprise for one that thought it had committed
+  tiers. Say which of the two this is.
+- **Names.** Only offer a model name you have seen the installed CLI list — `claude` and
+  `codex` both have their own picker. Do not recall one from training; those move, and a
+  wrong one fails at launch rather than at the moment you wrote it.
 
 Record changes in `braid.sh`, where setup put the others:
 
-    : "${BRAID_MODEL_DESIGN:=…}"  : "${BRAID_MODEL_ORCHESTRATE:=…}"  : "${BRAID_MODEL_WORK:=…}"
+    : "${BRAID_MODEL_DESIGN:=…}"
+    : "${BRAID_MODEL_ORCHESTRATE:=…}"
+    : "${BRAID_MODEL_WORK:=…}"
     : "${BRAID_MODEL_LOW:=…}"  : "${BRAID_MODEL_STANDARD:=…}"  : "${BRAID_MODEL_HIGH:=…}"
+
+    : "${BRAID_EFFORT_DESIGN:=…}"
+    : "${BRAID_EFFORT_ORCHESTRATE:=…}"
+    : "${BRAID_EFFORT_LOW:=…}"  : "${BRAID_EFFORT_STANDARD:=…}"
+    : "${BRAID_EFFORT_HIGH:=…}"
+
+Effort uses only the portable `low`, `medium`, `high`, `xhigh` vocabulary. Leave
+provider-only levels in that provider's configuration; a committed value must survive a
+seat moving between Codex and Claude Code.
 
 ## 4. How this house decides what to build
 

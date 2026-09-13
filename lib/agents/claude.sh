@@ -6,6 +6,8 @@
 # with approvals off exactly as it would with them on. Workers do not need that — they
 # are sealed in a worktree behind a pre-push hook — so putting the orchestrator on
 # Claude and the workers on something else is a reasonable configuration.
+# Portable reasoning effort is passed with `--effort`; if none is configured, the flag
+# is omitted and Claude Code keeps its own default.
 #
 # Everything below the launch command is a bonus. braid works without any of it.
 
@@ -49,20 +51,26 @@ agent_skill_prefix() { printf '/'; }
 # nobody is reading yet.
 agent_auto_mode() { printf -- '--permission-mode %s' "$BRAID_PERMISSION_MODE"; }
 agent_auto_mode_probe() { claude --help 2>/dev/null | grep -q -- '--permission-mode'; }
+agent_effort_mode() { printf -- '--effort'; }
+agent_effort_probe() { claude --help 2>/dev/null | grep -q -- '--effort'; }
 
 agent_command() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
-    local worktree="$1" model="$2" prompt="$3"
-    printf 'claude --model %q --permission-mode %q %q' \
-        "$model" "$BRAID_PERMISSION_MODE" "$prompt"
+    local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
+    command="claude --model $(printf '%q' "$model")"
+    command="$command --permission-mode $(printf '%q' "$BRAID_PERMISSION_MODE")"
+    [[ -z "$effort" ]] || command="$command --effort $(printf '%q' "$effort")"
+    printf '%s %q' "$command" "$prompt"
 }
 
 # -p, because a detached launcher has no tty and the TUI needs one.
 agent_command_headless() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
-    local worktree="$1" model="$2" prompt="$3"
-    printf 'claude -p --model %q --permission-mode %q %q' \
-        "$model" "$BRAID_PERMISSION_MODE" "$prompt"
+    local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
+    command="claude -p --model $(printf '%q' "$model")"
+    command="$command --permission-mode $(printf '%q' "$BRAID_PERMISSION_MODE")"
+    [[ -z "$effort" ]] || command="$command --effort $(printf '%q' "$effort")"
+    printf '%s %q' "$command" "$prompt"
 }
 
 # Where transcripts live, for liveness. Claude Code encodes the worktree path by

@@ -51,11 +51,11 @@ braid doctor     # confirms this machine can run a wave
 ```
 
 The first run asks two things before it opens anything: which agents this repository
-uses, and what each seat and complexity level costs. Both have to come first — a repo
-whose people run Codex should not have its setup session opened by Claude, and the model
-that session runs on is one of the rows in the table. `braid setup`
-is re-runnable: run it again when the test suite changes or a coworker arrives with a
-different agent.
+uses, and which model and reasoning effort each seat and complexity level gets. Both
+have to come first — a repo whose people run Codex should not have its setup session
+opened by Claude, and that session's model and effort are already one row in the table.
+`braid setup` is re-runnable when the project changes; `braid setup --costs` reopens only
+the agent/model/effort table without scaffolding or starting a session.
 
 ## Requirements
 
@@ -106,7 +106,7 @@ BRAID_AGENT=generic                  # anything else
 BRAID_AGENT_CMD='my-agent run --model {model} --prompt {prompt}'
 ```
 
-### Which model runs what
+### Which model and reasoning effort run what
 
 Seats and slices are named by **tier**, never by a vendor's model name: a slice says how
 much judgement its work needs, and the adapter says what that means here. For Claude Code
@@ -117,19 +117,26 @@ seats are `cursor-grok-4.6-high`, the work seat is `composer-2.5`, and a slice's
 Cursor's IDs are namespaced and tiered, and the bare `grok-4.6` is not one of them.
 
 **Those are the adapter's defaults, not a decision anybody made about your repository** —
-and they are the largest lever on what a wave costs, so override whatever does not fit:
+and they are the largest lever on what a wave costs, so override whatever does not fit.
+Reasoning effort is a separate setting with the portable values `low`, `medium`, `high`
+and `xhigh`:
 
 ```bash
 : "${BRAID_MODEL_DESIGN:=sonnet}"     # in braid.sh — committed, for everyone
+: "${BRAID_EFFORT_DESIGN:=high}"      # effort for the design seat
+: "${BRAID_EFFORT_STANDARD:=medium}"  # effort for standard workers
 braid setup --model sonnet            # or just this session
-braid spawn 04-migration --model opus # or just this slice
+braid design --effort high            # or just this session
+braid spawn 04-migration --effort high # or just this slice
 ```
 
 `braid setup` puts that table in front of you the first time it writes a `braid.sh` —
-every seat, every complexity level, and what each one resolves to — and writes down only
-what you change. `braid doctor` prints it resolved at any time. [`docs/configuration.md`](docs/configuration.md) has both
-families in full — the seats and the complexity levels are different variables and answer
-different questions.
+every seat, every complexity level, and what each model and effort resolves to — and
+writes down only what you change. Existing repositories keep their current CLI defaults
+until somebody opts in with `braid setup --costs`. `braid doctor` prints the resolved
+table at any time. [`docs/configuration.md`](docs/configuration.md) has both families in
+full — the seats and complexity levels are different variables and answer different
+questions.
 
 ### The repository decides which agents
 
@@ -224,8 +231,9 @@ blocked-by: 01-schema
 ~~~
 
 `complexity` is how much judgement the work needs — `low`, `standard`, `high` — and the
-adapter decides which model that means locally, so a slice never names one. `setup: yes`
-takes the expensive provisioning path and serialises: two of them never share a wave.
+repository maps it to both a model and reasoning effort, so a slice never names either.
+`setup: yes` takes the expensive provisioning path and serialises: two of them never
+share a wave.
 
 **A wave is a schedule, not a level of the dependency graph.** `braid plan` derives it
 from the blockers, then applies the two constraints the graph does not model —
@@ -271,6 +279,7 @@ whether it may delete something.
 ```
 braid next                 what to run now, and why
 braid setup                teach braid about this repository
+braid setup --costs        change the agent/model/effort table, open no session
 braid design               open the design seat, at the right tier
 braid orchestrate          open the orchestrator seat on this feature
 braid plan [feature]       derive the wave schedule from the slices
@@ -325,6 +334,8 @@ set:
 | `BRAID_AGENTS` | which agents this repository supports, best first |
 | `BRAID_MODEL_DESIGN`<br>`BRAID_MODEL_ORCHESTRATE` | which model a seat runs |
 | `BRAID_MODEL_LOW`<br>`BRAID_MODEL_STANDARD`<br>`BRAID_MODEL_HIGH` | what a slice's `complexity` means here |
+| `BRAID_EFFORT_DESIGN`<br>`BRAID_EFFORT_ORCHESTRATE` | how hard a seat reasons |
+| `BRAID_EFFORT_LOW`<br>`BRAID_EFFORT_STANDARD`<br>`BRAID_EFFORT_HIGH` | how hard each slice complexity reasons |
 | `BRAID_MAX_WORKERS` | how many run at once — a fact about your machine (`4`) |
 | `BRAID_SLICE_SOURCE` | `files` \| `github` |
 | `BRAID_WORKER_IGNORE` | what a worker's own build output leaves behind |

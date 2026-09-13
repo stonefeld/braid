@@ -72,6 +72,26 @@ BRAID_MODEL_ORCHESTRATE=opus    # judgement about other agents' work
 The work seat is not one model. A worker's model comes from **the complexity its slice
 declares**, mapped by the adapter — see §6.
 
+### Reasoning effort is a second axis
+
+Model and reasoning effort affect cost independently, so braid configures them
+independently. Seats have `BRAID_EFFORT_DESIGN` and `BRAID_EFFORT_ORCHESTRATE`; worker
+complexities have `BRAID_EFFORT_LOW`, `_STANDARD` and `_HIGH`. There is no effort field
+in a slice and no separate worker-wide effort tier: the slice still declares one
+agent-agnostic judgement level, and that level selects both model and effort locally.
+
+The committed vocabulary is the portable intersection supported by the bundled Codex
+and Claude Code adapters: `low`, `medium`, `high`, `xhigh`. Provider-only values stay in
+the provider's own configuration or a custom launch command. Otherwise changing a seat
+from one agent to another could make the same committed value invalid or change its
+meaning.
+
+Empty is a decision too. When no effort is configured, braid passes no effort flag and
+the CLI keeps the user's existing default. That preserves every repository created
+before this setting existed. New repositories see model and effort together during
+setup; existing ones opt in explicitly with `braid setup --costs`, which opens no agent
+session and changes only the cost table.
+
 ---
 
 ## 3. Installation
@@ -311,8 +331,8 @@ to schedule.
 has: it lives in an issue, written by a skill that does not know which agent will run
 it. `model: sonnet` is meaningless in a repository whose workers run Codex, and it
 breaks the rule the seats already follow — a vendor's model names belong in one file.
-So the slice says how much judgement the work needs, and the adapter says what that is
-here.
+So the slice says how much judgement the work needs, and the repository plus adapter say
+which model and reasoning effort that means here.
 
 | | The work | Claude |
 |---|---|---|
@@ -322,8 +342,9 @@ here.
 
 An adapter that is not confident maps nothing and lets its CLI choose; `braid setup`
 asks what each level means there, which is the moment somebody with that CLI installed
-can answer. `BRAID_MODEL_LOW` / `_STANDARD` / `_HIGH` override either way, and
-`braid spawn --model` is the escape hatch for the one slice the mapping gets wrong.
+can answer. `BRAID_MODEL_LOW` / `_STANDARD` / `_HIGH` and `BRAID_EFFORT_LOW` /
+`_STANDARD` / `_HIGH` override either way. `braid spawn --model` and `--effort` are the
+escape hatches for the one slice the mapping gets wrong.
 
 **Why a fence and not `**Key:** value` prose lines.** The old parser was
 `grep -i -m1 "$key"` — unanchored, over the whole body — so any prose mention above the

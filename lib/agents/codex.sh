@@ -56,8 +56,9 @@
 #                    BRAID_MODEL_ORCHESTRATE=…  BRAID_MODEL_WORK=…
 #                    BRAID_MODEL_LOW=…  BRAID_MODEL_STANDARD=…  BRAID_MODEL_HIGH=…
 #
-# How hard it thinks is a second axis Codex keeps apart from which model runs, and braid
-# has no opinion on it yet. It travels as config today:
+# How hard it thinks is a second axis Codex keeps apart from which model runs. Braid's
+# portable effort setting is translated to this config key per session; the raw form is
+# still available for Codex-only levels or other configuration:
 #
 #   BRAID_AGENT_ARGS="--sandbox workspace-write -c model_reasoning_effort=high"
 #
@@ -120,6 +121,12 @@ agent_auto_mode_probe() {
     codex --help 2>/dev/null | grep -q -- '--ask-for-approval'
 }
 
+agent_effort_mode() { printf -- '-c model_reasoning_effort=<level>'; }
+agent_effort_probe() {
+    codex --help 2>/dev/null | grep -q -- '--config' &&
+        codex exec --help 2>/dev/null | grep -q -- '--config'
+}
+
 # The interactive CLI, not `codex exec`. This is the seat somebody is sitting in front
 # of — `braid setup` asking what the verify command is, `braid design` grilling a spec,
 # an orchestrator judging a branch — and `codex exec` is documented as "run Codex
@@ -129,28 +136,24 @@ agent_auto_mode_probe() {
 # exactly what it was.
 agent_command() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
-    local worktree="$1" model="$2" prompt="$3"
-    # shellcheck disable=SC2086  # BRAID_AGENT_ARGS is a flag list on purpose
-    if [[ -n "$model" ]]; then
-        printf 'codex %s --ask-for-approval %q --model %q %q' \
-            "$BRAID_AGENT_ARGS" "$BRAID_APPROVAL_POLICY" "$model" "$prompt"
-    else
-        printf 'codex %s --ask-for-approval %q %q' \
-            "$BRAID_AGENT_ARGS" "$BRAID_APPROVAL_POLICY" "$prompt"
-    fi
+    local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
+    command="codex $BRAID_AGENT_ARGS --ask-for-approval $(
+        printf '%q' "$BRAID_APPROVAL_POLICY"
+    )"
+    [[ -z "$model" ]] || command="$command --model $(printf '%q' "$model")"
+    [[ -z "$effort" ]] || command="$command -c $(printf '%q' "model_reasoning_effort=$effort")"
+    printf '%s %q' "$command" "$prompt"
 }
 
 # For a launcher with no terminal. `exec` is the right tool here and the wrong one
 # above: it is the half of this CLI that runs without anybody watching.
 agent_command_headless() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
-    local worktree="$1" model="$2" prompt="$3"
-    # shellcheck disable=SC2086  # BRAID_AGENT_ARGS is a flag list on purpose
-    if [[ -n "$model" ]]; then
-        printf 'codex exec %s --model %q %q' "$BRAID_AGENT_ARGS" "$model" "$prompt"
-    else
-        printf 'codex exec %s %q' "$BRAID_AGENT_ARGS" "$prompt"
-    fi
+    local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
+    command="codex exec $BRAID_AGENT_ARGS"
+    [[ -z "$model" ]] || command="$command --model $(printf '%q' "$model")"
+    [[ -z "$effort" ]] || command="$command -c $(printf '%q' "model_reasoning_effort=$effort")"
+    printf '%s %q' "$command" "$prompt"
 }
 
 agent_transcript_dir() { printf '%s/.codex/sessions' "$HOME"; }
