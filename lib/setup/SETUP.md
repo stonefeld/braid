@@ -97,12 +97,13 @@ Two things are worth checking rather than restating:
 - **Rows that say "the CLI chooses".** Model and effort choose independently. For an
   agent whose model adapter maps nothing — Codex is one — every seat and complexity uses
   the CLI's configured model until the repository says otherwise. An unset effort also
-  passes no flag for either bundled agent. That is a fine answer for a repository that
-  wants personal CLI defaults, and a surprise for one that thought it had committed
-  tiers. Say which of the two this is.
-- **Names.** Only offer a model name you have seen the installed CLI list — `claude` and
-  `codex` both have their own picker. Do not recall one from training; those move, and a
-  wrong one fails at launch rather than at the moment you wrote it.
+  passes no flag. Cursor has no independent effort control, so its effort rows must stay
+  empty; its complexity levels still scale through the model mapping. These are fine
+  answers for a repository that wants CLI defaults or model-only tiers, and a surprise
+  for one that thought it had committed both axes. Say which this repository intends.
+- **Names.** Only offer a model name you have seen the installed CLI list. Each supported
+  agent has its own picker. Do not recall one from training; those move, and a wrong one
+  fails at launch rather than at the moment you wrote it.
 
 Record changes in `braid.sh`, where setup put the others:
 
@@ -116,9 +117,9 @@ Record changes in `braid.sh`, where setup put the others:
     : "${BRAID_EFFORT_LOW:=…}"  : "${BRAID_EFFORT_STANDARD:=…}"
     : "${BRAID_EFFORT_HIGH:=…}"
 
-Effort uses only the portable `low`, `medium`, `high`, `xhigh` vocabulary. Leave
-provider-only levels in that provider's configuration; a committed value must survive a
-seat moving between Codex and Claude Code.
+Effort uses only the portable `low`, `medium`, `high`, `xhigh` vocabulary among adapters
+that support it. Leave provider-only levels in that provider's configuration, and leave
+effort empty for a seat assigned to Cursor.
 
 ## 4. How this house decides what to build
 

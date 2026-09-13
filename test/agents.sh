@@ -272,6 +272,16 @@ PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent generic" \
 PATH="/usr/bin:/bin" BRAID_AGENT_CMD='' \
     refute "unusable without the CLI" with_agent agent_usable cursor-agent
 
+# Cursor's model IDs already carry tiers, but its CLI exposes no independent effort
+# control. The engine must refuse a non-empty value instead of recording one and letting
+# this adapter silently discard the fourth command argument.
+OUT=$(PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
+    with_engine agent_check_effort high 2>&1)
+has "cursor-agent refuses unsupported reasoning effort" \
+    "cursor-agent does not support reasoning effort" "$OUT"
+PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
+    check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
+
 echo
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 echo
