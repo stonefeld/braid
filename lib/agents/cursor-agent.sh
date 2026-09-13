@@ -42,6 +42,7 @@
 # than discovered as eight workers that died at launch. When yours disagrees:
 #
 #   BRAID_CURSOR_AGENT_ARGS="--force"
+#   BRAID_CURSOR_AGENT_HEADLESS_ARGS="--trust"
 #
 # or drop to the generic adapter and give it the whole command line. Namespaced,
 # unlike Codex's plain BRAID_AGENT_ARGS: that one came first and stays for
@@ -52,7 +53,8 @@
 # runs the agent inside it. Cursor's own flag would open a second worktree under
 # ~/.cursor/worktrees/ that braid knows nothing about.
 
-: "${BRAID_CURSOR_AGENT_ARGS:=--force --trust}"
+: "${BRAID_CURSOR_AGENT_ARGS:=--force}"
+: "${BRAID_CURSOR_AGENT_HEADLESS_ARGS:=--trust}"
 
 agent_available() { command -v cursor-agent >/dev/null 2>&1; }
 
@@ -102,13 +104,16 @@ agent_loads_skills() { return 0; }
 agent_skill_prefix() { printf '/'; }
 
 # --force rather than nothing, and not for the reason it looks like: print mode
-# already holds the write tool, so --trust alone does edit files. What --force buys
-# is the shell — "force allow commands unless explicitly denied". Denied, a worker
-# cannot run the verify command or `git add`, and improvises around the wall instead
-# of reporting it. --trust answers the workspace-trust prompt, which has nobody to
-# answer it in a detached run; the worker is confined to its own worktree already,
-# and braid_provision installed its dependencies before it started.
-agent_auto_mode() { printf '%s' "$BRAID_CURSOR_AGENT_ARGS"; }
+# already holds the write tool. What --force buys is the shell — "force allow
+# commands unless explicitly denied". Denied, a worker cannot run the verify command
+# or `git add`, and improvises around the wall instead of reporting it. --trust
+# answers the workspace-trust prompt, which has nobody to answer it in a detached
+# run; Cursor documents it as headless-only, so the interactive command must not see
+# it. The worker is confined to its own worktree already, and braid_provision
+# installed its dependencies before it started.
+agent_auto_mode() {
+    printf '%s %s' "$BRAID_CURSOR_AGENT_ARGS" "$BRAID_CURSOR_AGENT_HEADLESS_ARGS"
+}
 
 # --print as well as the configured flags: it is hardcoded into the headless command
 # rather than living in BRAID_CURSOR_AGENT_ARGS, so nothing else would notice it
@@ -116,10 +121,11 @@ agent_auto_mode() { printf '%s' "$BRAID_CURSOR_AGENT_ARGS"; }
 # agent run is cursor-agent's top-level command — there is no subcommand whose own
 # help could disagree, the way `codex exec --help` does.
 agent_auto_mode_probe() {
-    local flag help
+    local flag flags help
     help=$(cursor-agent --help 2>/dev/null) || return 1
     grep -q -- '--print' <<<"$help" || return 1
-    for flag in $BRAID_CURSOR_AGENT_ARGS; do
+    flags="$BRAID_CURSOR_AGENT_ARGS $BRAID_CURSOR_AGENT_HEADLESS_ARGS"
+    for flag in $flags; do
         [[ "$flag" == -* ]] || continue
         grep -q -- "$flag" <<<"$help" || return 1
     done
@@ -138,18 +144,20 @@ agent_command() {
     fi
 }
 
-# -p, because a detached launcher has no tty and the TUI needs one. --force and
-# --trust arrive with BRAID_CURSOR_AGENT_ARGS; both are global flags rather than
-# print-mode ones, so the interactive command above carries them too.
+# -p, because a detached launcher has no tty and the TUI needs one. --trust is
+# headless-only; keeping it out of BRAID_CURSOR_AGENT_ARGS is what lets the same
+# adapter launch Cursor's interactive half without handing it an invalid flag.
 agent_command_headless() {
     # shellcheck disable=SC2034  # fixed adapter signature; no worktree needed here
     local worktree="$1" model="$2" prompt="$3"
-    # shellcheck disable=SC2086  # BRAID_CURSOR_AGENT_ARGS is a flag list on purpose
+    # shellcheck disable=SC2086  # both variables are flag lists on purpose
     if [[ -n "$model" ]]; then
-        printf 'cursor-agent -p %s --model %q %q' \
-            "$BRAID_CURSOR_AGENT_ARGS" "$model" "$prompt"
+        printf 'cursor-agent -p %s %s --model %q %q' \
+            "$BRAID_CURSOR_AGENT_ARGS" "$BRAID_CURSOR_AGENT_HEADLESS_ARGS" \
+            "$model" "$prompt"
     else
-        printf 'cursor-agent -p %s %q' "$BRAID_CURSOR_AGENT_ARGS" "$prompt"
+        printf 'cursor-agent -p %s %s %q' \
+            "$BRAID_CURSOR_AGENT_ARGS" "$BRAID_CURSOR_AGENT_HEADLESS_ARGS" "$prompt"
     fi
 }
 

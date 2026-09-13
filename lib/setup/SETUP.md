@@ -97,9 +97,9 @@ Two things are worth checking rather than restating:
   their CLI is configured for, so `complexity: low` and `complexity: high` cost the same.
   That is a fine answer for a repository that does not care, and a surprise for one that
   thought it had tiers. Say which of the two this is.
-- **Names.** Only offer a model name you have seen the installed CLI list — `claude` and
-  `codex` both have their own picker. Do not recall one from training; those move, and a
-  wrong one fails at launch rather than at the moment you wrote it.
+- **Names.** Only offer a model name you have seen the installed CLI list. Each supported
+  agent has its own picker. Do not recall one from training; those move, and a wrong one
+  fails at launch rather than at the moment you wrote it.
 
 Record changes in `braid.sh`, where setup put the others:
 

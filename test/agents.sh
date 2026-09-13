@@ -206,7 +206,8 @@ is "skill prefix" "/" "$( ( with_adapter agent_skill_prefix ) )"
 
 # Unattended means --force (the agent's shell is denied without it, so a worker
 # cannot run the verify command) and --trust (nobody answers the trust prompt in a
-# detached run).
+# detached run). Cursor documents --trust as headless-only, so it must not leak into
+# the interactive command.
 has "auto mode forces" "--force" "$( ( with_adapter agent_auto_mode ) )"
 has "auto mode trusts" "--trust" "$( ( with_adapter agent_auto_mode ) )"
 
@@ -215,6 +216,7 @@ has "interactive runs cursor-agent" "cursor-agent" "$CMD"
 has "interactive passes the model" "$GROK" "$CMD"
 has "interactive carries the prompt" 'do\ the\ thing' "$CMD"
 hasnt "interactive is not print mode" " -p " " $CMD "
+hasnt "interactive omits headless-only trust" "--trust" "$CMD"
 hasnt "interactive makes no worktree of its own" "worktree" "$CMD"
 
 HEADLESS="$( ( with_adapter agent_command_headless \
@@ -225,6 +227,17 @@ has "headless trusts the workspace" "--trust" "$HEADLESS"
 has "headless passes the model" "$GROK" "$HEADLESS"
 has "headless carries the prompt" 'do\ the\ thing' "$HEADLESS"
 hasnt "headless makes no worktree of its own" "worktree" "$HEADLESS"
+
+SPLIT="$( ( BRAID_CURSOR_AGENT_ARGS="--force --common-test" \
+    BRAID_CURSOR_AGENT_HEADLESS_ARGS="--trust --headless-test" \
+    with_adapter agent_command_headless "/tmp/wt" "$GROK" "do the thing" ) )"
+has "headless carries common custom flags" "--common-test" "$SPLIT"
+has "headless carries headless custom flags" "--headless-test" "$SPLIT"
+SPLIT_INTERACTIVE="$( ( BRAID_CURSOR_AGENT_ARGS="--force --common-test" \
+    BRAID_CURSOR_AGENT_HEADLESS_ARGS="--trust --headless-test" \
+    with_adapter agent_command "/tmp/wt" "$GROK" "do the thing" ) )"
+has "interactive carries common custom flags" "--common-test" "$SPLIT_INTERACTIVE"
+hasnt "interactive omits custom headless flags" "--headless-test" "$SPLIT_INTERACTIVE"
 
 NOMODEL="$( ( with_adapter agent_command "/tmp/wt" "" "do the thing" ) )"
 hasnt "empty model omits the flag" "--model" "$NOMODEL"
@@ -246,6 +259,8 @@ PATH="$TMP/bin:$PATH" \
 PATH="$TMP/bin:$PATH" CURSOR_STUB_HELP="--model" \
     refute "probe fails when a flag is renamed upstream" \
     with_adapter agent_auto_mode_probe
+PATH="$TMP/bin:$PATH" BRAID_CURSOR_AGENT_HEADLESS_ARGS="--headless-test" \
+    refute "probe checks headless-only flags too" with_adapter agent_auto_mode_probe
 # --print is not in BRAID_CURSOR_AGENT_ARGS — it is hardcoded into the headless
 # command — so it needs covering by name or a rename lands as a hung wave.
 PATH="$TMP/bin:$PATH" CURSOR_STUB_HELP="--force --trust --model" \

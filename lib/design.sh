@@ -12,8 +12,8 @@
 # you are standing in, and gets out of the way.
 #
 # What it saves is the part that is fiddly and easy to get wrong: the tier's model name
-# lives in one file, so this works the same whether the seat is Claude or Codex, and you
-# stop choosing a model by hand at the moment you least want to think about it.
+# lives in one adapter, so this works the same whichever agent runs the seat, and you stop
+# choosing a model by hand at the moment you least want to think about it.
 #
 # The design seat and the orchestrator share this worktree, one after the other. The
 # orchestrator wants a fresh window; this is where you already are.
