@@ -3,8 +3,9 @@
 #
 #   braid orchestrate
 #
-#     --model NAME   override the tier for this one session
-#     --here         take over this terminal instead of opening a window
+#     --model NAME    override the tier for this one session
+#     --effort LEVEL  override reasoning effort for this one session
+#     --here          take over this terminal instead of opening a window
 #
 # A fresh context window, on the tier this repository calls `orchestrate`, in the feature
 # worktree, already holding the instructions for running a wave.
@@ -22,6 +23,7 @@ source "$BRAID_HOME/lib/agent.sh"
 source "$BRAID_HOME/lib/launcher.sh"
 
 MODEL=""
+EFFORT=""
 HERE=0
 
 while [[ $# -gt 0 ]]; do
@@ -30,12 +32,16 @@ while [[ $# -gt 0 ]]; do
             MODEL="${2:?--model needs a name}"
             shift 2
             ;;
+        --effort)
+            EFFORT="${2:?--effort needs a level}"
+            shift 2
+            ;;
         --here)
             HERE=1
             shift
             ;;
         -h | --help)
-            sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         *) die "unknown argument: $1" ;;
@@ -50,6 +56,8 @@ is_protected_branch "$(current_branch)" &&
 agent_load orchestrate || exit 1
 MODEL="${MODEL:-$(agent_model orchestrate)}"
 agent_check_model "$MODEL"
+EFFORT="${EFFORT:-$(agent_effort orchestrate)}"
+agent_check_effort "$EFFORT"
 
 WORKTREE=$(current_worktree)
 # Before the agent starts, because the first thing it is told is to write its long
@@ -58,8 +66,8 @@ ensure_seat_dir "$WORKTREE"
 PROMPT=$(agent_skill_prompt braid-orchestrate)
 
 if [[ "$HERE" -eq 1 ]]; then
-    note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — orchestrating $(current_branch) here"
-    BRAID_SEAT=orchestrate eval "$(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT")"
+    note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)}${EFFORT:+, effort $EFFORT} — orchestrating $(current_branch) here"
+    BRAID_SEAT=orchestrate eval "$(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT" "$EFFORT")"
     exit 0
 fi
 
@@ -67,9 +75,9 @@ fi
 # want your own terminal back. --here is for when you would rather not.
 read -r LAUNCHER CERTAINTY < <(launcher_resolve)
 launcher_load "$LAUNCHER"
-note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — orchestrating $(current_branch) in $LAUNCHER ($CERTAINTY)"
+note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)}${EFFORT:+, effort $EFFORT} — orchestrating $(current_branch) in $LAUNCHER ($CERTAINTY)"
 
-COMMAND="cd $(printf '%q' "$WORKTREE") && BRAID_SEAT=orchestrate $(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT")"
+COMMAND="cd $(printf '%q' "$WORKTREE") && BRAID_SEAT=orchestrate $(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT" "$EFFORT")"
 if ! launcher_launch "$WORKTREE" "braid-$(branch_slug "$(current_branch)")" "$COMMAND"; then
     warn "$(printf '%s\n' \
         "could not open a window in $LAUNCHER." \

@@ -5,6 +5,7 @@
 #   braid design "the payments flow" open it with something to chew on
 #
 #     --model NAME    override the tier for this one session
+#     --effort LEVEL  override reasoning effort for this one session
 #
 # This is a shortcut, not a workflow. **braid has no opinion about how you decide what to
 # build** — grilling, a PRD, a conversation, a whiteboard photo — and this command carries
@@ -24,6 +25,7 @@ set -uo pipefail
 source "$BRAID_HOME/lib/agent.sh"
 
 MODEL=""
+EFFORT=""
 PROMPT=""
 
 while [[ $# -gt 0 ]]; do
@@ -32,8 +34,12 @@ while [[ $# -gt 0 ]]; do
             MODEL="${2:?--model needs a name}"
             shift 2
             ;;
+        --effort)
+            EFFORT="${2:?--effort needs a level}"
+            shift 2
+            ;;
         -h | --help)
-            sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         -*) die "unknown argument: $1" ;;
@@ -57,9 +63,11 @@ fi
 agent_load design || exit 1
 MODEL="${MODEL:-$(agent_model design)}"
 agent_check_model "$MODEL"
+EFFORT="${EFFORT:-$(agent_effort design)}"
+agent_check_effort "$EFFORT"
 
 ensure_seat_dir "$(current_worktree)"
-note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — the design seat, in $(current_worktree)"
+note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)}${EFFORT:+, effort $EFFORT} — the design seat, in $(current_worktree)"
 # To the person, before the session opens — not into the prompt. Putting it there would
 # make braid carry the workflow it spent this whole file refusing to carry; saying it out
 # loud only means you are not staring at a blank session wondering what this house does.
@@ -67,4 +75,4 @@ note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)} — the design seat, in $(current
     info "here that means:  $BRAID_DESIGN_STEPS  →  /braid-plan"
 [[ -z "$PROMPT" ]] && note "slices go in $BRAID_FEATURES_DIR/$(branch_slug "$(current_branch)")/, then: braid plan"
 
-eval "$(agent_cmd "$(current_worktree)" "$MODEL" "$PROMPT")"
+eval "$(agent_cmd "$(current_worktree)" "$MODEL" "$PROMPT" "$EFFORT")"

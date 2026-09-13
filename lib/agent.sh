@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Which agent runs which seat, and on which model.
+# Which agent runs each seat, and with which model and reasoning effort.
 #
 # braid assumes only this much of an agent: it starts, it works in the directory it was
 # started in, and it exits. Everything past that is per-agent and lives in
@@ -26,8 +26,9 @@ source "$BRAID_HOME/lib/config.sh"
 # orchestrate  judging other agents' work and integrating it
 # work         implementing one slice
 #
-# Tiers are named by seat rather than by brand so a vendor's model names appear in one
-# file. BRAID_MODEL_WORK is only the default; a slice overrides it in its config block.
+# Tiers are named by seat rather than by brand so vendor-specific model names stay in an
+# adapter or repository config. A worker's slice declares complexity; that selects its
+# model and effort without putting either vendor-shaped value in the slice.
 seat_var() {
     printf 'BRAID_%s_%s' "${1:?prefix}" "$(printf '%s' "${2:?seat}" | tr '[:lower:]-' '[:upper:]_')"
 }
@@ -186,6 +187,48 @@ agent_complexity() {
         printf '%s' "${!var}"
     else
         agent_complexity_model "$level"
+    fi
+}
+
+# How hard a seat is allowed to reason, independently of which model runs it. Empty is
+# meaningful: do not pass an override, and let the agent CLI keep the user's configured
+# default. That is what makes this addition invisible to repositories whose braid.sh
+# predates it.
+agent_effort() {
+    local seat="${1:?seat}" var
+    var=$(seat_var EFFORT "$seat")
+    printf '%s' "${!var:-}"
+}
+
+# A worker gets effort from the same complexity tier that selects its model. Keeping the
+# slice agent-agnostic means it still declares one judgement level, rather than learning
+# a second vendor-shaped field.
+agent_complexity_effort() {
+    local level="${1:-standard}" var
+    case "$level" in
+        low | standard | high) ;;
+        *) die "unknown complexity '$level' (expected: low, standard, high)" ;;
+    esac
+    var=$(seat_var EFFORT "$level")
+    printf '%s' "${!var:-}"
+}
+
+# The portable intersection supported by the bundled Codex and Claude Code adapters.
+# An adapter opts into this contract by defining agent_effort_mode; otherwise a value
+# must be refused rather than accepted, recorded and silently dropped at launch. A
+# project launch hook is itself the explicit escape hatch and receives effort as $4.
+# Provider-only levels (`minimal` in Codex, `max` and `ultracode` in Claude Code) remain
+# available through each adapter's raw configuration escape hatch.
+agent_check_effort() {
+    local effort="${1:-}"
+    [[ -z "$effort" ]] && return 0
+    case "$effort" in
+        low | medium | high | xhigh) ;;
+        *) die "unknown effort '$effort' (expected: low, medium, high, xhigh)" ;;
+    esac
+    if ! declare -F agent_effort_mode >/dev/null &&
+        ! declare -F braid_agent_command >/dev/null; then
+        die "${BRAID_AGENT_RESOLVED:-agent} does not support reasoning effort"
     fi
 }
 

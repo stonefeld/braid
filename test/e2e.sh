@@ -112,8 +112,10 @@ has "registered hooks by name, not by path" "braid hook guard-remote" "$(cat .cl
 # The one command somebody runs before they know anything about braid. It used to open
 # whatever tier the adapter names for `design` — for Claude that is the most expensive
 # model there is — with no flag to change it and nothing on screen saying you could.
-OUT=$(BRAID_AGENT_CMD='echo model={model}' "$BRAID" setup --model haiku </dev/null 2>&1)
+OUT=$(BRAID_AGENT_CMD='echo model={model} effort={effort}' \
+    "$BRAID" setup --model haiku --effort medium </dev/null 2>&1)
 has "setup takes a model, like the seats that always could" "model=haiku" "$OUT"
+has "setup takes reasoning effort for its session" "effort=medium" "$OUT"
 has "and names the escape hatch before opening anything" "braid setup --model" "$OUT"
 has "and points at where the whole table is" "braid doctor" "$OUT"
 # With nobody there to answer, it proceeds. Blocking on a prompt that cannot be seen is
@@ -151,13 +153,51 @@ has "--add-agent appends to the list that is there" "$(listed codex claude gener
 CODEX=$(BRAID_HOME="$XDG_DATA_HOME/braid" /bin/bash -c '
     # shellcheck disable=SC1091
     . "$BRAID_HOME/lib/agents/codex.sh"
-    printf "seat:%s\nheadless:%s\n" \
-        "$(agent_command /w "" p)" "$(agent_command_headless /w "" p)"')
+    printf "seat:%s\nheadless:%s\neffort:%s\neffort-headless:%s\n" \
+        "$(agent_command /w "" p)" "$(agent_command_headless /w "" p)" \
+        "$(agent_command /w "" p high)" \
+        "$(agent_command_headless /w "" p high)"')
 hasnt "the codex seat somebody sits in front of is not codex exec" "seat:codex exec" "$CODEX"
 has "it is the CLI that can ask a question" "seat:codex " "$CODEX"
 has "told not to stop for approvals nobody is there to give" "--ask-for-approval never" "$CODEX"
 has "while a detached worker still gets exec" "headless:codex exec" "$CODEX"
 hasnt "which is never handed the flag it rejects" "exec --sandbox workspace-write --ask" "$CODEX"
+has "codex receives a per-session effort" "-c model_reasoning_effort=high" "$CODEX"
+is "codex passes effort to interactive and headless commands" "2" \
+    "$(printf '%s' "$CODEX" | grep -c 'model_reasoning_effort=high' | tr -d ' ')"
+hasnt "codex omits an unset effort" "model_reasoning_effort" \
+    "$(printf '%s\n' "$CODEX" | grep '^seat:')"
+
+CLAUDE=$(BRAID_HOME="$XDG_DATA_HOME/braid" /bin/bash -c '
+    # shellcheck disable=SC1091
+    . "$BRAID_HOME/lib/agents/claude.sh"
+    printf "seat:%s\nheadless:%s\nplain:%s\n" \
+        "$(agent_command /w opus p high)" \
+        "$(agent_command_headless /w opus p high)" \
+        "$(agent_command /w opus p)"')
+has "claude receives the same portable effort" "--effort high" "$CLAUDE"
+is "claude passes effort to interactive and headless commands" "2" \
+    "$(printf '%s' "$CLAUDE" | grep -c -- '--effort high' | tr -d ' ')"
+hasnt "claude omits an unset effort" "--effort" \
+    "$(printf '%s\n' "$CLAUDE" | grep '^plain:')"
+
+OUT=$(BRAID_AGENT_CMD='echo model={model} effort={effort}' \
+    "$BRAID" design --model zebra --effort medium 2>&1)
+has "the generic adapter exposes effort too" "model=zebra effort=medium" "$OUT"
+OUT=$(BRAID_AGENT_CMD=true "$BRAID" design --effort max 2>&1)
+has "provider-only effort is refused by the portable interface" \
+    "expected: low, medium, high, xhigh" "$OUT"
+
+# An adapter that predates the effort argument must not silently discard it. This is
+# also the compatibility path for a newly merged adapter: accepting and recording an
+# effort is dishonest until that adapter explicitly says how it carries the value.
+OUT=$(BRAID_HOME="$XDG_DATA_HOME/braid" /bin/bash -c '
+    # shellcheck disable=SC1091
+    . "$BRAID_HOME/lib/agent.sh"
+    BRAID_AGENT_RESOLVED=legacy
+    agent_check_effort high' 2>&1)
+has "an adapter without effort support refuses a configured value" \
+    "legacy does not support reasoning effort" "$OUT"
 
 # --- what setup writes into braid.sh, and what reads it back -----------------
 
@@ -185,10 +225,55 @@ cat >"$BS" <<'SH'
 : "${BRAID_AGENTS:=generic claude}"
 : "${BRAID_AGENT_WORK:=generic}"
 : "${BRAID_MODEL_STANDARD:=zebra}"
+: "${BRAID_EFFORT_LOW:=low}"
+: "${BRAID_EFFORT_STANDARD:=medium}"
+: "${BRAID_EFFORT_HIGH:=xhigh}"
 SH
 OUT=$(env -u BRAID_AGENTS "$BRAID" doctor 2>&1)
-has "a seat pinned in braid.sh is the seat that resolves" "work         generic  via BRAID_AGENT_WORK" "$OUT"
+has "a seat pinned in braid.sh is the seat that resolves" "standard     generic  via BRAID_AGENT_WORK" "$OUT"
 has "and the model it names is the model reported" "zebra" "$OUT"
+has "doctor reports low-complexity effort" "low          generic  via BRAID_AGENT_WORK" "$OUT"
+has "doctor reports its resolved value" "effort: low" "$OUT"
+has "doctor reports high-complexity effort" "high         generic  via BRAID_AGENT_WORK" "$OUT"
+has "doctor reports that resolved value too" "effort: xhigh" "$OUT"
+
+# A malformed committed value stops spawn, so doctor must be red for the same reason.
+# Merely proving that the provider still has an effort flag leaves the bad value hidden.
+OUT=$(env -u BRAID_AGENTS BRAID_EFFORT_HIGH=banana "$BRAID" doctor 2>&1)
+has "doctor rejects malformed effort" "unknown effort 'banana'" "$OUT"
+has "malformed effort makes doctor fatal" "something above would stop a spawn" "$OUT"
+
+cp "$TMP/braid.sh.keep" "$BS"
+OUT=$(env -u BRAID_AGENTS "$BRAID" doctor 2>&1)
+has "an old config leaves effort to the CLI" "effort: (the CLI chooses)" "$OUT"
+
+cp "$TMP/braid.sh.keep" "$BS"
+
+# Existing repositories are never migrated implicitly. They can reopen the cost table
+# explicitly, without scaffolding again or starting the setup agent session.
+OUT=$(cd "$REPO" && python3 "$SOURCE/test/ask.py" \
+    'y||high||xhigh|||low||medium||high' -- "$BRAID" setup --costs 2>&1)
+has "an existing repository can reopen the cost table" "change any of it?" "$OUT"
+hasnt "the cost table opens no setup agent" "about to open a session" "$OUT"
+has "and records design effort" 'BRAID_EFFORT_DESIGN:=high' "$(cat "$BS")"
+has "and records orchestrator effort" 'BRAID_EFFORT_ORCHESTRATE:=xhigh' "$(cat "$BS")"
+has "and records standard-slice effort" 'BRAID_EFFORT_STANDARD:=medium' "$(cat "$BS")"
+OUT=$(cd "$REPO" && "$BRAID" setup --costs --model zebra </dev/null 2>&1)
+has "the cost table refuses unrelated setup options" \
+    "--costs cannot be combined with other setup options" "$OUT"
+
+cp "$TMP/braid.sh.keep" "$BS"
+
+# The project launch hook keeps its original three arguments and gets effort as an
+# optional fourth, so an existing three-argument function remains source-compatible.
+cat >>"$BS" <<'SH'
+braid_agent_command() {
+    printf 'printf %%s %q' "argc=$# model=$2 prompt=$3 effort=${4:-}"
+}
+SH
+OUT=$("$BRAID" design --model zebra --effort high "review this" 2>/dev/null)
+has "a custom launch command receives effort as its fourth argument" \
+    "argc=4 model=zebra prompt=review this effort=high" "$OUT"
 
 cp "$TMP/braid.sh.keep" "$BS"
 
@@ -210,9 +295,13 @@ mkdir -p "$ASKED"
     git commit -qm initial
 ) >/dev/null 2>&1
 
-# agents, then yes to the table, then a model for design and nothing for the rest, then
-# no to opening a session.
-OUT=$(cd "$ASKED" && python3 "$SOURCE/test/ask.py" 'generic|y|zebra||||||n' -- "$BRAID" setup 2>&1)
+# Agents, then yes to the table, then a model for design and nothing for the remaining
+# ten model/effort prompts, then no to opening a session. Built instead of counted as a
+# run of pipes: adding a row to the table should make this intention obvious to edit.
+SETUP_ANSWERS='generic|y|zebra'
+for _ in 1 2 3 4 5 6 7 8 9 10; do SETUP_ANSWERS="$SETUP_ANSWERS|"; done
+SETUP_ANSWERS="$SETUP_ANSWERS|n"
+OUT=$(cd "$ASKED" && python3 "$SOURCE/test/ask.py" "$SETUP_ANSWERS" -- "$BRAID" setup 2>&1)
 has "it asks which agents this repository uses" "best first" "$OUT"
 has "showing what is installed rather than deciding it" "installed here:" "$OUT"
 has "then what each seat and each level costs" "change any of it?" "$OUT"
@@ -228,6 +317,10 @@ has "and reaches the session about to be opened" "model: zebra" "$OUT"
 has "while an empty answer keeps the adapter's" "the CLI chooses" "$OUT"
 refute "leaving no line for what was not changed" \
     grep -q 'BRAID_MODEL_ORCHESTRATE' "$ASKED/braid.sh"
+
+# A repository-level effort is inherited by workers without changing their slices.
+# shellcheck disable=SC2016  # the braid.sh assignment is literal text, not an expansion
+printf '\n: "${BRAID_EFFORT_LOW:=medium}"\n' >>"$BS"
 
 git add -A
 git commit -qm "chore: braid"
@@ -319,6 +412,7 @@ printf '.DS_Store
 git config --global core.excludesFile "$HOME/.gitignore-global"
 slice 96-junk low no "" "Do nothing."
 "$BRAID" spawn "$D/96-junk.md" --no-launch >/dev/null 2>&1
+is "a worker records its resolved effort" "medium" "$(cat "$(W 96-junk)/.braid/effort")"
 mkdir -p "$(W 96-junk)/.pytest_cache"
 touch "$(W 96-junk)/.pytest_cache/x" "$(W 96-junk)/run.coverage" \
     "$(W 96-junk)/.DS_Store" "$(W 96-junk)/real.txt"
