@@ -86,6 +86,10 @@ the provider's own configuration or a custom launch command. Otherwise changing 
 from one agent to another could make the same committed value invalid or change its
 meaning.
 
+An adapter must opt into the effort contract. If it has no independent effort control,
+braid refuses a non-empty value before launch; recording an effort while silently
+discarding it would make the cost table false.
+
 Empty is a decision too. When no effort is configured, braid passes no effort flag and
 the CLI keeps the user's existing default. That preserves every repository created
 before this setting existed. New repositories see model and effort together during

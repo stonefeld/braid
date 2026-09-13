@@ -188,6 +188,17 @@ OUT=$(BRAID_AGENT_CMD=true "$BRAID" design --effort max 2>&1)
 has "provider-only effort is refused by the portable interface" \
     "expected: low, medium, high, xhigh" "$OUT"
 
+# An adapter that predates the effort argument must not silently discard it. This is
+# also the compatibility path for a newly merged adapter: accepting and recording an
+# effort is dishonest until that adapter explicitly says how it carries the value.
+OUT=$(BRAID_HOME="$XDG_DATA_HOME/braid" /bin/bash -c '
+    # shellcheck disable=SC1091
+    . "$BRAID_HOME/lib/agent.sh"
+    BRAID_AGENT_RESOLVED=legacy
+    agent_check_effort high' 2>&1)
+has "an adapter without effort support refuses a configured value" \
+    "legacy does not support reasoning effort" "$OUT"
+
 # --- what setup writes into braid.sh, and what reads it back -----------------
 
 BS="$REPO/braid.sh"
@@ -214,10 +225,26 @@ cat >"$BS" <<'SH'
 : "${BRAID_AGENTS:=generic claude}"
 : "${BRAID_AGENT_WORK:=generic}"
 : "${BRAID_MODEL_STANDARD:=zebra}"
+: "${BRAID_EFFORT_LOW:=low}"
+: "${BRAID_EFFORT_STANDARD:=medium}"
+: "${BRAID_EFFORT_HIGH:=xhigh}"
 SH
 OUT=$(env -u BRAID_AGENTS "$BRAID" doctor 2>&1)
-has "a seat pinned in braid.sh is the seat that resolves" "work         generic  via BRAID_AGENT_WORK" "$OUT"
+has "a seat pinned in braid.sh is the seat that resolves" "standard     generic  via BRAID_AGENT_WORK" "$OUT"
 has "and the model it names is the model reported" "zebra" "$OUT"
+has "doctor reports low-complexity effort" "low          generic  via BRAID_AGENT_WORK" "$OUT"
+has "doctor reports its resolved value" "effort: low" "$OUT"
+has "doctor reports high-complexity effort" "high         generic  via BRAID_AGENT_WORK" "$OUT"
+has "doctor reports that resolved value too" "effort: xhigh" "$OUT"
+
+# A malformed committed value stops spawn, so doctor must be red for the same reason.
+# Merely proving that the provider still has an effort flag leaves the bad value hidden.
+OUT=$(env -u BRAID_AGENTS BRAID_EFFORT_HIGH=banana "$BRAID" doctor 2>&1)
+has "doctor rejects malformed effort" "unknown effort 'banana'" "$OUT"
+has "malformed effort makes doctor fatal" "something above would stop a spawn" "$OUT"
+
+cp "$TMP/braid.sh.keep" "$BS"
+OUT=$(env -u BRAID_AGENTS "$BRAID" doctor 2>&1)
 has "an old config leaves effort to the CLI" "effort: (the CLI chooses)" "$OUT"
 
 cp "$TMP/braid.sh.keep" "$BS"

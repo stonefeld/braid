@@ -105,6 +105,10 @@ and `xhigh`: the intersection supported by the bundled Codex and Claude Code ada
 Braid translates them at launch (`model_reasoning_effort` for Codex, `--effort` for
 Claude Code).
 
+Adapters opt into effort explicitly. If the resolved adapter has no independent effort
+control, a configured value is an error rather than a promise braid cannot keep. A
+project `braid_agent_command` may still implement the fourth argument itself.
+
 | | Answers |
 |---|---|
 | `BRAID_EFFORT_DESIGN` | how hard the design seat reasons |

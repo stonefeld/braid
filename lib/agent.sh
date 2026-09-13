@@ -213,17 +213,23 @@ agent_complexity_effort() {
     printf '%s' "${!var:-}"
 }
 
-# The portable intersection supported by both bundled agent CLIs. Provider-only levels
-# (`minimal` in Codex, `max` and `ultracode` in Claude Code) remain available through
-# each adapter's raw configuration escape hatch; accepting them here would make a
-# committed braid.sh change meaning when a seat moves between agents.
+# The portable intersection supported by the bundled Codex and Claude Code adapters.
+# An adapter opts into this contract by defining agent_effort_mode; otherwise a value
+# must be refused rather than accepted, recorded and silently dropped at launch. A
+# project launch hook is itself the explicit escape hatch and receives effort as $4.
+# Provider-only levels (`minimal` in Codex, `max` and `ultracode` in Claude Code) remain
+# available through each adapter's raw configuration escape hatch.
 agent_check_effort() {
     local effort="${1:-}"
     [[ -z "$effort" ]] && return 0
     case "$effort" in
-        low | medium | high | xhigh) return 0 ;;
+        low | medium | high | xhigh) ;;
         *) die "unknown effort '$effort' (expected: low, medium, high, xhigh)" ;;
     esac
+    if ! declare -F agent_effort_mode >/dev/null &&
+        ! declare -F braid_agent_command >/dev/null; then
+        die "${BRAID_AGENT_RESOLVED:-agent} does not support reasoning effort"
+    fi
 }
 
 # Checked only where the adapter says what it accepts. A typo in a model name is

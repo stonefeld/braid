@@ -314,15 +314,18 @@ ask_model() {
 }
 
 ask_effort() {
-    local tier="${1:?tier}" label="${2:?label}" current="${3:-}" effort
+    local tier="${1:?tier}" label="${2:?label}" current="${3:-}" seat="${4:?seat}" effort
     while :; do
         effort=$(ask_value "$label" "$current")
         [[ -n "$effort" ]] || return 0
-        if agent_check_effort "$effort" >/dev/null 2>&1; then
+        if (
+            agent_load "$seat" 2>/dev/null || exit 1
+            agent_check_effort "$effort"
+        ) >/dev/null 2>&1; then
             printf '%s %s' "$(seat_var EFFORT "$tier")" "$effort"
             return 0
         fi
-        warn "unknown effort '$effort' — expected low, medium, high or xhigh"
+        warn "'$effort' is not a supported effort for $(seat_now "$seat" | cut -d' ' -f1)"
     done
 }
 
@@ -398,7 +401,7 @@ seats_ask() {
         [[ -z "$answer" ]] || writes="$writes$answer
 "
         if [[ "$seat" != work ]]; then
-            answer=$(ask_effort "$seat" "$seat effort" "$(seat_effort_now "$seat")")
+            answer=$(ask_effort "$seat" "$seat effort" "$(seat_effort_now "$seat")" "$seat")
             [[ -z "$answer" ]] || writes="$writes$answer
 "
         fi
@@ -408,7 +411,7 @@ seats_ask() {
         answer=$(ask_model work "complexity: $level" "$(level_now "$level")" "$level")
         [[ -z "$answer" ]] || writes="$writes$answer
 "
-        answer=$(ask_effort "$level" "$level effort" "$(level_effort_now "$level")")
+        answer=$(ask_effort "$level" "$level effort" "$(level_effort_now "$level")" work)
         [[ -z "$answer" ]] || writes="$writes$answer
 "
     done

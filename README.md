@@ -119,7 +119,9 @@ Cursor's IDs are namespaced and tiered, and the bare `grok-4.6` is not one of th
 **Those are the adapter's defaults, not a decision anybody made about your repository** —
 and they are the largest lever on what a wave costs, so override whatever does not fit.
 Reasoning effort is a separate setting with the portable values `low`, `medium`, `high`
-and `xhigh`:
+and `xhigh`. Cursor does not expose a separate effort control, so braid refuses a
+configured effort when that adapter resolves instead of pretending the model tier
+changed:
 
 ```bash
 : "${BRAID_MODEL_DESIGN:=sonnet}"     # in braid.sh — committed, for everyone
