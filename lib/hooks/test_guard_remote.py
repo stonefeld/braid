@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 HOOK = Path(__file__).with_name("guard_remote.py")
 
@@ -155,8 +156,8 @@ def repo_on(branch: str) -> str:
 def decide(
     command: str,
     branch: str,
-    files: dict[str, str] | None = None,
-    env_extra: dict[str, str] | None = None,
+    files: Optional[dict[str, str]] = None,
+    env_extra: Optional[dict[str, str]] = None,
 ) -> str:
     env = dict(os.environ)
     env.pop("BRAID_AGENT_ROLE", None)
