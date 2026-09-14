@@ -8,9 +8,9 @@
 #
 #     --machine   write ~/.config/braid/config instead: this computer, every repository
 #
-# The way to change something that needs neither an agent nor a text editor. `braid
-# setup` scaffolds a repository and opens a session to learn what it is; this is for
-# afterwards, when you know the answer and only want it written down.
+# The way to change something that needs neither an agent nor a text editor. `braid init`
+# scaffolds a repository and `braid learn` opens the session that works out what it is;
+# this is for afterwards, when you know the answer and only want it written down.
 #
 # Writing goes to braid.sh by default because that is the layer somebody can review: a
 # decision about a repository belongs in the repository, where a pull request can argue

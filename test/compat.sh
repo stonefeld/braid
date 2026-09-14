@@ -262,12 +262,36 @@ else
     printf '%s\n' "$stale" | sed 's/^/          /'
 fi
 
-# --- what --help actually prints ----------------------------------------------
+# --- commands that exist ------------------------------------------------------
 
-# Every command's usage is its own header comment, printed by line number. Add a flag to
-# the list and the range no longer covers it; add nothing and the range quietly runs past
-# the block into the code — three --help outputs once ended with `set -uo pipefail`, and
-# commands were doing it. Nothing fails, so nobody finds out except the person reading it.
+# Every `braid <word>` the engine writes down has to be a command the dispatcher has.
+# A rename leaves its old name behind in the one place nobody greps — a help text, a
+# hint after an error, a heading in the docs — and the person who follows it gets
+# `unknown command`, which reads as a broken install rather than as out-of-date prose.
+#
+# DESIGN.md is exempt on purpose: it argues about commands braid deliberately does not
+# have, and a rejected name is the point of writing it down.
+NAMES=$(sed -n 's/^    "[^:]*:\([a-z]*\):.*/\1/p' bin/braid | tr '\n' ' ')
+NAMES="$NAMES version help wait "
+GHOSTS=""
+while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    # A fenced code block opens with ```braid, which is a slice's configuration and not
+    # a command. Dropped by the whole line, because the match alone no longer shows it.
+    case "$line" in *'```braid'*) continue ;; esac
+    where="${line%%:*}:$(printf '%s' "${line#*:}" | cut -d: -f1)"
+    for word in $(printf '%s' "$line" | grep -oE '`braid [a-z][a-z-]*' | sed 's/.*`braid //'); do
+        case " $NAMES " in *" $word "*) continue ;; esac
+        GHOSTS="$GHOSTS
+    $where: braid $word"
+    done
+done < <(grep -rnE '`braid [a-z][a-z-]*' bin lib docs README.md AGENTS.md CONTRIBUTING.md 2>/dev/null || true)
+if [[ -z "$GHOSTS" ]]; then
+    ok "every command the engine names is a command it has"
+else
+    bad "named, but not a command:$GHOSTS"
+fi
+
 # --- flags and the help that describes them -----------------------------------
 
 # A command's header comment is its --help, so a flag it parses and does not name is a
@@ -395,7 +419,7 @@ fi
 # from the code would make the test agree with whatever the code does, which is the one
 # thing it must not do.
 #
-# Literal exports only. setup.sh also exports names seat_var assembles, and seat_var can
+# Literal exports only. seats.sh also exports names seat_var assembles, and seat_var can
 # only ever build BRAID_<PREFIX>_<SEAT> out of the prefixes and seats named in agent.sh.
 CROSSES="BRAID_AGENTS BRAID_AGENT_DESIGN BRAID_AGENT_ORCHESTRATE BRAID_AGENT_WORK
 BRAID_BRANCH_PREFIX BRAID_DESIGN_STEPS BRAID_FEATURES_DIR BRAID_HOME BRAID_MAX_WORKERS

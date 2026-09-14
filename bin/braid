@@ -27,9 +27,6 @@ export BRAID_HOME
     exit 1
 }
 
-# command:blurb. The dispatcher is the only place that knows the full surface, so this
-# table is also what `braid help` prints and what an unknown command is measured
-# against. A command is here once lib/<name>.sh exists.
 # section:name:blurb. The dispatcher is the only place that knows the full surface, so
 # this table is also what `braid help` prints and what an unknown command is measured
 # against. A command is here once lib/<name>.sh exists.
