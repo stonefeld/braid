@@ -282,6 +282,20 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- the worker's model chain -------------------------------------------------
+
+# The reference calls BRAID_MODEL_WORK "a worker's model when nothing else says", which
+# makes it the last link in the complexity chain rather than a rival to it. It matters
+# for an adapter that maps no models — Codex is one — where every level otherwise
+# resolves to nothing and a repository has to set three variables to say one thing.
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_MODEL_WORK=zebra \
+    with_engine agent_complexity standard)
+is "a level that maps nothing falls through to BRAID_MODEL_WORK" "zebra" "$OUT"
+
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_MODEL_WORK=zebra \
+    BRAID_MODEL_STANDARD=quagga with_engine agent_complexity standard)
+is "and the level still wins wherever it says something" "quagga" "$OUT"
+
 echo
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 echo

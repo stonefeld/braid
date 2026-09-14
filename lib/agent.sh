@@ -174,10 +174,14 @@ agent_model() {
 #
 #   BRAID_MODEL_<COMPLEXITY>   this repository, or this session
 #   the adapter's mapping      where it is confident enough to have one
+#   BRAID_MODEL_WORK           what a worker runs when nothing above said anything.
+#                              This is the only place that variable can mean what it is
+#                              documented to mean: every worker declares a complexity,
+#                              so no path to the work seat avoids this function.
 #   nothing                    the CLI chooses, which is right for a vendor whose
 #                              model names change faster than braid can track
 agent_complexity() {
-    local level="${1:-standard}" var
+    local level="${1:-standard}" var model
     case "$level" in
         low | standard | high) ;;
         *) die "unknown complexity '$level' (expected: low, standard, high)" ;;
@@ -185,9 +189,11 @@ agent_complexity() {
     var=$(seat_var MODEL "$level")
     if [[ -n "${!var:-}" ]]; then
         printf '%s' "${!var}"
-    else
-        agent_complexity_model "$level"
+        return 0
     fi
+    model=$(agent_complexity_model "$level")
+    [[ -n "$model" ]] || model=$(agent_model work)
+    printf '%s' "$model"
 }
 
 # How hard a seat is allowed to reason, independently of which model runs it. Empty is

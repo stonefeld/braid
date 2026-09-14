@@ -91,7 +91,9 @@ braid spawn 04-migration --model opus  # this one slice
 An adapter that maps nothing — Codex — lets its own CLI choose unless you set these, so
 every seat and every complexity level runs whatever `~/.codex/config.toml` names. That is
 a real answer, not a gap: it follows you when you change it there. It does mean a
-`complexity:` level buys nothing until you say what it means here. Codex also has no tier
+`complexity:` level buys nothing until you say what it means here — and `BRAID_MODEL_WORK`
+is the shortest way to say it, because a level that maps nothing falls through to it, so
+one name covers all three until the levels are worth separating. Codex also has no tier
 alias to lean on — Claude's `opus` and `sonnet` stay put while the model behind them
 moves, while every name Codex offers carries its version — so take the names from the
 CLI's own picker rather than from memory.
