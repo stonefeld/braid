@@ -151,7 +151,7 @@ There is deliberately no effort field in a slice. Its `complexity` selects the m
 and effort together, while the repository decides what that tier costs. An unset effort
 is also deliberate: braid passes no effort flag and the agent CLI keeps its configured
 default. That makes every existing `braid.sh` backwards compatible. Run
-`braid setup --costs` to opt an existing repository into explicit values without
+`braid config` to opt an existing repository into explicit values without
 scaffolding again or opening a setup session.
 
 Provider-only levels remain provider configuration, not portable braid values. For

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # What this repository and this machine have decided, and where each answer came from.
 #
-#   braid config                 every value, resolved, with the layer it came from
+#   braid config                 the cost table, asked one row at a time
+#   braid config list            every value, resolved, with the layer it came from
 #   braid config get NAME        one value, resolved
 #   braid config set NAME VALUE  write it to braid.sh — committed, for everyone
 #
@@ -19,8 +20,8 @@
 
 set -uo pipefail
 
-# shellcheck source=agent.sh
-source "$BRAID_HOME/lib/agent.sh"
+# shellcheck source=seats.sh
+source "$BRAID_HOME/lib/seats.sh"
 
 MACHINE_FILE=0
 ARGS=()
@@ -31,7 +32,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h | --help)
-            sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         -*) die "unknown argument: $1" ;;
@@ -74,7 +75,27 @@ setting_known() {
     return 1
 }
 
-shown() { printf '%s' "${1:-(unset — whatever is under it decides)}"; }
+# seats.sh has a `shown` for a table where empty means the CLI decides. Here empty
+# means a lower layer answers, which is a different sentence.
+unset_or() { printf '%s' "${1:-(unset — whatever is under it decides)}"; }
+
+config_list() {
+        note "resolved for $(current_branch), from $_BRAID_PROJECT_FILE"
+        echo >&2
+        OUTSIDE=0
+        for NAME in $_BRAID_SETTINGS; do
+            FROM=$(setting_layer "$NAME")
+            [[ "$FROM" == default && -z "${!NAME:-}" ]] && continue
+            case "$FROM" in
+                environment | machine) OUTSIDE=1 ;;
+            esac
+            printf '  %-28s %-11s %s\n' "$NAME" "$FROM" "$(unset_or "${!NAME:-}")" >&2
+        done
+        echo >&2
+        info "everything not shown is unset, and whatever is under it decides"
+        [[ "$OUTSIDE" -eq 0 ]] ||
+            meh "some values came from outside braid.sh, so they are not what your coworkers get"
+}
 
 case "${ARGS[0]:-}" in
     get)
@@ -129,8 +150,8 @@ PY
         # writing to is a setting that will not change, and saying only the new one hides
         # exactly that case.
         note "$NAME in $WHERE"
-        info "was:  $(shown "$BEFORE")${BEFORE:+   (from $FROM)}"
-        info "now:  $(shown "$VALUE")"
+        info "was:  $(unset_or "$BEFORE")${BEFORE:+   (from $FROM)}"
+        info "now:  $(unset_or "$VALUE")"
         if [[ "$FROM" == environment && "$MACHINE_FILE" -eq 0 ]]; then
             meh "$NAME is exported in this shell, which outranks both files — unset it to see this take effect"
         fi
@@ -141,23 +162,18 @@ PY
         esac
         ;;
 
-    "" | list)
-        note "resolved for $(current_branch), from $_BRAID_PROJECT_FILE"
-        echo >&2
-        OUTSIDE=0
-        for NAME in $_BRAID_SETTINGS; do
-            FROM=$(setting_layer "$NAME")
-            [[ "$FROM" == default && -z "${!NAME:-}" ]] && continue
-            case "$FROM" in
-                environment | machine) OUTSIDE=1 ;;
-            esac
-            printf '  %-28s %-11s %s\n' "$NAME" "$FROM" "$(shown "${!NAME:-}")" >&2
-        done
-        echo >&2
-        info "everything not shown is unset, and whatever is under it decides"
-        [[ "$OUTSIDE" -eq 0 ]] ||
-            meh "some values came from outside braid.sh, so they are not what your coworkers get"
+    "")
+        # The table, when somebody is there to answer it. Piped or run from a script the
+        # listing is the useful half, and a prompt nobody can see is worse than the
+        # default it would have guarded.
+        if [[ -t 0 ]]; then
+            seats_ask || exit 1
+        else
+            config_list
+        fi
         ;;
 
-    *) die "unknown: braid config ${ARGS[0]} (expected: get, set, or nothing)" ;;
+    list) config_list ;;
+
+    *) die "unknown: braid config ${ARGS[0]} (expected: list, get, set, or nothing)" ;;
 esac

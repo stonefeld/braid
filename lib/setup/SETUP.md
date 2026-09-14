@@ -91,7 +91,7 @@ status from `.braid/finish.sh` instead of a stop hook. Both work.
 offered to change them before this session opened — it had to, because this session is
 already spending one of the rows. Run `braid doctor`, show them where it landed, and
 confirm it in one line. In a repository created by an older braid, the values remain the
-CLI's defaults until somebody explicitly runs `braid setup --costs`.
+CLI's defaults until somebody explicitly runs `braid config`.
 
 Two things are worth checking rather than restating:
 

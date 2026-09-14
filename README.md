@@ -54,8 +54,8 @@ The first run asks two things before it opens anything: which agents this reposi
 uses, and which model and reasoning effort each seat and complexity level gets. Both
 have to come first — a repo whose people run Codex should not have its setup session
 opened by Claude, and that session's model and effort are already one row in the table.
-`braid setup` is re-runnable when the project changes; `braid setup --costs` reopens only
-the agent/model/effort table without scaffolding or starting a session.
+`braid setup` is re-runnable when the project changes; `braid config` reopens the
+agent/model/effort table on its own, with no scaffolding and no session.
 
 ## Requirements
 
@@ -135,7 +135,7 @@ braid spawn 04-migration --effort high # or just this slice
 `braid setup` puts that table in front of you the first time it writes a `braid.sh` —
 every seat, every complexity level, and what each model and effort resolves to — and
 writes down only what you change. Existing repositories keep their current CLI defaults
-until somebody opts in with `braid setup --costs`. `braid doctor` prints the resolved
+until somebody opts in with `braid config`. `braid doctor` prints the resolved
 table at any time. [`docs/configuration.md`](docs/configuration.md) has both families in
 full — the seats and complexity levels are different variables and answer different
 questions.
@@ -281,7 +281,7 @@ whether it may delete something.
 ```
 braid next                 what to run now, and why
 braid setup                teach braid about this repository
-braid setup --costs        change the agent/model/effort table, open no session
+braid config              the agent/model/effort table, or get and set one value
 braid design               open the design seat, at the right tier
 braid orchestrate          open the orchestrator seat on this feature
 braid plan [feature]       derive the wave schedule from the slices

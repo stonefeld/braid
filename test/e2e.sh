@@ -253,18 +253,19 @@ has "an old config leaves effort to the CLI" "effort: (the CLI chooses)" "$OUT"
 
 cp "$TMP/braid.sh.keep" "$BS"
 
-# Existing repositories are never migrated implicitly. They can reopen the cost table
-# explicitly, without scaffolding again or starting the setup agent session.
+# Existing repositories are never migrated implicitly. The table reopens on its own
+# command, with no scaffolding and no agent session behind it.
 OUT=$(cd "$REPO" && python3 "$SOURCE/test/ask.py" \
-    'y||high||xhigh|||low||medium||high' -- "$BRAID" setup --costs 2>&1)
+    'y||high||xhigh|||low||medium||high' -- "$BRAID" config 2>&1)
 has "an existing repository can reopen the cost table" "change any of it?" "$OUT"
-hasnt "the cost table opens no setup agent" "about to open a session" "$OUT"
+hasnt "which opens no setup agent" "about to open a session" "$OUT"
 has "and records design effort" 'BRAID_EFFORT_DESIGN:=high' "$(cat "$BS")"
 has "and records orchestrator effort" 'BRAID_EFFORT_ORCHESTRATE:=xhigh' "$(cat "$BS")"
 has "and records standard-slice effort" 'BRAID_EFFORT_STANDARD:=medium' "$(cat "$BS")"
-OUT=$(cd "$REPO" && "$BRAID" setup --costs --model zebra </dev/null 2>&1)
-has "the cost table refuses unrelated setup options" \
-    "--costs cannot be combined with other setup options" "$OUT"
+# It was a flag on setup, which had to refuse every other option on the command it
+# belonged to — the shape of a command wearing somebody else's name.
+OUT=$(cd "$REPO" && "$BRAID" setup --costs </dev/null 2>&1)
+has "and is no longer a flag on setup" "unknown argument: --costs" "$OUT"
 
 cp "$TMP/braid.sh.keep" "$BS"
 
