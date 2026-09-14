@@ -7,11 +7,7 @@
 : "${BRAID_AGENTS:=claude}"
 
 braid_provision() {
-    local worktree="$1" slug="$2"
-
-    # .env from the primary checkout, with this worker's own BRAID_PORT so its dev
-    # server cannot answer for — or attach to — anybody else's.
-    provision_env "$worktree" "$slug"
+    local worktree="$1"
 
     # Long, and its output matters when it fails, so it goes to a file rather than
     # scrolling past in a panel nobody was watching.

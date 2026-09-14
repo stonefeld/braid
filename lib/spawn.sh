@@ -25,8 +25,6 @@ set -euo pipefail
 source "$BRAID_HOME/lib/agent.sh"
 # shellcheck source=contract.sh
 source "$BRAID_HOME/lib/contract.sh"
-# shellcheck source=env.sh
-source "$BRAID_HOME/lib/env.sh"
 # shellcheck source=launcher.sh
 source "$BRAID_HOME/lib/launcher.sh"
 # shellcheck source=source.sh

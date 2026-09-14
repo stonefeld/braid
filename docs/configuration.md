@@ -239,9 +239,13 @@ braid_slice_launchable <id>   # is this open issue work a worker could start?
                               # non-zero withdraws it. github mode only.
 ```
 
-Two helpers braid provides for use inside them: `provision_env <worktree> <slug>` copies
-the primary checkout's `.env` and gives the worker its own `BRAID_PORT`, and
-`worker_suffix <slug>` gives a short unique string for naming anything else.
+One helper braid provides for use inside them. `worker_suffix <slug>` gives a short name
+no other worker will take, derived from the slice id — so it is the same every time that
+worker is re-provisioned, and recomputable in `braid_teardown` once the worktree is gone.
+
+It is one piece, not a solution. braid knows that workers running in parallel must not
+collide on a shared name; what your workers share — a port, a schema, a queue, a
+container — is this project's business, and `braid_provision` is where you say so.
 
 `braid doctor` says which of these the repository actually defines.
 
@@ -279,8 +283,6 @@ ignored. The composed text is written once, at spawn, to the worktree's
 | `BRAID_FEATURES_DIR` | where slices live in files mode | `braid/features` |
 | `BRAID_WORKER_IGNORE` | what a worker's own build output leaves behind, ignored per worktree | empty |
 | `BRAID_DESIGN_STEPS` | what this house runs before there are slices — printed, never run | empty |
-| `BRAID_PORT_BASE` | first port handed to a worker | `8100` |
-| `BRAID_PORT_RANGE` | how many ports it may use | `400` |
 | `BRAID_STALE_SECONDS` | silence before a worker is called `stale` | `1200` |
 | `BRAID_PUSH_GUARD` | install a `pre-push` hook in every worker worktree | `1` |
 | `BRAID_NAME` | this repository's name, for anything that displays one | the directory |

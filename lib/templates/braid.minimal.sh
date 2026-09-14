@@ -25,7 +25,18 @@
 # Non-zero aborts the spawn and the half-made worktree is removed, so it is safe to
 # fail here.
 braid_provision() {
-    provision_env "$1" "$2" # .env copied from the primary checkout, with its own BRAID_PORT
+    local worktree="$1" slug="$2" name
+    # Nothing a worker shares with another may be named the same twice. `worker_suffix`
+    # gives you the one piece braid can supply — a short name derived from the slice,
+    # stable across re-provisions, and recomputable in braid_teardown once the worktree
+    # is gone. What you build out of it is this project's business:
+    #
+    #   name=$(worker_suffix "$slug")
+    #   printf 'PORT=%%s\n' "$((8100 + name))" >>"$worktree/.env"
+    #   createdb "app_$name"
+    #   docker run -d --name "app-$name" …
+    name=$(worker_suffix "$slug")
+    : "$worktree" "$name"
 }
 
 # The mechanical half of the gate: build, typecheck, lint, tests. Whatever a human

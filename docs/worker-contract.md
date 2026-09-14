@@ -99,19 +99,15 @@ report that claims a test the diff does not contain is worse than no report at a
 
 ## Your environment
 
-If your worktree has a `.env`, it was generated for you. `BRAID_PORT` is yours — bind
-your dev server to it and nothing else:
+Your worktree may have been provisioned before you started: a database, a port, a queue,
+a container — whatever this project has to give each worker its own of. What it did and
+where it recorded it is in this project's `braid.sh`, and its own rules below will say if
+you need to know.
 
-```bash
-# whatever this project's dev server command is
-PORT="$(grep '^BRAID_PORT=' .env | cut -d= -f2)"
-```
-
-The default port is the human's, and it is usually pointed at real data. If your port is
-taken, stop and say so; do not pick another one.
-
-Anything else the project isolated for you — a database, a queue, a container — is
-recorded in the same file. Do not edit those keys.
+**Use what you were given, and nothing else.** The defaults belong to the human running
+this repository and are usually pointed at real data. If something you were given is
+already taken, stop and say so in your report; do not pick another one, and do not edit
+the values you were handed.
 
 ## When you need the human
 

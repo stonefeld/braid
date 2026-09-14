@@ -85,6 +85,28 @@ braid_teardown_feature() { :; }
 # no branch for the case where nobody defined it.
 braid_slice_launchable() { :; }
 
+# --- what the seam is built from ----------------------------------------------
+
+# A short unique name for anything a worker must not share: a port, a schema, a queue,
+# a container. Derived from the slice id, so it is the same every time that worker is
+# re-provisioned — a worker sent back to fix something keeps the name its notes refer
+# to — and recomputable from the slug alone, so braid_teardown can still name what it
+# has to remove after the worktree is gone.
+#
+# It lives here rather than beside a helper that only spawn sourced, which is what made
+# that last sentence untrue: reap runs braid_teardown and never loaded the file.
+#
+# What the name is *for* is the repository's business. braid knows that parallel workers
+# must not collide on a shared name; it does not know whether yours is a port.
+worker_suffix() {
+    local slug="${1:?slug}"
+    if [[ "$slug" =~ ^([0-9]+)(-|$) ]]; then
+        printf '%s' "${BASH_REMATCH[1]}"
+    else
+        printf 'h%s' "$(printf '%s' "$slug" | cksum | cut -d' ' -f1)"
+    fi
+}
+
 # Whether the repository actually replaced one of them. Compared against the no-op body
 # rather than asked with `declare -F`, which is true of the defaults too — and a tool
 # that reports a gate it does not have is worse than one that reports no gate at all.
@@ -151,8 +173,6 @@ braid_config() {
     #   : "${BRAID_DESIGN_STEPS:=/grilling /to-spec /to-tickets}"
     : "${BRAID_DESIGN_STEPS:=}"
 
-    : "${BRAID_PORT_BASE:=8100}"
-    : "${BRAID_PORT_RANGE:=400}"
     : "${BRAID_STALE_SECONDS:=1200}"
     : "${BRAID_PUSH_GUARD:=1}"
 

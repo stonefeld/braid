@@ -306,7 +306,7 @@ is in the wrong place.
 
 ```bash
 braid_provision() {                  # $1 worktree  $2 slug  $3 base  $4 needs-setup
-    provision_env "$1" "$2"          # .env copied, with this worker's own BRAID_PORT
+    printf 'PORT=%s\n' "$((8100 + $(worker_suffix "$2")))" >>"$1/.env"
     (cd "$1" && npm ci) >"$1/.braid/install.log" 2>&1
 }
 

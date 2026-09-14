@@ -7,9 +7,7 @@
 : "${BRAID_AGENTS:=claude}"
 
 braid_provision() {
-    local worktree="$1" slug="$2"
-
-    provision_env "$worktree" "$slug"
+    local worktree="$1"
 
     # A worktree is a fresh checkout, so it has no virtualenv. Built here rather than
     # shared with the primary checkout: two workers installing into one environment is

@@ -375,15 +375,27 @@ has "the plan keeps room for what only it holds" "## Contracts" "$PLAN"
 # --- a wave -------------------------------------------------------------------
 
 phase "a wave"
+# What braid supplies to a project's own provisioning, used the way a project would use
+# it: a name derived from the slice, written where the worker can see it. And the same
+# name recomputed in braid_teardown, once the worktree it describes is gone — which is
+# the promise the helper makes and the reason it does not live in a file only spawn read.
+export SUFFIXES="$TMP/suffixes"
+cat >>"$BS" <<'TXT'
+braid_provision() { printf '%s' "$(worker_suffix "$2")" >"$1/.braid/suffix"; }
+braid_teardown() { printf '%s=%s\n' "$2" "$(worker_suffix "$2")" >>"$SUFFIXES"; }
+TXT
+git add -A
+git commit -qm "chore: name what each worker gets its own of"
 "$BRAID" wave 1 >/dev/null 2>&1
 COUNT=$(git worktree list | grep -c 'agent-')
 is "one worktree per slice" "3" "$COUNT"
 
 W() { printf '%s/agent-%s' "$BRAID_WORKTREE_ROOT" "$1"; }
-check "each worker gets its own port" grep -q '^BRAID_PORT=' "$(W 01-login)/.env"
-P1=$(grep '^BRAID_PORT=' "$(W 01-login)/.env" | cut -d= -f2)
-P2=$(grep '^BRAID_PORT=' "$(W 02-session)/.env" | cut -d= -f2)
-check "ports differ between workers" test "$P1" != "$P2"
+check "provisioning reaches a worker" test -s "$(W 01-login)/.braid/suffix"
+S1=$(cat "$(W 01-login)/.braid/suffix")
+S2=$(cat "$(W 02-session)/.braid/suffix")
+check "and no two workers are given the same name" test "$S1" != "$S2"
+is "the name is the slice's own number" "01" "$S1"
 
 # The single most expensive thing braid can get wrong here: if a worker can commit
 # .braid/, every worker commits a different version of the same paths and every
@@ -646,6 +658,7 @@ is "refuses to reap unintegrated work" "1" "$?"
 check "--force says so and does it" "$BRAID" reap 05-bad --force
 "$BRAID" reap --merged >/dev/null 2>&1
 is "reap --merged clears the wave" "0" "$(git worktree list | grep -c 'agent-')"
+has "teardown can still name what it has to remove" "99-contract=99" "$(cat "$SUFFIXES")"
 
 # --- the branch you stand on is where the instructions live -------------------
 

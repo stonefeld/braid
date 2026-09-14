@@ -40,8 +40,9 @@ go wrong:
 - **How long does the gate take?** It runs on every integration. If the honest test
   command takes forty minutes, ask what the fast subset is.
 - **Does anything need isolating per worker?** A database, a port, a container name. If
-  so, `provision_env` gives each worker its own `.env` with its own `BRAID_PORT`, and
-  `worker_suffix` gives a short unique string for naming anything else.
+  so, `worker_suffix <slug>` gives a short name no other worker will take, and
+  `braid_provision` is where this project turns that into whatever it actually needs.
+  Write that out — braid supplies the name and nothing else.
 - **What does a full test run leave lying about?** A worker's worktree is a fresh
   checkout where the install and the suite both run, so it produces things this
   repository may not ignore — a `.pytest_cache/` in a project whose tests only run in
