@@ -68,14 +68,20 @@ A preference outside the repository's list is an error, never a silent fallback.
 **Two families, and they answer different questions.** Seats are named by role; a
 worker's model comes from the complexity its slice declares.
 
-| | Answers | Claude Code | Cursor (`cursor-agent`) |
-|---|---|---|---|
-| `BRAID_MODEL_DESIGN` | which model the design seat runs | `fable` | `cursor-grok-4.6-high` |
-| `BRAID_MODEL_ORCHESTRATE` | which model the orchestrator runs | `opus` | `cursor-grok-4.6-high` |
-| `BRAID_MODEL_WORK` | a worker's model when nothing else says | `sonnet` | `composer-2.5` |
-| `BRAID_MODEL_LOW` | what a `complexity: low` slice means here | `haiku` | `composer-2.5-fast` |
-| `BRAID_MODEL_STANDARD` | what a `complexity: standard` slice means | `sonnet` | `composer-2.5` |
-| `BRAID_MODEL_HIGH` | what a `complexity: high` slice means | `opus` | `cursor-grok-4.6-high` |
+| | Answers | `claude` | `codex` | `cursor-agent` | `generic` |
+|---|---|---|---|---|---|
+| `BRAID_MODEL_DESIGN` | which model the design seat runs | `fable` | — | — | — |
+| `BRAID_MODEL_ORCHESTRATE` | which model the orchestrator runs | `opus` | — | — | — |
+| `BRAID_MODEL_WORK` | a worker's model when nothing else says | `sonnet` | — | — | — |
+| `BRAID_MODEL_LOW` | what a `complexity: low` slice means here | `haiku` | — | — | — |
+| `BRAID_MODEL_STANDARD` | what a `complexity: standard` slice means | `sonnet` | — | — | — |
+| `BRAID_MODEL_HIGH` | what a `complexity: high` slice means | `opus` | — | — | — |
+
+A dash means the adapter names nothing and the CLI's own default runs until this
+repository says otherwise. Only Claude Code has model names that are aliases rather than
+versions — `opus` stays `opus` while what runs under it changes — and an adapter may only
+name one of those. Everywhere else a name written into braid would be a snapshot that goes
+stale, and a stale name does not degrade: the CLI refuses it.
 
 Those defaults come from the agent adapters, which are the one place a vendor's model
 names are allowed to appear in code. They are a guess about somebody else's budget, and
@@ -88,15 +94,17 @@ braid setup --model sonnet             # this session
 braid spawn 04-migration --model opus  # this one slice
 ```
 
-An adapter that maps nothing — Codex — lets its own CLI choose unless you set these, so
-every seat and every complexity level runs whatever `~/.codex/config.toml` names. That is
-a real answer, not a gap: it follows you when you change it there. It does mean a
-`complexity:` level buys nothing until you say what it means here — and `BRAID_MODEL_WORK`
-is the shortest way to say it, because a level that maps nothing falls through to it, so
-one name covers all three until the levels are worth separating. Codex also has no tier
-alias to lean on — Claude's `opus` and `sonnet` stay put while the model behind them
-moves, while every name Codex offers carries its version — so take the names from the
-CLI's own picker rather than from memory.
+An adapter that maps nothing lets its own CLI choose unless you set these, so every seat
+and every complexity level runs whatever that CLI is configured for — `~/.codex/config.toml`
+for Codex, Cursor's own default. That is a real answer, not a gap: it follows you when you
+change it there. It does mean a `complexity:` level buys nothing until you say what it
+means here — and `BRAID_MODEL_WORK` is the shortest way to say it, because a level that
+maps nothing falls through to it, so one name covers all three until the levels are worth
+separating.
+
+Take those names from the CLI's own picker rather than from memory. Neither of those two
+has a tier alias to lean on, which is the whole reason braid does not write their names
+down for you: every name they offer carries its version, and a version is what moves.
 
 `braid doctor` prints the resolved table for every seat and every level.
 

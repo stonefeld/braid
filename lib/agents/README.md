@@ -55,6 +55,26 @@ belongs to the contract, not to each adapter's reading of it; an adapter that de
 three still runs, and silently drops whatever the engine passes in the position it did not
 declare.
 
+### Naming a model
+
+**An adapter may name a model only where the name is an alias that outlives the model
+behind it.** Claude Code's `opus` and `sonnet` stay put while what runs under them
+changes, so naming them is safe for as long as this file exists. A name that carries its
+version — `gpt-5.6-sol`, `composer-2.5`, `cursor-grok-4.6-high` — is a snapshot, and a
+snapshot written into an adapter is wrong before the release carrying it is a week old.
+
+The asymmetry is what decides it. An adapter that names nothing runs whatever the CLI is
+configured for, which always works; the repository says what a tier means, and `braid
+config` asks for that at the moment somebody with the CLI installed can answer it. An
+adapter that names a model which has since moved fails **hard**: the CLI refuses the name,
+and for at least one of them it refuses by writing nothing and exiting 0, so a wave reads
+as a run of empty successes.
+
+The same rule decides `agent_models`. Declare a closed set only where the set is aliases,
+or where the CLI validates names itself. Returning nothing is not a gap — `braid doctor`
+says which adapters check a name, so that one accepted here and refused by the API is an
+expected asymmetry rather than a surprise.
+
 ### Optional — skipped
 
 | | Absent means |

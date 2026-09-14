@@ -274,6 +274,16 @@ for name in $BRAID_AGENTS; do
     (
         # shellcheck disable=SC1090
         source "$(agent_file "$name")"
+        # An adapter naming a closed set refuses anything outside it; one naming none
+        # accepts whatever it is handed and lets the API refuse it. Both are correct and
+        # they are not the same, so the difference is said rather than discovered when a
+        # name braid accepted comes back rejected several minutes later.
+        if [[ -n "$(agent_models)" ]]; then
+            info "$name model names: checked against $(agent_models)"
+        else
+            info "$name model names: unchecked — its CLI decides"
+        fi
+
         # Absent is reported rather than skipped, the way the effort branch below already
         # does it: an adapter braid cannot probe is a thing to know before a wave, and
         # silence reads the same as a pass.

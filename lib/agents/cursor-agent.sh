@@ -66,24 +66,18 @@ agent_version() { cursor-agent --version 2>/dev/null | head -1; }
 #
 # `-high` is Cursor's default tier for Grok rather than an upgrade — the CLI lists
 # `cursor-grok-4.6-high` as plain "Cursor Grok 4.6".
-agent_seat_model() {
-    case "${1:?seat}" in
-        design) echo cursor-grok-4.6-high ;;
-        orchestrate) echo cursor-grok-4.6-high ;;
-        work | *) echo composer-2.5 ;;
-    esac
-}
+# Left to the repository, for the reason lib/agents/README.md gives: every name this CLI
+# offers carries its version — `composer-2.5`, `cursor-grok-4.6-high` — and there is no
+# family alias underneath them to name instead. A version is the thing that moves, and a
+# name that has moved fails hard here: the CLI answers "Cannot use this model", writes
+# nothing and exits 0, so a wave on a stale name reads as a wave of empty successes.
+# Naming nothing runs whatever the CLI is configured for, which always works.
+#
+# `braid config` asks which model each seat and each complexity level means here, which
+# is the moment somebody with the CLI installed can read the answer off `--list-models`.
+agent_seat_model() { :; }
 
-# What a slice's complexity means here. The slice says how much judgement the work
-# needs; the adapter says which model that is. A slice that named a model directly
-# would be unusable in a repository whose workers run something else.
-agent_complexity_model() {
-    case "${1:?complexity}" in
-        low) echo composer-2.5-fast ;;
-        high) echo cursor-grok-4.6-high ;;
-        standard | *) echo composer-2.5 ;;
-    esac
-}
+agent_complexity_model() { :; }
 
 # Nothing to validate against. `--list-models` answers with hundreds of names: every
 # Claude, GPT, Gemini, Grok, Kimi and GLM tier the account can reach, plus `auto`.

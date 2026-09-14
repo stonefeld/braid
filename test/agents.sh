@@ -162,38 +162,21 @@ done
 ADAPTER="$BRAID_HOME/lib/agents/cursor-agent.sh"
 check "cursor-agent adapter exists" test -f "$ADAPTER"
 
-# Pinned first-party models: Grok for judgement, Composer for the everyday. Spelled
-# the way Cursor spells them — namespaced and tiered. The bare `grok-4.6` is not a
-# model ID: the CLI answers "Cannot use this model", writes nothing, and exits 0, so
-# a wave on a wrong name reads as a wave of empty successes. Hence the exact strings.
-GROK="cursor-grok-4.6-high"
-is "design seat" "$GROK" "$( ( with_adapter agent_seat_model design ) )"
-is "orchestrate seat" "$GROK" "$( ( with_adapter agent_seat_model orchestrate ) )"
-is "high complexity" "$GROK" "$( ( with_adapter agent_complexity_model high ) )"
-is "work seat" "composer-2.5" "$( ( with_adapter agent_seat_model work ) )"
-is "standard complexity" "composer-2.5" \
-    "$( ( with_adapter agent_complexity_model standard ) )"
-is "low complexity" "composer-2.5-fast" \
-    "$( ( with_adapter agent_complexity_model low ) )"
-# Cursor's own Grok IDs all carry the `cursor-` namespace. A bare `grok-*` is the
-# exact mistake that reads as a successful empty wave, so no mapping may emit one.
-for seat in design orchestrate work; do
-    case "$( ( with_adapter agent_seat_model "$seat" ) )" in
-        grok-*) bad "$seat seat uses a bare vendor model name" ;;
-        *) ok "$seat seat is spelled the way Cursor spells it" ;;
-    esac
+# This adapter names no model and validates none, and both are decisions rather than
+# gaps. Every name the CLI offers carries its version, and a stale one is refused by
+# writing nothing and exiting 0 — a wave on a wrong name reads as a run of empty
+# successes. Naming nothing runs whatever the CLI is configured for, and the repository
+# says what a tier means here. The rule behind that is checked across every adapter
+# further down; this is the one adapter it changed.
+NAMED=""
+for tier in design orchestrate work; do
+    NAMED="$NAMED$( ( with_adapter agent_seat_model "$tier" ) )"
 done
-for level in low standard high; do
-    case "$( ( with_adapter agent_complexity_model "$level" ) )" in
-        grok-*) bad "complexity $level uses a bare vendor model name" ;;
-        *) ok "complexity $level is spelled the way Cursor spells it" ;;
-    esac
+for tier in low standard high; do
+    NAMED="$NAMED$( ( with_adapter agent_complexity_model "$tier" ) )"
 done
-
-# Nothing is validated, on purpose. The CLI reaches hundreds of models and the list
-# braid could write down would reject working configurations a release later — so
-# BRAID_MODEL_* and `--model` stay the escape hatches DESIGN.md §5 promises.
-is "names no closed model set" "" "$( ( with_adapter agent_models ) )"
+is "names no model for any seat or level" "" "$NAMED"
+is "and no closed set to validate against" "" "$( ( with_adapter agent_models ) )"
 for model in claude-opus-5-high gpt-5.2 auto; do
     PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
         check "a model braid never heard of survives --model $model" \
@@ -213,31 +196,32 @@ is "skill prefix" "/" "$( ( with_adapter agent_skill_prefix ) )"
 has "auto mode forces" "--force" "$( ( with_adapter agent_auto_mode ) )"
 has "auto mode trusts" "--trust" "$( ( with_adapter agent_auto_mode ) )"
 
-CMD="$( ( with_adapter agent_command "/tmp/wt" "$GROK" "do the thing" ) )"
+GIVEN_MODEL="a-model"
+CMD="$( ( with_adapter agent_command "/tmp/wt" "$GIVEN_MODEL" "do the thing" ) )"
 has "interactive runs cursor-agent" "cursor-agent" "$CMD"
-has "interactive passes the model" "$GROK" "$CMD"
+has "interactive passes the model" "$GIVEN_MODEL" "$CMD"
 has "interactive carries the prompt" 'do\ the\ thing' "$CMD"
 hasnt "interactive is not print mode" " -p " " $CMD "
 hasnt "interactive omits headless-only trust" "--trust" "$CMD"
 hasnt "interactive makes no worktree of its own" "worktree" "$CMD"
 
 HEADLESS="$( ( with_adapter agent_command_headless \
-    "/tmp/wt" "$GROK" "do the thing" ) )"
+    "/tmp/wt" "$GIVEN_MODEL" "do the thing" ) )"
 has "headless runs cursor-agent in print mode" "cursor-agent -p" "$HEADLESS"
 has "headless allows its shell" "--force" "$HEADLESS"
 has "headless trusts the workspace" "--trust" "$HEADLESS"
-has "headless passes the model" "$GROK" "$HEADLESS"
+has "headless passes the model" "$GIVEN_MODEL" "$HEADLESS"
 has "headless carries the prompt" 'do\ the\ thing' "$HEADLESS"
 hasnt "headless makes no worktree of its own" "worktree" "$HEADLESS"
 
 SPLIT="$( ( BRAID_CURSOR_AGENT_ARGS="--force --common-test" \
     BRAID_CURSOR_AGENT_HEADLESS_ARGS="--trust --headless-test" \
-    with_adapter agent_command_headless "/tmp/wt" "$GROK" "do the thing" ) )"
+    with_adapter agent_command_headless "/tmp/wt" "$GIVEN_MODEL" "do the thing" ) )"
 has "headless carries common custom flags" "--common-test" "$SPLIT"
 has "headless carries headless custom flags" "--headless-test" "$SPLIT"
 SPLIT_INTERACTIVE="$( ( BRAID_CURSOR_AGENT_ARGS="--force --common-test" \
     BRAID_CURSOR_AGENT_HEADLESS_ARGS="--trust --headless-test" \
-    with_adapter agent_command "/tmp/wt" "$GROK" "do the thing" ) )"
+    with_adapter agent_command "/tmp/wt" "$GIVEN_MODEL" "do the thing" ) )"
 has "interactive carries common custom flags" "--common-test" "$SPLIT_INTERACTIVE"
 hasnt "interactive omits custom headless flags" "--headless-test" "$SPLIT_INTERACTIVE"
 
@@ -283,6 +267,29 @@ has "cursor-agent refuses unsupported reasoning effort" \
     "cursor-agent does not support reasoning effort" "$OUT"
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
+
+# --- the rule about naming a model --------------------------------------------
+
+# An adapter may name a model only where the name is an alias that outlives the model
+# behind it — Claude's `opus` and `sonnet` stay put while what runs under them changes.
+# A digit is how a version announces itself, and a version is what goes stale. When a
+# name that is genuinely an alias needs one, this test and lib/agents/README.md change
+# together, which is the friction that decision deserves.
+for file in lib/agents/*.sh; do
+    name=$(basename "$file" .sh)
+    ADAPTER="$BRAID_HOME/$file"
+    named=""
+    for seat in design orchestrate work; do
+        named="$named $( ( with_adapter agent_seat_model "$seat" ) )"
+    done
+    for level in low standard high; do
+        named="$named $( ( with_adapter agent_complexity_model "$level" ) )"
+    done
+    case "$named" in
+        *[0-9]*) bad "$name names a model whose name carries a version:$named" ;;
+        *) ok "$name names no versioned model" ;;
+    esac
+done
 
 # --- a probe that asks nothing ------------------------------------------------
 
