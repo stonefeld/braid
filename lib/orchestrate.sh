@@ -5,6 +5,7 @@
 #
 #     --model NAME    override the tier for this one session
 #     --effort LEVEL  override reasoning effort for this one session
+#     --agent NAME    which agent takes the seat, for this one session
 #     --here          take over this terminal instead of opening a window
 #
 # A fresh context window, on the tier this repository calls `orchestrate`, in the feature
@@ -36,12 +37,17 @@ while [[ $# -gt 0 ]]; do
             EFFORT="${2:?--effort needs a level}"
             shift 2
             ;;
+        --agent)
+            # Read back by agent_resolve through indirect expansion of the seat name.
+            export BRAID_AGENT_ORCHESTRATE="${2:?--agent needs a name}"
+            shift 2
+            ;;
         --here)
             HERE=1
             shift
             ;;
         -h | --help)
-            sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         *) die "unknown argument: $1" ;;

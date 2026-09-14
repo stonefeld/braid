@@ -275,6 +275,12 @@ OUT=$("$BRAID" design --model zebra --effort high "review this" 2>/dev/null)
 has "a custom launch command receives effort as its fourth argument" \
     "argc=4 model=zebra prompt=review this effort=high" "$OUT"
 
+# agent.sh names `braid <cmd> --agent <supported>` in every resolution failure, so the
+# commands it names have to accept it. A seat whose model can be overridden for one run
+# and whose agent cannot is the odd half of a pair.
+OUT=$("$BRAID" design --agent nosuchagent "review this" 2>&1)
+hasnt "design parses --agent" "unknown argument: --agent" "$OUT"
+
 cp "$TMP/braid.sh.keep" "$BS"
 
 # --- the two questions, answered ----------------------------------------------

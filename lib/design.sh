@@ -6,6 +6,7 @@
 #
 #     --model NAME    override the tier for this one session
 #     --effort LEVEL  override reasoning effort for this one session
+#     --agent NAME    which agent takes the seat, for this one session
 #
 # This is a shortcut, not a workflow. **braid has no opinion about how you decide what to
 # build** — grilling, a PRD, a conversation, a whiteboard photo — and this command carries
@@ -38,8 +39,13 @@ while [[ $# -gt 0 ]]; do
             EFFORT="${2:?--effort needs a level}"
             shift 2
             ;;
+        --agent)
+            # Read back by agent_resolve through indirect expansion of the seat name.
+            export BRAID_AGENT_DESIGN="${2:?--agent needs a name}"
+            shift 2
+            ;;
         -h | --help)
-            sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         -*) die "unknown argument: $1" ;;
