@@ -72,6 +72,16 @@ on `push` to `main` as well as on pull requests, so the same suites gate both, a
 nothing reaches anybody until a release tag is cut — `install.sh` and `braid upgrade`
 resolve the latest tag, never the branch. The tag is the gate, not the merge.
 
+**Rebase onto `main`, never merge `main` into your branch.** A branch that is behind, or
+that conflicts, is caught up with `git fetch origin && git rebase origin/main` — and the
+conflict is resolved inside the commit that causes it, where the next reader looks for it.
+A `Merge branch 'main' into feat/x` commit puts that resolution in a place no reader of the
+feature would think to open, and it makes the branch's own history unreadable as a sequence
+of changes.
+
+The merge commit a pull request produces is kept: it is the only record of where a change
+entered and when it closed. The one that has to go is the other direction.
+
 ## Commits
 
 **Conventional commits, English, imperative.** `type(scope): what changed`, and the type
