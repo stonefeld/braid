@@ -129,6 +129,21 @@ case "$MODE" in
                 "send the worker back to commit them, or commit them yourself.")"
         fi
 
+        # The contract tells a worker to commit everything, and `.braid/` is the one
+        # place that sentence must not reach: the contract, the report and the command
+        # logs all live there, ignored. Forced in, they fast-forward into the feature
+        # branch and stay — braid's scratch space, in the project's history, for good.
+        TRACKED=$(git -C "$WORKTREE" ls-files -- .braid 2>/dev/null)
+        if [[ -n "$TRACKED" ]]; then
+            die "$(printf '%s\n' \
+                "$BRANCH has braid's own scratch space committed in it:" \
+                "$(printf '%s' "$TRACKED" | sed 's/^/  /')" \
+                "that is the contract, the report and the command logs — ignored here, and" \
+                "not this project's history to keep. take it out of the branch:" \
+                "  git -C $WORKTREE rm -r --cached .braid" \
+                "then amend or rebase so no commit carries it, and integrate again.")"
+        fi
+
         ahead=$(git -C "$WORKTREE" rev-list --count "$FEATURE..$BRANCH" 2>/dev/null || echo 0)
         [[ "$ahead" -gt 0 ]] ||
             die "$BRANCH has no commits that $FEATURE does not — nothing to integrate"

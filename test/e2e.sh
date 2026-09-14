@@ -812,6 +812,26 @@ is "a red gate after the fast-forward exits 5" "5" "$?"
 check "and nothing is reaped" git show-ref --verify --quiet refs/heads/agent/05-bad
 git reset --hard HEAD^ >/dev/null 2>&1
 
+# --- braid's scratch space, forced into a branch ------------------------------
+
+phase "a worker that committed .braid/"
+# The contract tells a worker to commit everything, and `.braid/` is where that sentence
+# has to stop. A worker that forces its report in puts the contract, the report and the
+# command logs into the project's history, and a fast-forward keeps them there for good.
+slice 06-leaky low no "" "Leak it."
+"$BRAID" spawn "$D/06-leaky.md" --no-launch >/dev/null 2>&1
+printf 'leak\n' >"$(W 06-leaky)/leak.txt"
+printf 'Leaked.\n' >"$(W 06-leaky)/.braid/report.md"
+git -C "$(W 06-leaky)" add -A
+git -C "$(W 06-leaky)" add -f .braid/report.md
+git -C "$(W 06-leaky)" commit -qm "06-leaky"
+"$BRAID" integrate 06-leaky >/dev/null 2>&1
+is "integrating braid's own scratch space is refused" "1" "$?"
+git -C "$(W 06-leaky)" rm -r -q --cached .braid
+git -C "$(W 06-leaky)" commit -q --amend --no-edit
+check "and once it is out of the branch, it integrates" "$BRAID" integrate 06-leaky
+is "nothing under .braid/ reached the feature branch" "" "$(git ls-files -- .braid)"
+
 # --- reaping ------------------------------------------------------------------
 
 phase "reaping"

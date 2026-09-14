@@ -35,6 +35,11 @@ orchestrator sees, and a dirty tree is reported as `dirty` rather than as work.
 Match the commit message convention already in the repository's log. If there is none
 yet, use `type(scope): what changed`, present tense.
 
+**`.braid/` is braid's, not yours to commit.** Your report, your logs and the contract
+itself live there, it is already ignored, and a clean tree is one where git says so —
+never one where you forced those files in. Committing them puts braid's scratch space
+into the feature branch for good.
+
 ## You stay inside your slice
 
 Implement the slice you were given, completely — whatever it actually requires.
