@@ -338,7 +338,7 @@ breaks the rule the seats already follow — a vendor's model names belong in on
 So the slice says how much judgement the work needs, and the repository plus adapter say
 which model and reasoning effort that means here.
 
-| | The work | Claude |
+| | The work | `claude` |
 |---|---|---|
 | `low` | mechanical and fully specified: a rename, a field addition, porting a test | `haiku` |
 | `standard` | the default — an ordinary vertical slice | `sonnet` |

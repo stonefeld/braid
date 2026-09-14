@@ -89,8 +89,8 @@ command-line template, is a first-class option rather than a fallback.
 
 | | Contract arrives | Status written by | Remote blocked by | Run for real |
 |---|---|---|---|---|
-| **Claude Code** | `SessionStart` hook | `Stop` hook, which can push back on a dirty tree | `PreToolUse` guard **and** `pre-push` | a whole feature |
-| **Codex** | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | a whole feature |
+| **Claude Code** (`claude`) | `SessionStart` hook | `Stop` hook, which can push back on a dirty tree | `PreToolUse` guard **and** `pre-push` | a whole feature |
+| **Codex** (`codex`) | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | a whole feature |
 | **Cursor** (`cursor-agent`) | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | the adapter, against the installed CLI. No feature yet |
 | **`generic`** | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | the test suite, every CI run. No real agent |
 

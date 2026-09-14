@@ -63,6 +63,14 @@ not a default. The old code defaulted a missing `Needs setup` to "no", which is 
 cheap path — so a typo silently ran a task without the setup it needed and failed
 strangely half an hour later.
 
+**One spelling per agent.** Nothing braid prints is a brand: commands print the adapter
+id — `claude`, `codex`, `cursor-agent`, `generic` — which is also what a person types into
+`BRAID_AGENTS` and what their shell completes, because `agent_usable` asks the adapter and
+every adapter braid ships answers "is my binary on PATH". Prose may name the product where
+the product is the subject, and each document pairs the two the first time: **Cursor**
+(`cursor-agent`). Where a sentence is about a value braid reads or prints, it uses the id
+— a reader holding a document beside command output should never have to translate.
+
 **English.** Code, comments, docs, commit messages. What language a *project using*
 braid writes its issues in is that project's choice, configured at setup — but the
 keys braid parses are always English, because a translated key breaks the parse

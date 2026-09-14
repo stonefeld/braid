@@ -340,7 +340,9 @@ ask_effort() {
 # session is opened by the design seat, so its model is already spent by the time an
 # agent could ask you about it.
 seats_ask() {
-    local seat level agent model effort answer row writes="" agents=0
+    local seat level agent model effort answer row writes="" agents=0 width
+    # Measured, not typed. The same table in braid doctor learned this the same way.
+    width=$(agents_shipped | tr ' ' '\n' | awk '{ if (length > m) m = length } END { print m }')
 
     for seat in $BRAID_AGENTS; do
         agents=$((agents + 1))
@@ -355,13 +357,13 @@ seats_ask() {
             return 1
         }
         effort=$(seat_effort_now "$seat")
-        info "$(printf '%-13s %-9s %-24s effort: %s' "$seat" "${row%% *}" \
+        info "$(printf "%-13s %-${width}s %-24s effort: %s" "$seat" "${row%% *}" \
             "$(shown "${row#* }")" "$(shown "$effort")")"
     done
     echo >&2
     note "and what a slice's complexity means, on the work seat?"
     for level in low standard high; do
-        info "$(printf '%-13s %-9s %-24s effort: %s' "$level" "" \
+        info "$(printf "%-13s %-${width}s %-24s effort: %s" "$level" "" \
             "$(shown "$(level_now "$level")")" "$(shown "$(level_effort_now "$level")")")"
     done
     echo >&2

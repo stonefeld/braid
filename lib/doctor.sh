@@ -221,6 +221,11 @@ info "installed:      $(doctor_agent_versions | cut -c3-)"
 # Print a cost row only after checking it exactly as a launch would. Kept in a command
 # substitution because agent_load sources one adapter's generic function names; loading
 # another row in the doctor process would leave the previous adapter behind.
+# As wide as the longest adapter braid ships, measured rather than typed: this column
+# was sized before an id of twelve characters existed, and a truncated agent name in a
+# table about which agent runs what is the one word that had to survive.
+AGENT_W=$(agents_shipped | tr ' ' '\n' | awk '{ if (length > m) m = length } END { print m }')
+
 doctor_cost_row() {
     local seat="${1:?seat}" label="${2:?label}" level="${3:-}" model effort
     agent_load "$seat"
@@ -233,7 +238,7 @@ doctor_cost_row() {
     fi
     agent_check_model "$model"
     agent_check_effort "$effort"
-    printf '  %sok%s    %-12s %-8s via %-24s %s  effort: %s\n' \
+    printf "  %sok%s    %-12s %-${AGENT_W}s via %-24s %s  effort: %s\n" \
         "$_C_GREEN" "$_C_OFF" "$label" "$BRAID_AGENT_RESOLVED" "$BRAID_AGENT_REASON" \
         "${model:-(the CLI chooses)}" "${effort:-(the CLI chooses)}"
 }

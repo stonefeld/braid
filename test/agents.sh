@@ -283,6 +283,27 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- the list a repository chooses from ---------------------------------------
+
+# BRAID_AGENTS is read best-first, so its default is an order and an order is a decision:
+# it stays typed rather than derived. What a typed list does is drift, and this one is
+# the only statement of which adapters a repository may pick from before it has picked.
+SHIPPED=$( ( with_agent agents_shipped ) )
+# shellcheck disable=SC2016  # a sed script, not an expansion
+DEFAULT=$(sed -n 's/^[[:space:]]*: "\${BRAID_AGENTS:=\(.*\)}"$/\1/p' lib/config.sh)
+for name in $SHIPPED; do
+    case " $DEFAULT " in
+        *" $name "*) ok "the default agent list offers $name" ;;
+        *) bad "the default agent list omits $name" ;;
+    esac
+done
+for name in $DEFAULT; do
+    case " $SHIPPED " in
+        *" $name "*) ok "and names nothing braid does not ship ($name)" ;;
+        *) bad "the default agent list names $name, which braid does not ship" ;;
+    esac
+done
+
 # --- the fourth argument ------------------------------------------------------
 
 # agent_command takes four arguments whether or not an adapter uses the fourth. One

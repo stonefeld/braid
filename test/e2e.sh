@@ -230,11 +230,15 @@ cat >"$BS" <<'SH'
 : "${BRAID_EFFORT_HIGH:=xhigh}"
 SH
 OUT=$(env -u BRAID_AGENTS "$BRAID" doctor 2>&1)
-has "a seat pinned in braid.sh is the seat that resolves" "standard     generic  via BRAID_AGENT_WORK" "$OUT"
+# Runs of spaces collapsed: the agent column is as wide as the longest adapter braid
+# ships, so asserting its padding would assert which adapters exist rather than which
+# one resolved.
+ROWS=$(printf '%s\n' "$OUT" | tr -s ' ')
+has "a seat pinned in braid.sh is the seat that resolves" "standard generic via BRAID_AGENT_WORK" "$ROWS"
 has "and the model it names is the model reported" "zebra" "$OUT"
-has "doctor reports low-complexity effort" "low          generic  via BRAID_AGENT_WORK" "$OUT"
+has "doctor reports low-complexity effort" "low generic via BRAID_AGENT_WORK" "$ROWS"
 has "doctor reports its resolved value" "effort: low" "$OUT"
-has "doctor reports high-complexity effort" "high         generic  via BRAID_AGENT_WORK" "$OUT"
+has "doctor reports high-complexity effort" "high generic via BRAID_AGENT_WORK" "$ROWS"
 has "doctor reports that resolved value too" "effort: xhigh" "$OUT"
 
 # A malformed committed value stops spawn, so doctor must be red for the same reason.

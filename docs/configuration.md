@@ -25,7 +25,7 @@ which agent that person prefers. Conflating them is how one laptop configures a 
 > **The machine layer currently outranks the repository for *every* variable**, including
 > the ones that exist precisely so that one laptop cannot configure a team. A
 > `BRAID_AGENTS=codex` written once in `~/.config/braid/config` silently un-supports
-> Claude in every repository on that machine, and nothing reports it.
+> `claude` in every repository on that machine, and nothing reports it.
 >
 > That is the behaviour, not the intent, and it is stated here because a reference that
 > omits it is worse than none. Narrowing which keys a machine may override — and having

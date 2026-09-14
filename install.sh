@@ -330,8 +330,13 @@ fi
 
 # Reported, not decided. Which agents a *repository* supports is a committed decision
 # made in `braid setup`; what happens to be on this PATH is not it.
+# From what was just installed, never a list typed here: one written by hand is a
+# second answer to "which agents does braid know about", and it was already missing
+# one. `generic` is not a binary, so asking PATH about it excludes it for free.
 found=""
-for agent in claude codex cursor-agent; do
+for adapter in "$DATA"/lib/agents/*.sh; do
+    [ -f "$adapter" ] || continue
+    agent=$(basename "$adapter" .sh)
     command -v "$agent" >/dev/null 2>&1 && found="$found $agent"
 done
 if [ -n "$found" ]; then
