@@ -279,13 +279,19 @@ whether it may delete something.
 ## Commands
 
 ```
-braid next                 what to run now, and why
-braid init                 scaffold this repository, then learn what it is
+# preparing a repository
+braid init                 scaffold it, then learn what it is   (--agents, --no-learn)
 braid learn                open the session that works out what it is
-braid config              the agent/model/effort table, or get and set one value
+braid config               the agent/model/effort table, or get and set one value
+braid doctor               check this machine can run a wave
+
+# you run these
+braid next                 what to run now, and why
 braid design               open the design seat, at the right tier
-braid orchestrate          open the orchestrator seat on this feature
 braid plan [feature]       derive the wave schedule from the slices
+braid orchestrate          open the orchestrator seat on this feature
+
+# the orchestrator seat runs these
 braid wave <n|slices…>     launch a wave, at most BRAID_MAX_WORKERS at a time
 braid spawn <slice>        launch one worker
 braid status               what every worker is doing   (--reports, --all)
@@ -294,7 +300,8 @@ braid verify [slug]        run the project's mechanical gate
 braid integrate <slug>     rebase, fast-forward, gate    (--continue, --abort)
 braid reap <slug>          tear a worker down            (--merged, --force)
 braid reap --feature       tear down what the whole feature provisioned, once it lands
-braid doctor               check this machine can run a wave
+
+# the engine
 braid upgrade              update the engine, keeping what you changed
 ```
 
