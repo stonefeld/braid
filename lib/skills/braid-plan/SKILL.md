@@ -38,8 +38,9 @@ Each slice gets a braid block. Configuration of the slice, not description of it
     setup: no
     ```
 
-**`complexity`** — how much judgement the work needs. Never a model name: the slice does
-not know which agent will run it, and the adapter maps this locally.
+**`complexity`** — how much judgement the work needs. Never a model name or reasoning
+effort: the slice does not know which agent will run it, and the repository maps this to
+both locally.
 
 | | |
 |---|---|

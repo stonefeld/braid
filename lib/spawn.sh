@@ -8,6 +8,7 @@
 #
 #     --complexity low|standard|high   how much judgement the work needs
 #     --model NAME                     override the model the adapter would pick
+#     --effort LEVEL                   override reasoning effort for this worker
 #     --agent NAME                     override the agent for this worker
 #     --base BRANCH                    what to cut from   (default: the branch you are on)
 #     --setup / --no-setup             force or skip the expensive provision path
@@ -31,11 +32,12 @@ source "$BRAID_HOME/lib/launcher.sh"
 # shellcheck source=source.sh
 source "$BRAID_HOME/lib/source.sh"
 
-usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' >&2; }
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' >&2; }
 
 SLICE=""
 COMPLEXITY=""
 MODEL=""
+EFFORT=""
 BASE=""
 BASE_EXPLICIT=0
 NEEDS_SETUP=""
@@ -50,6 +52,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --model)
             MODEL="${2:?--model needs a name}"
+            shift 2
+            ;;
+        --effort)
+            EFFORT="${2:?--effort needs a level}"
             shift 2
             ;;
         --agent)
@@ -139,6 +145,10 @@ if [[ -z "$MODEL" ]]; then
     MODEL=$(agent_complexity "$COMPLEXITY")
 fi
 agent_check_model "$MODEL"
+if [[ -z "$EFFORT" ]]; then
+    EFFORT=$(agent_complexity_effort "$COMPLEXITY")
+fi
+agent_check_effort "$EFFORT"
 
 BRANCH=$(worker_branch "$SLUG")
 WORKTREE=$(worker_worktree_path "$SLUG")
@@ -161,7 +171,7 @@ unwind() {
 }
 trap unwind EXIT
 
-note "worktree $WORKTREE off $BASE ($BRAID_AGENT_RESOLVED${MODEL:+ $MODEL}, setup: $NEEDS_SETUP)"
+note "worktree $WORKTREE off $BASE ($BRAID_AGENT_RESOLVED${MODEL:+ $MODEL}${EFFORT:+, effort $EFFORT}, setup: $NEEDS_SETUP)"
 mkdir -p "$(dirname "$WORKTREE")"
 git -C "$CHECKOUT" worktree add -b "$BRANCH" "$WORKTREE" "$BASE" >/dev/null
 CREATED="$WORKTREE"
@@ -176,6 +186,7 @@ printf '%s' "$BASE" >"$WORKTREE/.braid/base"
 printf '%s' "$SLICE_ID" >"$WORKTREE/.braid/slice-id"
 printf '%s' "$BRAID_AGENT_RESOLVED" >"$WORKTREE/.braid/agent"
 printf '%s' "$MODEL" >"$WORKTREE/.braid/model"
+printf '%s' "$EFFORT" >"$WORKTREE/.braid/effort"
 printf '%s' "$COMPLEXITY" >"$WORKTREE/.braid/complexity"
 printf '%s' "$(braid_version)" >"$WORKTREE/.braid/braid-version"
 printf '%s\n' "$BODY" >"$WORKTREE/.braid/slice.md"
@@ -261,9 +272,9 @@ launcher_load "$LAUNCHER"
 build_command() {
     local agent_command
     if launcher_headless; then
-        agent_command=$(agent_cmd_headless "$WORKTREE" "$MODEL" "$PROMPT")
+        agent_command=$(agent_cmd_headless "$WORKTREE" "$MODEL" "$PROMPT" "$EFFORT")
     else
-        agent_command=$(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT")
+        agent_command=$(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT" "$EFFORT")
     fi
     # finish.sh runs whatever happened to the agent — a clean exit, a crash, a CLI that
     # was never installed. It is what makes the control plane independent of hooks.
@@ -319,7 +330,7 @@ if [[ "$STRICT" -eq 1 && -t 2 ]]; then
         "  what it needed:  run the agent, visibly, in $WORKTREE" \
         "  last call:       ${BRAID_LAUNCHER_PROBE:-unknown}" \
         "" \
-        "  by hand:      cd $WORKTREE && $(agent_cmd "$WORKTREE" "$MODEL" 'the slice is in .braid/slice.md')" \
+        "  by hand:      cd $WORKTREE && $(agent_cmd "$WORKTREE" "$MODEL" 'the slice is in .braid/slice.md' "$EFFORT")" \
         "  teach braid:  ${XDG_CONFIG_HOME:-$HOME/.config}/braid/launchers/$LAUNCHER.sh")"
     exit 4
 fi

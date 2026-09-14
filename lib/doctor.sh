@@ -193,29 +193,58 @@ echo
 echo "agents"
 info "supported here: $BRAID_AGENTS   ($BRAID_PROJECT_FILE)"
 info "installed:      $(agents_installed || echo none)"
-for seat in design orchestrate work; do
+
+# Print a cost row only after checking it exactly as a launch would. Kept in a command
+# substitution because agent_load sources one adapter's generic function names; loading
+# another row in the doctor process would leave the previous adapter behind.
+doctor_cost_row() {
+    local seat="${1:?seat}" label="${2:?label}" level="${3:-}" model effort
+    agent_load "$seat"
+    if [[ "$seat" == work ]]; then
+        model=$(agent_complexity "$level")
+        effort=$(agent_complexity_effort "$level")
+    else
+        model=$(agent_model "$seat")
+        effort=$(agent_effort "$seat")
+    fi
+    agent_check_model "$model"
+    agent_check_effort "$effort"
+    printf '  %sok%s    %-12s %-8s via %-24s %s  effort: %s\n' \
+        "$_C_GREEN" "$_C_OFF" "$label" "$BRAID_AGENT_RESOLVED" "$BRAID_AGENT_REASON" \
+        "${model:-(the CLI chooses)}" "${effort:-(the CLI chooses)}"
+}
+
+for seat in design orchestrate; do
     if resolved=$( (agent_resolve "$seat") 2>/dev/null ) && [[ -n "$resolved" ]]; then
-        name="${resolved%% *}"
-        why="${resolved#* }"
-        (
-            agent_load "$seat"
-            # The work seat has no single model: it comes from each slice's complexity,
-            # so what is shown is what a standard one would get.
-            if [[ "$seat" == work ]]; then
-                model=$(agent_complexity standard)
-            else
-                model=$(agent_model "$seat")
-            fi
-            printf '  %sok%s    %-12s %-8s via %-24s %s\n' \
-                "$_C_GREEN" "$_C_OFF" "$seat" "$name" "$why" "${model:-(the CLI chooses)}"
-        ) >&2
+        if row=$(doctor_cost_row "$seat" "$seat"); then
+            printf '%s\n' "$row" >&2
+        else
+            fail "$seat cost configuration is invalid"
+        fi
     else
         fail "$seat: no usable agent"
     fi
 done
 
-# The flag that lets a worker run unattended. If it is renamed upstream, every worker in
-# a wave dies at launch, and the cause is one line inside a log nobody is reading yet.
+# Work has no single cost: each slice complexity resolves independently. Showing only
+# standard hides the two rows where repositories most often change their spend.
+if resolved=$( (agent_resolve work) 2>/dev/null ) && [[ -n "$resolved" ]]; then
+    for level in low standard high; do
+        if row=$(doctor_cost_row work "$level" "$level"); then
+            printf '%s\n' "$row" >&2
+        else
+            fail "$level complexity cost configuration is invalid"
+        fi
+    done
+else
+    fail "work: no usable agent"
+fi
+
+# Flags whose upstream names can move. If one is renamed, every worker in a wave dies at
+# launch, and the cause is one line inside a log nobody is reading yet.
+CONFIGURED_EFFORTS="${BRAID_EFFORT_DESIGN:-}${BRAID_EFFORT_ORCHESTRATE:-}"
+CONFIGURED_EFFORTS="$CONFIGURED_EFFORTS${BRAID_EFFORT_LOW:-}"
+CONFIGURED_EFFORTS="$CONFIGURED_EFFORTS${BRAID_EFFORT_STANDARD:-}${BRAID_EFFORT_HIGH:-}"
 for name in $BRAID_AGENTS; do
     agent_usable "$name" || continue
     (
@@ -226,6 +255,17 @@ for name in $BRAID_AGENTS; do
             ok "$name unattended mode: $(agent_auto_mode)"
         else
             meh "$name does not seem to accept '$(agent_auto_mode)' — workers would die at launch"
+        fi
+        if [[ -n "$CONFIGURED_EFFORTS" ]]; then
+            if ! declare -F agent_effort_mode >/dev/null; then
+                meh "$name has no reasoning effort support — configured efforts would fail"
+            elif ! declare -F agent_effort_probe >/dev/null; then
+                meh "$name reasoning effort support cannot be probed"
+            elif agent_effort_probe; then
+                ok "$name reasoning effort: $(agent_effort_mode)"
+            else
+                meh "$name does not seem to accept '$(agent_effort_mode)' — configured efforts would fail"
+            fi
         fi
     ) >&2
 done
