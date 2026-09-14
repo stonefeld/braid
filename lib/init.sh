@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --agents)
-            AGENTS_ARG="${2:?--agents needs a list, best first}"
+            AGENTS_ARG=$(flag_value --agents "${2-}") || exit 1
             shift 2
             ;;
         -y | --yes)
@@ -44,7 +44,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h | --help)
-            sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' >&2
+            braid_help "$0"
             exit 0
             ;;
         *) die "unknown argument: $1" ;;

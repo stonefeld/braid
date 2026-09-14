@@ -268,34 +268,68 @@ fi
 # the list and the range no longer covers it; add nothing and the range quietly runs past
 # the block into the code — three --help outputs once ended with `set -uo pipefail`, and
 # commands were doing it. Nothing fails, so nobody finds out except the person reading it.
+# --- flags and the help that describes them -----------------------------------
+
+# A command's header comment is its --help, so a flag it parses and does not name is a
+# flag nobody outside this repository can find. `plan --prd` was implemented, validated,
+# used by `next` and written up in the README while its own --help never mentioned it.
+#
+# The reverse is the same bug read backwards: a flag in the help that nothing parses is
+# an instruction to type something that errors.
 if drift=$(python3 - <<'PY'
 import pathlib
 import re
 
+SKIP = {"--help", "--h"}
+
+# The commands, from the one table that knows them. A library's header is prose about
+# its own subject and has no flags to agree with.
+COMMANDS = [
+    line.split(":")[1]
+    for line in pathlib.Path("bin/braid").read_text(encoding="utf-8").split("\n")
+    if line.strip().startswith('"') and line.count(":") >= 2
+]
 bad = []
-for path in sorted(pathlib.Path("lib").glob("*.sh")):
-    text = path.read_text(encoding="utf-8")
-    match = re.search(r"sed -n '2,(\d+)p' \"\$0\"", text)
-    if not match:
+for path in [pathlib.Path("lib/%s.sh" % name) for name in COMMANDS]:
+    if not path.exists():
         continue
-    printed = int(match.group(1))
-    lines = text.splitlines()
-    end = 1
-    for number, line in enumerate(lines[1:], start=2):
-        if line.startswith("#"):
-            end = number
-        elif line.strip():
-            break
-    if printed != end:
-        bad.append(f"{path}: prints to {printed}, the comment block ends at {end}")
+    lines = path.read_text(encoding="utf-8").split("\n")
+    header, body, in_header = [], [], True
+    for number, line in enumerate(lines):
+        if in_header and number and line.startswith("#"):
+            header.append(line)
+        elif in_header and number and line.strip():
+            in_header = False
+            body.append(line)
+        elif not in_header:
+            body.append(line)
+    # A case arm is how every command parses one: `--flag)` or `-f | --flag)`.
+    parsed = {m.group(1) for line in body
+              for m in [re.match(r"\s*(?:-\w \| )?(--[a-z][a-z-]*)\)", line)] if m}
+    # Only where the header describes this command's own surface: a usage line, or an
+    # entry in the indented flag block. Prose naming another tool's flag — `merge
+    # --ff-only` in integrate's second paragraph — is prose.
+    named = set()
+    for line in header:
+        if not re.match(r"^#\s\s+", line):
+            continue
+        content = re.sub(r"^#\s*", "", line)
+        if not (content.startswith("braid ") or content.startswith("-")):
+            continue
+        named.update(re.findall(r"--[a-z][a-z-]*", content))
+    for flag in sorted(parsed - named - SKIP):
+        bad.append(f"{path}: parses {flag} and its --help does not name it")
+    for flag in sorted(named - parsed - SKIP):
+        bad.append(f"{path}: --help names {flag} and it parses no such flag")
 print("\n".join(bad))
 PY
 ) && [[ -z "$drift" ]]; then
-    ok "every --help stops where its comment block does"
+    ok "every flag a command parses is in its --help, and the reverse"
 else
-    bad "a --help range does not match its usage block:"
-    printf '%s\n' "$drift" | sed 's/^/          /'
+    bad "a --help and its parser disagree:"
+    printf '          %s\n' "$drift" >&2
 fi
+
 
 # --- unbraced expansions before multibyte text --------------------------------
 

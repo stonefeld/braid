@@ -27,7 +27,7 @@ case "${1:-}" in
     stop) exec python3 "$BRAID_HOME/lib/hooks/worker_stop.py" ;;
     guard-remote) exec python3 "$BRAID_HOME/lib/hooks/guard_remote.py" ;;
     "" | -h | --help)
-        sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' >&2
+        braid_help "$0"
         exit 0
         ;;
     *) die "unknown hook '$1' (expected: session-start, stop, guard-remote)" ;;

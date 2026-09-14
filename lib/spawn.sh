@@ -30,7 +30,7 @@ source "$BRAID_HOME/lib/launcher.sh"
 # shellcheck source=source.sh
 source "$BRAID_HOME/lib/source.sh"
 
-usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' >&2; }
+usage() { braid_help "$0"; }
 
 SLICE=""
 COMPLEXITY=""
@@ -45,25 +45,26 @@ PROMPT_OVERRIDE=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --complexity)
-            COMPLEXITY="${2:?--complexity needs a level}"
+            COMPLEXITY=$(flag_value --complexity "${2-}") || exit 1
             shift 2
             ;;
         --model)
-            MODEL="${2:?--model needs a name}"
+            MODEL=$(flag_value --model "${2-}") || exit 1
             shift 2
             ;;
         --effort)
-            EFFORT="${2:?--effort needs a level}"
+            EFFORT=$(flag_value --effort "${2-}") || exit 1
             shift 2
             ;;
         --agent)
             # Read back by agent_resolve through indirect expansion of the seat name,
             # which is why it is exported rather than passed.
-            export BRAID_AGENT_WORK="${2:?--agent needs a name}"
+            VALUE=$(flag_value --agent "${2-}") || exit 1
+            export BRAID_AGENT_WORK="$VALUE"
             shift 2
             ;;
         --base)
-            BASE="${2:?--base needs a branch}"
+            BASE=$(flag_value --base "${2-}") || exit 1
             BASE_EXPLICIT=1
             shift 2
             ;;
@@ -80,7 +81,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --prompt)
-            PROMPT_OVERRIDE="${2:?--prompt needs text}"
+            PROMPT_OVERRIDE=$(flag_value --prompt "${2-}") || exit 1
             shift 2
             ;;
         -h | --help)

@@ -32,20 +32,21 @@ PROMPT=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --model)
-            MODEL="${2:?--model needs a name}"
+            MODEL=$(flag_value --model "${2-}") || exit 1
             shift 2
             ;;
         --effort)
-            EFFORT="${2:?--effort needs a level}"
+            EFFORT=$(flag_value --effort "${2-}") || exit 1
             shift 2
             ;;
         --agent)
             # Read back by agent_resolve through indirect expansion of the seat name.
-            export BRAID_AGENT_DESIGN="${2:?--agent needs a name}"
+            VALUE=$(flag_value --agent "${2-}") || exit 1
+            export BRAID_AGENT_DESIGN="$VALUE"
             shift 2
             ;;
         -h | --help)
-            sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' >&2
+            braid_help "$0"
             exit 0
             ;;
         -*) die "unknown argument: $1" ;;

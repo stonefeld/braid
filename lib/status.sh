@@ -40,11 +40,11 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --timeout)
-            TIMEOUT="${2:?--timeout needs seconds}"
+            TIMEOUT=$(flag_value --timeout "${2-}") || exit 1
             shift 2
             ;;
         -h | --help)
-            sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' >&2
+            braid_help "$0"
             exit 0
             ;;
         *) die "unknown argument: $1" ;;

@@ -39,23 +39,25 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --ref)
-            REF="${2:?--ref needs a tag or branch}"
+            REF=$(flag_value --ref "${2-}") || exit 1
             shift 2
             ;;
         --from)
-            FROM="${2:?--from needs a directory}"
+            FROM=$(flag_value --from "${2-}") || exit 1
             shift 2
             ;;
         --take)
-            TAKE="$TAKE ${2:?--take needs a path}"
+            VALUE=$(flag_value --take "${2-}") || exit 1
+            TAKE="$TAKE $VALUE"
             shift 2
             ;;
         --keep)
-            KEEP="$KEEP ${2:?--keep needs a path}"
+            VALUE=$(flag_value --keep "${2-}") || exit 1
+            KEEP="$KEEP $VALUE"
             shift 2
             ;;
         -h | --help)
-            sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' >&2
+            braid_help "$0"
             exit 0
             ;;
         *) die "unknown argument: $1" ;;

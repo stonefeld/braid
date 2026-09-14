@@ -31,11 +31,11 @@ ARGS=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --capacity)
-            CAPACITY="${2:?--capacity needs a number}"
+            CAPACITY=$(flag_value --capacity "${2-}") || exit 1
             shift 2
             ;;
         --timeout)
-            TIMEOUT="${2:?--timeout needs seconds}"
+            TIMEOUT=$(flag_value --timeout "${2-}") || exit 1
             shift 2
             ;;
         --dry-run)
@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h | --help)
-            sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' >&2
+            braid_help "$0"
             exit 0
             ;;
         -*) die "unknown argument: $1" ;;

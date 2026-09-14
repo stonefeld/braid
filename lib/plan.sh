@@ -5,6 +5,7 @@
 #
 #     --dry-run          print the schedule, write nothing
 #     --capacity N       workers per wave  (default: BRAID_MAX_WORKERS)
+#     --prd N            the PRD issue whose sub-issues are the slices, in github mode
 #
 # You do not write waves by hand. The blockers are the input, the schedule is derived
 # from them under the constraints braid knows about — serialisation and capacity — and
@@ -31,16 +32,16 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --capacity)
-            CAPACITY="${2:?--capacity needs a number}"
+            CAPACITY=$(flag_value --capacity "${2-}") || exit 1
             shift 2
             ;;
         --prd)
-            PRD="${2:?--prd needs an issue number}"
+            PRD=$(flag_value --prd "${2-}") || exit 1
             PRD="${PRD#\#}"
             shift 2
             ;;
         -h | --help)
-            sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2
+            braid_help "$0"
             exit 0
             ;;
         -*) die "unknown argument: $1" ;;

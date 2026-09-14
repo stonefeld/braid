@@ -20,6 +20,19 @@ source "$BRAID_HOME/lib/worker.sh"
 # shellcheck source=source.sh
 source "$BRAID_HOME/lib/source.sh"
 
+# Neither of these takes a flag, and both used to run whatever they were handed —
+# `braid doctor --help` ran doctor. A command that ignores its arguments is a command
+# that cannot tell you it has none.
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h | --help)
+            braid_help "$0"
+            exit 0
+            ;;
+        *) die "unknown argument: $1 — this command takes none" ;;
+    esac
+done
+
 braid_config
 CHECKOUT=$(primary_checkout)
 BRANCH=$(current_branch)

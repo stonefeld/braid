@@ -462,6 +462,22 @@ OUT=$(cd "$REPO" && BRAID_AGENT_CMD=anything "$BRAID" doctor 2>&1)
 has "an exported one is told apart from a committed one" \
     "BRAID_AGENT_CMD is set in the environment" "$OUT"
 
+phase "the shape of an argument"
+
+# A flag that takes a value used to take whatever came next, flag or not: this ran on a
+# model called --effort and took the next word for the slice.
+OUT=$(cd "$REPO" && "$BRAID" spawn --model --effort 01-login 2>&1)
+has "a flag is not a value" "is another flag" "$OUT"
+OUT=$(cd "$REPO" && "$BRAID" spawn --model 2>&1)
+has "and a missing one is braid's error, not bash's" "error: --model needs a value" "$OUT"
+
+# Two commands parsed nothing at all, so `braid doctor --help` ran doctor.
+OUT=$(cd "$REPO" && "$BRAID" doctor --help 2>&1)
+has "a command that takes no flag still answers --help" "braid doctor" "$OUT"
+hasnt "rather than running" "checking" "$OUT"
+OUT=$(cd "$REPO" && "$BRAID" next --bogus 2>&1)
+has "and says so about anything else" "this command takes none" "$OUT"
+
 phase "changing a value without an agent and without an editor"
 cp "$BS" "$TMP/braid.sh.before-config"
 
