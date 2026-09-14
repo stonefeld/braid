@@ -94,6 +94,26 @@ agent_complexity_model() { :; }
 # rather than the CLI's, and the only list braid could form is the stale one above.
 agent_models() { :; }
 
+# What a tier costs in thinking, beside what it costs in model. The shape mirrors the
+# model tiers above it: the two seats that decide things reason hard because they run
+# briefly and a bad judgement there costs a whole wave, while the levels vary because
+# varying is what a level is for. `xhigh` is left out on purpose — that is the level
+# somebody chooses, not one braid chooses for them.
+agent_seat_effort() {
+    case "${1:?seat}" in
+        design | orchestrate) echo high ;;
+        work | *) echo medium ;;
+    esac
+}
+
+agent_level_effort() {
+    case "${1:?complexity}" in
+        low) echo low ;;
+        high) echo high ;;
+        standard | *) echo medium ;;
+    esac
+}
+
 agent_injects_contract() { return 1; }
 
 # Codex keeps skills in ~/.codex/skills, which links into the shared ~/.agents/skills the

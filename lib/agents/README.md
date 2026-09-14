@@ -94,11 +94,14 @@ turns that into a line in `braid doctor` rather than into eight workers that die
 launch. A probe that returns success without asking anything is worse than no probe: it
 reports a green check for a thing nobody verified.
 
-No adapter braid ships names an effort, and the reason is not that they have nothing to
-say. Effort costs money, and an engine upgrade that silently raised what a repository
-spends would be a worse failure than the gap it closed. The hooks are here for an adapter
-whose CLI has a default worth stating; `braid config` is where a repository says what it
-wants.
+Name an effort only where the CLI has a control of its own. `claude` and `codex` do and
+name the same five values; `cursor-agent` has none, and `generic` cannot know whether the
+command line it was handed takes one — naming a value for either would be braid spending
+money on a guess.
+
+These cost something, which the model defaults do not: an adapter that names an effort
+raises what a repository spends against letting the CLI keep its own default. Mirror the
+model tiers rather than inventing a second opinion, and leave `xhigh` to the person.
 
 `<level>` is a complexity level — `low`, `standard`, `high` — spelled that way because
 `agent_complexity_effort` is the engine's own resolver and the names would collide.

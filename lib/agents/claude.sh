@@ -38,6 +38,26 @@ agent_complexity_model() {
 
 agent_models() { echo "fable opus sonnet haiku"; }
 
+# What a tier costs in thinking, beside what it costs in model. The shape mirrors the
+# model tiers above it: the two seats that decide things reason hard because they run
+# briefly and a bad judgement there costs a whole wave, while the levels vary because
+# varying is what a level is for. `xhigh` is left out on purpose — that is the level
+# somebody chooses, not one braid chooses for them.
+agent_seat_effort() {
+    case "${1:?seat}" in
+        design | orchestrate) echo high ;;
+        work | *) echo medium ;;
+    esac
+}
+
+agent_level_effort() {
+    case "${1:?complexity}" in
+        low) echo low ;;
+        high) echo high ;;
+        standard | *) echo medium ;;
+    esac
+}
+
 # The contract arrives through the SessionStart hook, so the prompt only has to point
 # at the slice. Keeping it short matters: it is what the agent reads first.
 agent_injects_contract() { return 0; }

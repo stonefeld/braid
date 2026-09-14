@@ -283,6 +283,33 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- what an adapter says a tier costs ----------------------------------------
+
+# Effort mirrors the model tiers this repository already ships: the seats that decide
+# things think hard because they run briefly and a bad judgement there costs a wave, and
+# the levels vary because that is what a level is for. An adapter names them only where
+# its CLI has an effort control of its own.
+for name in claude codex; do
+    ADAPTER="$BRAID_HOME/lib/agents/$name.sh"
+    is "$name names a design effort" "high" "$( ( with_adapter agent_seat_effort design ) )"
+    is "$name names an orchestrate effort" "high" \
+        "$( ( with_adapter agent_seat_effort orchestrate ) )"
+    is "$name names a low-complexity effort" "low" \
+        "$( ( with_adapter agent_level_effort low ) )"
+    is "$name names a standard-complexity effort" "medium" \
+        "$( ( with_adapter agent_level_effort standard ) )"
+    is "$name names a high-complexity effort" "high" \
+        "$( ( with_adapter agent_level_effort high ) )"
+done
+
+# Cursor has no effort control, and generic cannot know whether the command it was given
+# takes one. Naming a value for either would be braid spending money on a guess.
+for name in cursor-agent generic; do
+    ADAPTER="$BRAID_HOME/lib/agents/$name.sh"
+    refute "$name names no effort for a seat" with_adapter declare -F agent_seat_effort
+    refute "$name names no effort for a level" with_adapter declare -F agent_level_effort
+done
+
 # --- the list a repository chooses from ---------------------------------------
 
 # BRAID_AGENTS is read best-first, so its default is an order and an order is a decision:

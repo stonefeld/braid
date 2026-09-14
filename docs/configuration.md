@@ -119,20 +119,26 @@ Adapters opt into effort explicitly. If the resolved adapter has no independent 
 control, a configured value is an error rather than a promise braid cannot keep. A
 project `braid_agent_command` may still implement the fourth argument itself.
 
-| | Answers |
-|---|---|
-| `BRAID_EFFORT_DESIGN` | how hard the design seat reasons |
-| `BRAID_EFFORT_ORCHESTRATE` | how hard the orchestrator reasons |
-| `BRAID_EFFORT_LOW` | effort for a `complexity: low` worker |
-| `BRAID_EFFORT_STANDARD` | effort for a `complexity: standard` worker |
-| `BRAID_EFFORT_HIGH` | effort for a `complexity: high` worker |
-| `BRAID_EFFORT_WORK` | a worker's effort when no level says |
+| | Answers | `claude` | `codex` | `cursor-agent` | `generic` |
+|---|---|---|---|---|---|
+| `BRAID_EFFORT_DESIGN` | how hard the design seat reasons | `high` | `high` | — | — |
+| `BRAID_EFFORT_ORCHESTRATE` | how hard the orchestrator reasons | `high` | `high` | — | — |
+| `BRAID_EFFORT_LOW` | effort for a `complexity: low` worker | `low` | `low` | — | — |
+| `BRAID_EFFORT_STANDARD` | effort for a `complexity: standard` worker | `medium` | `medium` | — | — |
+| `BRAID_EFFORT_HIGH` | effort for a `complexity: high` worker | `high` | `high` | — | — |
+| `BRAID_EFFORT_WORK` | a worker's effort when no level says | `medium` | `medium` | — | — |
 
 It resolves exactly as a model does: the level's own variable, then whatever the adapter
-names, then `BRAID_EFFORT_WORK`, then nothing — and nothing means the CLI keeps the effort
-the person configured for it. No adapter braid ships names one, because effort costs money
-and upgrading the engine must not change what a repository already spends. `braid doctor`
-prints the resolved value beside the model, in one table.
+names, then `BRAID_EFFORT_WORK`, then nothing — and nothing means the CLI keeps whatever
+effort the person configured for it. A dash means the adapter names none: Cursor's CLI has
+no effort control at all, and `generic` cannot know whether the command line it was handed
+takes one.
+
+Unlike the model defaults, these are **not** free. They mirror the model tiers — the two
+seats that decide things reason hard because they run briefly and a bad judgement there
+costs a whole wave, and the levels vary because varying is what a level is for — and they
+raise what a repository spends compared with letting each CLI keep its own default. Change
+them where the shape does not fit; `braid doctor` prints the resolved table.
 
 ```bash
 : "${BRAID_EFFORT_DESIGN:=high}"       # in braid.sh — committed, for everyone
