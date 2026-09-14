@@ -10,7 +10,6 @@
 #     --model NAME   which model runs the session   (default: the `design` tier)
 #     --effort LEVEL reasoning effort for the session
 #     --agent NAME   which agent runs it            (default: this repository's first)
-#     --preset NAME  node, python or minimal
 #     --yes          do not ask before opening the session
 #
 # Two halves, deliberately separated. The scaffolding — hooks registered, .gitignore,
@@ -32,7 +31,6 @@ SCAFFOLD_ONLY=0
 COSTS=0
 ADD_AGENT=""
 AGENTS_ARG=""
-PRESET=""
 MODEL=""
 EFFORT=""
 ASSUME_YES=0
@@ -56,10 +54,6 @@ while [[ $# -gt 0 ]]; do
             AGENTS_ARG="${2:?--agents needs a list, best first}"
             shift 2
             ;;
-        --preset)
-            PRESET="${2:?--preset needs node, python or minimal}"
-            shift 2
-            ;;
         --model)
             MODEL="${2:?--model needs a name}"
             shift 2
@@ -79,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -h | --help)
-            sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         *) die "unknown argument: $1" ;;
@@ -146,7 +140,11 @@ import sys
 name, value, heading = sys.argv[1], sys.argv[2], sys.argv[3]
 path = pathlib.Path("braid.sh")
 text = path.read_text(encoding="utf-8")
-pattern = re.compile(r'(?m)^(: "\$\{%s:=)([^}]*)(\}")' % re.escape(name))
+# The comment marker is optional and is dropped when one is written. The template
+# ships every value braid reads, commented out, so that the file lists the whole
+# surface without deciding any of it — and setting one has to activate the line where
+# it already is rather than append a second copy at the end.
+pattern = re.compile(r'(?m)^#? ?(: "\$\{%s:=)([^}]*)(\}")' % re.escape(name))
 if pattern.search(text):
     # A literal replacement, never a template: re.sub reads \g and \1 in a replacement
     # string, and everything being written here came from somebody typing it.
@@ -209,7 +207,7 @@ agents_ask() {
         read -r answer || answer=""
         [[ -z "$answer" ]] && answer="$installed"
         [[ -z "$answer" ]] && {
-            warn "nothing chosen — braid.sh keeps the $PRESET preset's list"
+            warn "nothing chosen — braid.sh decides no agents, and braid accepts any adapter it has"
             return 1
         }
         reply=""
@@ -443,7 +441,7 @@ seats_ask() {
 # This mode does only this job: no scaffolding and no setup agent session afterwards.
 if [[ "$COSTS" -eq 1 ]]; then
     [[ "$SCAFFOLD_ONLY" -eq 0 && -z "$ADD_AGENT" && -z "$AGENTS_ARG" &&
-        -z "$PRESET" && -z "$MODEL" && -z "$EFFORT" && -z "$AGENT_ARG" &&
+        -z "$MODEL" && -z "$EFFORT" && -z "$AGENT_ARG" &&
         "$ASSUME_YES" -eq 0 ]] ||
         die "--costs cannot be combined with other setup options"
     [[ -f braid.sh ]] || die "no braid.sh yet — run braid setup first"
@@ -481,23 +479,13 @@ fi
 # worth being sure about.
 note "scaffolding $CHECKOUT on '$(current_branch)'"
 
-if [[ -z "$PRESET" ]]; then
-    if [[ -f package.json ]]; then
-        PRESET=node
-    elif [[ -f pyproject.toml || -f requirements.txt ]]; then
-        PRESET=python
-    else
-        PRESET=minimal
-    fi
-fi
-
 FRESH=0
 if [[ -f braid.sh ]]; then
-    ok "braid.sh kept (--preset to start over from a template)"
+    ok "braid.sh kept — delete it to start over from the template"
 else
-    cp "$BRAID_HOME/lib/templates/braid.$PRESET.sh" braid.sh ||
-        die "no preset '$PRESET' (expected: node, python, minimal)"
-    ok "braid.sh from the $PRESET preset"
+    cp "$BRAID_HOME/lib/templates/braid.sh" braid.sh ||
+        die "no template at $BRAID_HOME/lib/templates/braid.sh — reinstall"
+    ok "braid.sh written — every value braid reads, commented out"
     FRESH=1
 fi
 
@@ -623,8 +611,8 @@ echo
 
 PROMPT="$(
     cat "$BRAID_HOME/lib/setup/SETUP.md"
-    printf '\n\n---\n\nThe scaffolding is already done: braid.sh exists from the %s preset, the hooks are registered, and %s/ was created. Start at section 1.\n' \
-        "$PRESET" "$BRAID_FEATURES_DIR"
+    printf '\n\n---\n\nThe scaffolding is already done: braid.sh exists with every value commented out, the hooks are registered, and %s/ was created. Read the repository to work out what it is — the template names no stack. Start at section 1.\n' \
+        "$BRAID_FEATURES_DIR"
 )"
 
 # In this terminal, not a panel. You are sitting here, and this is a conversation.

@@ -17,7 +17,7 @@ keep true.
 | `lib/hooks/` | Claude Code hooks |
 | `lib/launchers/` | one per place a worker can run, shadowable from `~/.config/braid/` |
 | `lib/skills/` | the skills braid owns, installed to the user's agent |
-| `lib/templates/` | the `braid.sh` presets |
+| `lib/templates/` | the `braid.sh` braid writes into a repository that has none |
 | `docs/` | the worker contract, and the configuration reference |
 | `test/` | `e2e.sh`, plus the parser, the scheduler and the compat invariants |
 | `test.sh` | the runner — `./test.sh [suite…]` |

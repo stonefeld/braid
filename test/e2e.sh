@@ -320,13 +320,23 @@ has "and every complexity level" "complexity: high" "$OUT"
 # shellcheck disable=SC2016  # the braid.sh assignment is literal text, not an expansion
 is "the answer reaches braid.sh" 'zebra' \
     "$(sed -n 's/^: "${BRAID_MODEL_DESIGN:=\(.*\)}"$/\1/p' "$ASKED/braid.sh")"
-has "under a heading, not as a loose line" "each complexity level costs" "$(cat "$ASKED/braid.sh")"
+# Rewritten where the template already listed it, never appended: a file whose settings
+# accumulate at the bottom has them in three places after two runs, and the point of the
+# block is that what you came to change is in one.
+# shellcheck disable=SC2016  # a braid.sh assignment, literal text rather than an expansion
+is "written once, in place" "1" \
+    "$(grep -c '^: "${BRAID_MODEL_DESIGN' "$ASKED/braid.sh")"
+# shellcheck disable=SC2016  # the same literal, read for where it sits rather than how often
+VALUE_AT=$(grep -n '^: "${BRAID_MODEL_DESIGN' "$ASKED/braid.sh" | cut -d: -f1)
+FIRST_FN=$(grep -n '^braid_provision()' "$ASKED/braid.sh" | cut -d: -f1)
+check "and above every function, where the values live" test "$VALUE_AT" -lt "$FIRST_FN"
 # braid_config read braid.sh before any of this was written, so an answer that only
 # reached the file would be an answer the session it opens never sees.
 has "and reaches the session about to be opened" "model: zebra" "$OUT"
 has "while an empty answer keeps the adapter's" "the CLI chooses" "$OUT"
-refute "leaving no line for what was not changed" \
-    grep -q 'BRAID_MODEL_ORCHESTRATE' "$ASKED/braid.sh"
+# shellcheck disable=SC2016  # the braid.sh assignment is literal text, not an expansion
+check "and what was not answered keeps its line, inert" \
+    grep -q '^# : "${BRAID_MODEL_ORCHESTRATE:=}"' "$ASKED/braid.sh"
 
 # A repository-level effort is inherited by workers without changing their slices.
 # shellcheck disable=SC2016  # the braid.sh assignment is literal text, not an expansion
