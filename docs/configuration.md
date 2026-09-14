@@ -293,6 +293,27 @@ ignored. The composed text is written once, at spawn, to the worktree's
 buys you something by being wrong. `off` disables the guard for a session. The default
 reads the branch — a worker branch is a worker — and that is almost always right.
 
+## Reading and writing it
+
+`braid config` is the way to change any of this that needs neither an agent nor a text
+editor.
+
+```bash
+braid config                          every value, resolved, and the layer it came from
+braid config get BRAID_MAX_WORKERS
+braid config set BRAID_MAX_WORKERS 6  written to braid.sh — committed, for everyone
+braid config set BRAID_LAUNCHER tmux --machine
+```
+
+`set` writes `braid.sh` unless told otherwise, because that is the layer somebody can
+review. It prints the value before and the value after, with the layer the old one came
+from — a value you are overwriting in one file while a higher layer still answers for it
+is the case that would otherwise look like nothing happened, and it says so.
+
+The table marks every value that came from outside the committed file. That is the same
+warning as the one at the top of this document, made answerable for a particular
+repository rather than stated in general.
+
 ## The three kinds of name
 
 Everything above is configuration: braid reads it, a person may set it, and each one is

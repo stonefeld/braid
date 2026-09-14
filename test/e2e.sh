@@ -380,6 +380,41 @@ OUT=$(cd "$REPO" && BRAID_AGENT_CMD=anything "$BRAID" doctor 2>&1)
 has "an exported one is told apart from a committed one" \
     "BRAID_AGENT_CMD is set in the environment" "$OUT"
 
+phase "changing a value without an agent and without an editor"
+cp "$BS" "$TMP/braid.sh.before-config"
+
+OUT=$(cd "$REPO" && "$BRAID" config set BRAID_MAX_WORKERS 6 2>&1)
+has "set says where it wrote" "braid.sh" "$OUT"
+has "and what the value was" "was:" "$OUT"
+has "and what it is now" "now:  6" "$OUT"
+is "get reads it back" "6" "$(cd "$REPO" && "$BRAID" config get BRAID_MAX_WORKERS 2>/dev/null)"
+# The template ships every value commented out, so setting one activates the line where
+# it already is. Twice would mean the file grows a second copy at the bottom.
+cd "$REPO" && "$BRAID" config set BRAID_MAX_WORKERS 7 >/dev/null 2>&1
+# shellcheck disable=SC2016  # a braid.sh assignment, literal text rather than an expansion
+is "and writes one line however often it is set" "1" \
+    "$(grep -c '^: "${BRAID_MAX_WORKERS' "$BS")"
+
+OUT=$(cd "$REPO" && "$BRAID" config 2>&1)
+has "the table says which layer an answer came from" "braid.sh" "$OUT"
+OUT=$(cd "$REPO" && BRAID_MAX_WORKERS=2 "$BRAID" config 2>&1)
+has "an exported value is named as one" "environment" "$OUT"
+has "and called out as invisible to everybody else" "not what your coworkers get" "$OUT"
+
+OUT=$(cd "$REPO" && "$BRAID" config set BRAID_NONSENSE x 2>&1)
+has "a name braid does not have is refused" "is not a braid setting" "$OUT"
+has "and the refusal says where the names are" "docs/configuration.md" "$OUT"
+
+# Not BRAID_LAUNCHER: this suite exports one, and an exported value outranks both files
+# — which is the behaviour, and would make this assert the wrong layer.
+OUT=$(cd "$REPO" && "$BRAID" config set BRAID_STALE_SECONDS 900 --machine 2>&1)
+has "--machine writes the other file" "config" "$OUT"
+check "and the machine file has it" grep -qx 'BRAID_STALE_SECONDS=900' "$XDG_CONFIG_HOME/braid/config"
+OUT=$(cd "$REPO" && "$BRAID" config 2>&1)
+has "which the table then attributes to the machine" "machine" "$OUT"
+rm -f "$XDG_CONFIG_HOME/braid/config"
+cp "$TMP/braid.sh.before-config" "$BS"
+
 phase "slices and a schedule"
 D="braid/features/auth"
 mkdir -p "$D"

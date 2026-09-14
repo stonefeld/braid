@@ -119,6 +119,62 @@ braid_overridden() {
     [[ "$(declare -f "$1" | sed '1d')" != "$_BRAID_NOOP_BODY" ]]
 }
 
+# Every value a person may set — a decision rather than a survey. A name here is one
+# `braid config` offers and the reference documents, and adding one means somebody meant
+# to. The seat and level families are spelled out rather than assembled, because a list
+# you can read is the whole point of having one.
+_BRAID_SETTINGS="BRAID_AGENTS BRAID_MAX_WORKERS BRAID_LAUNCHER BRAID_LAUNCHER_STRICT
+BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_WORKTREE_ROOT BRAID_SLICE_SOURCE
+BRAID_FEATURES_DIR BRAID_WORKER_IGNORE BRAID_DESIGN_STEPS BRAID_STALE_SECONDS
+BRAID_PUSH_GUARD BRAID_AGENT BRAID_AGENT_ROLE
+BRAID_AGENT_DESIGN BRAID_MODEL_DESIGN BRAID_EFFORT_DESIGN
+BRAID_AGENT_ORCHESTRATE BRAID_MODEL_ORCHESTRATE BRAID_EFFORT_ORCHESTRATE
+BRAID_AGENT_WORK BRAID_MODEL_WORK BRAID_EFFORT_WORK
+BRAID_MODEL_LOW BRAID_EFFORT_LOW
+BRAID_MODEL_STANDARD BRAID_EFFORT_STANDARD
+BRAID_MODEL_HIGH BRAID_EFFORT_HIGH"
+
+# Set one `: "${VAR:=value}"` in braid.sh — rewritten where the line exists, appended
+# where it does not. Always the `:=` form, which is what lets the environment win for a
+# single command without editing a committed file.
+#
+# A third argument is a heading for whatever is being appended, written once. Every other
+# line in this file explains itself; a block of assignments arriving at the end with
+# nothing over them reads like something that fell in.
+braid_sh_set() {
+    python3 - "${1:?name}" "${2-}" "${3:-}" "${4:-braid.sh}" <<'PY'
+import pathlib
+import re
+import sys
+
+name, value, heading, target = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+path = pathlib.Path(target)
+text = path.read_text(encoding="utf-8") if path.exists() else ""
+# The comment marker is optional and is dropped when one is written. The template
+# ships every value braid reads, commented out, so that the file lists the whole
+# surface without deciding any of it — and setting one has to activate the line where
+# it already is rather than append a second copy at the end.
+pattern = re.compile(r'(?m)^#? ?(: "\$\{%s:=)([^}]*)(\}")' % re.escape(name))
+if pattern.search(text):
+    # A literal replacement, never a template: re.sub reads \g and \1 in a replacement
+    # string, and everything being written here came from somebody typing it.
+    text = pattern.sub(lambda m: m.group(1) + value + m.group(3), text, count=1)
+else:
+    lines = text.rstrip("\n").split("\n") if text.strip() else []
+    block = ""
+    if heading and heading not in text:
+        block = "\n\n# " + heading + "\n"
+    elif lines and lines[-1].startswith(': "${BRAID_'):
+        # Several of these are appended in a row, and a blank line between each turns
+        # one decision into a scattered list.
+        block = "\n"
+    elif lines:
+        block = "\n\n"
+    text = "\n".join(lines) + block + ': "${%s:=%s}"' % (name, value) + "\n"
+path.write_text(text, encoding="utf-8")
+PY
+}
+
 braid_config() {
     local checkout
     checkout=$(primary_checkout)

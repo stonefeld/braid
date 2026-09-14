@@ -124,46 +124,6 @@ print(" ".join(match.group(1).split()) if match else "")
 PY
 }
 
-# Set one `: "${VAR:=value}"` in braid.sh — rewritten where the line exists, appended
-# where it does not. Always the `:=` form, which is what lets the environment win for a
-# single command without editing a committed file.
-#
-# A third argument is a heading for whatever is being appended, written once. Every other
-# line in this file explains itself; a block of assignments arriving at the end with
-# nothing over them reads like something that fell in.
-braid_sh_set() {
-    python3 - "$1" "$2" "${3:-}" <<'PY'
-import pathlib
-import re
-import sys
-
-name, value, heading = sys.argv[1], sys.argv[2], sys.argv[3]
-path = pathlib.Path("braid.sh")
-text = path.read_text(encoding="utf-8")
-# The comment marker is optional and is dropped when one is written. The template
-# ships every value braid reads, commented out, so that the file lists the whole
-# surface without deciding any of it — and setting one has to activate the line where
-# it already is rather than append a second copy at the end.
-pattern = re.compile(r'(?m)^#? ?(: "\$\{%s:=)([^}]*)(\}")' % re.escape(name))
-if pattern.search(text):
-    # A literal replacement, never a template: re.sub reads \g and \1 in a replacement
-    # string, and everything being written here came from somebody typing it.
-    text = pattern.sub(lambda m: m.group(1) + value + m.group(3), text, count=1)
-else:
-    lines = text.rstrip("\n").split("\n")
-    block = ""
-    if heading and heading not in text:
-        block = "\n\n# " + heading + "\n"
-    elif lines and lines[-1].startswith(': "${BRAID_'):
-        # Several of these are appended in a row, and a blank line between each turns
-        # one decision into a scattered list.
-        block = "\n"
-    else:
-        block = "\n\n"
-    text = "\n".join(lines) + block + ': "${%s:=%s}"' % (name, value) + "\n"
-path.write_text(text, encoding="utf-8")
-PY
-}
 
 # Order is the decision — BRAID_AGENTS is read best-first — so duplicates are dropped
 # rather than sorted away.
