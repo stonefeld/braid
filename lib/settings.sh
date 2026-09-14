@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Configuration, resolved once per command.
+# Every layer of configuration, resolved once per command.
+#
+# Named for what it resolves rather than for the concept, because `braid config` is a
+# command and lib/<name>.sh is where the dispatcher looks for one.
 #
 # Three layers, and the order is the whole point:
 #
@@ -14,8 +17,8 @@
 # runs. A machine's settings are facts about one computer — how many agents it survives,
 # which agent that person prefers. Conflating them is how one laptop configures a team.
 
-[[ -n "${_BRAID_CONFIG_SH:-}" ]] && return 0
-_BRAID_CONFIG_SH=1
+[[ -n "${_BRAID_SETTINGS_SH:-}" ]] && return 0
+_BRAID_SETTINGS_SH=1
 
 # shellcheck source=git.sh
 source "$BRAID_HOME/lib/git.sh"

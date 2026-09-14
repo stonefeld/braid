@@ -28,8 +28,8 @@
 [[ -n "${_BRAID_LAUNCHER_SH:-}" ]] && return 0
 _BRAID_LAUNCHER_SH=1
 
-# shellcheck source=config.sh
-source "$BRAID_HOME/lib/config.sh"
+# shellcheck source=settings.sh
+source "$BRAID_HOME/lib/settings.sh"
 
 # Set by a launcher just before each call it makes, and read by spawn when one fails —
 # so the error names the call that broke rather than only the launcher that made it.

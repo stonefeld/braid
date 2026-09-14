@@ -317,7 +317,7 @@ done
 # the only statement of which adapters a repository may pick from before it has picked.
 SHIPPED=$( ( with_agent agents_shipped ) )
 # shellcheck disable=SC2016  # a sed script, not an expansion
-DEFAULT=$(sed -n 's/^[[:space:]]*: "\${BRAID_AGENTS:=\(.*\)}"$/\1/p' lib/config.sh)
+DEFAULT=$(sed -n 's/^[[:space:]]*: "\${BRAID_AGENTS:=\(.*\)}"$/\1/p' lib/settings.sh)
 for name in $SHIPPED; do
     case " $DEFAULT " in
         *" $name "*) ok "the default agent list offers $name" ;;

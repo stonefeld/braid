@@ -17,8 +17,8 @@
 [[ -n "${_BRAID_AGENT_SH:-}" ]] && return 0
 _BRAID_AGENT_SH=1
 
-# shellcheck source=config.sh
-source "$BRAID_HOME/lib/config.sh"
+# shellcheck source=settings.sh
+source "$BRAID_HOME/lib/settings.sh"
 
 # --- seats --------------------------------------------------------------------
 

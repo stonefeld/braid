@@ -16,8 +16,8 @@ _BRAID_SOURCE_SH=1
 
 # shellcheck source=slice.sh
 source "$BRAID_HOME/lib/slice.sh"
-# shellcheck source=config.sh
-source "$BRAID_HOME/lib/config.sh"
+# shellcheck source=settings.sh
+source "$BRAID_HOME/lib/settings.sh"
 
 # The one definition of where a feature's slices and plan live. Three commands used to
 # build this path themselves, which is why fixing it in one place would have left three
