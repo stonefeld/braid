@@ -402,7 +402,7 @@ while read -r name; do
     esac
     # Anchored: BRAID_FEATURE is not documented by a line about BRAID_FEATURES_DIR, and
     # a loose match is exactly how it hid.
-    grep -qE "(^|[^A-Za-z0-9_])$name([^A-Za-z0-9_]|\$)" docs/configuration.md ||
+    grep -qE "(^|[^A-Za-z0-9_])$name([^A-Za-z0-9_]|\$)" docs/reference/configuration.md ||
         UNDOCUMENTED="$UNDOCUMENTED $name"
 done < <(grep -rhoE '\$\{?BRAID_[A-Z0-9_]+' lib bin 2>/dev/null |
     grep -oE 'BRAID_[A-Z0-9_]+' | sort -u)

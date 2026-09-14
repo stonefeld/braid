@@ -264,7 +264,7 @@ container — is this project's business, and `braid_provision` is where you say
 
 Every worker is told the same four things — never touch the remote, commit everything,
 stay inside the slice, write a report — from
-[`worker-contract.md`](worker-contract.md), which ships with the engine. A repository is
+[`worker-contract.md`](../worker-contract.md), which ships with the engine. A repository is
 in exactly one of three states:
 
 | State | The repository has | Upgrades |
@@ -382,5 +382,5 @@ Two things resolve through your own config directory before braid's own, and
 ```
 
 A launcher is four functions, only one of them required — see
-[`DESIGN.md`](../DESIGN.md) § 10. When one of these CLIs changes its contract and braid
+[`DESIGN.md`](../../DESIGN.md) § 10. When one of these CLIs changes its contract and braid
 has not caught up, twenty lines there have you running the same afternoon.

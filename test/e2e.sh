@@ -510,7 +510,7 @@ has "and called out as invisible to everybody else" "not what your coworkers get
 
 OUT=$(cd "$REPO" && "$BRAID" config set BRAID_NONSENSE x 2>&1)
 has "a name braid does not have is refused" "is not a braid setting" "$OUT"
-has "and the refusal says where the names are" "docs/configuration.md" "$OUT"
+has "and the refusal says where the names are" "docs/reference/configuration.md" "$OUT"
 
 # Not BRAID_LAUNCHER: this suite exports one, and an exported value outranks both files
 # — which is the behaviour, and would make this assert the wrong layer.

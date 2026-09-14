@@ -11,7 +11,7 @@
 # without deciding any of it, and setting one activates the line where it already is.
 #
 # Why every value is `: "${VAR:=…}"` and never `VAR=…`, and which layer wins when two
-# disagree: docs/configuration.md.
+# disagree: docs/reference/configuration.md.
 
 # --- what each seat costs -----------------------------------------------------
 #

@@ -130,7 +130,7 @@ them by adapter — `BRAID_CODEX_ARGS`, `BRAID_CLAUDE_PERMISSION_MODE` — becau
 `BRAID_AGENT_WORK` pins a seat, and a third meaning under the same prefix is a collision
 waiting for whoever reads it next.
 
-Every such variable belongs in `docs/configuration.md`. A setting nobody can find is a
+Every such variable belongs in `docs/reference/configuration.md`. A setting nobody can find is a
 setting nobody has.
 
 ## Checking one

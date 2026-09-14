@@ -136,9 +136,9 @@ braid spawn 04-migration --effort high # or just this slice
 every seat, every complexity level, and what each model and effort resolves to — and
 writes down only what you change. Existing repositories keep their current CLI defaults
 until somebody opts in with `braid config`. `braid doctor` prints the resolved
-table at any time. [`docs/configuration.md`](docs/configuration.md) has both families in
-full — the seats and complexity levels are different variables and answer different
-questions.
+table at any time. [`docs/reference/configuration.md`](docs/reference/configuration.md) has
+both families in full — the seats and complexity levels are different variables and
+answer different questions.
 
 ### The repository decides which agents
 
@@ -350,9 +350,9 @@ set:
 | `BRAID_SLICE_SOURCE` | `files` \| `github` |
 | `BRAID_WORKER_IGNORE` | what a worker's own build output leaves behind |
 
-**[`docs/configuration.md`](docs/configuration.md) is the whole surface** — every variable,
-every hook, how a seat and a slice each resolve a model, and what `~/.config/braid/` can
-shadow. `braid doctor` prints all of it resolved, for this machine and this repository.
+**[`docs/reference/configuration.md`](docs/reference/configuration.md) is the whole
+surface** — every variable, every hook, how a seat and a slice each resolve a model, and
+what `~/.config/braid/` can shadow. `braid doctor` prints all of it resolved, for this machine and this repository.
 
 ## Skills
 
@@ -367,7 +367,7 @@ skills gets the name and one that does not gets the text.
 
 ## More
 
-- [`docs/configuration.md`](docs/configuration.md) — every variable and hook, in one place
+- [`docs/reference/configuration.md`](docs/reference/configuration.md) — every variable and hook
 - [`docs/worker-contract.md`](docs/worker-contract.md) — what every worker is told
 - [`DESIGN.md`](DESIGN.md) — every decision behind this, and why
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — branches, commits, pull requests, running the tests

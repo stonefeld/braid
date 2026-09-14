@@ -119,7 +119,7 @@ case "${ARGS[0]:-}" in
             printf '%s\n' \
                 "'$NAME' is not a braid setting." \
                 "  braid config            every name there is" \
-                "  docs/configuration.md   what each one does"
+                "  docs/reference/configuration.md   what each one does"
         )"
 
         if [[ "$MACHINE_FILE" -eq 1 ]] && ! braid_machine_allows "$NAME"; then
