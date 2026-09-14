@@ -57,7 +57,8 @@ setting_layer() {
     local name="${1:?name}"
     if grep -q "^$name=" <<<"$EXPORTED"; then
         printf 'environment'
-    elif [[ -f "$MACHINE" ]] && grep -qE "^[[:space:]]*$name=" "$MACHINE"; then
+    elif [[ -f "$MACHINE" ]] && braid_machine_allows "$name" &&
+        grep -qE "^[[:space:]]*$name=" "$MACHINE"; then
         printf 'machine'
     elif [[ -f "$_BRAID_PROJECT_FILE" ]] &&
         grep -qE "^[[:space:]]*: \"\\\$\\{$name:=" "$_BRAID_PROJECT_FILE"; then
@@ -67,17 +68,20 @@ setting_layer() {
     fi
 }
 
-setting_known() {
-    local name="${1:?name}" candidate
-    for candidate in $_BRAID_SETTINGS; do
-        [[ "$candidate" == "$name" ]] && return 0
-    done
-    return 1
-}
 
 # seats.sh has a `shown` for a table where empty means the CLI decides. Here empty
 # means a lower layer answers, which is a different sentence.
 unset_or() { printf '%s' "${1:-(unset — whatever is under it decides)}"; }
+
+# What the machine file said that braid did not take. Read out where somebody is looking
+# for it rather than on every command that happens to load configuration.
+machine_refusals() {
+    local name why
+    while IFS='|' read -r name why; do
+        [[ -n "$name" ]] || continue
+        meh "$MACHINE: $name $why"
+    done <<<"$_BRAID_MACHINE_REFUSED"
+}
 
 config_list() {
         note "resolved for $(current_branch), from $_BRAID_PROJECT_FILE"
@@ -95,13 +99,14 @@ config_list() {
         info "everything not shown is unset, and whatever is under it decides"
         [[ "$OUTSIDE" -eq 0 ]] ||
             meh "some values came from outside braid.sh, so they are not what your coworkers get"
+        machine_refusals
 }
 
 case "${ARGS[0]:-}" in
     get)
         NAME="${ARGS[1]:-}"
         [[ -n "$NAME" ]] || die "braid config get <name>"
-        setting_known "$NAME" || die "'$NAME' is not a braid setting — braid config lists them"
+        braid_setting_known "$NAME" || die "'$NAME' is not a braid setting — braid config lists them"
         printf '%s\n' "${!NAME:-}"
         ;;
 
@@ -110,12 +115,22 @@ case "${ARGS[0]:-}" in
         [[ -n "$NAME" ]] || die "braid config set <name> <value>"
         [[ "${#ARGS[@]}" -ge 3 ]] || die "braid config set $NAME <value>  (empty is '')"
         VALUE="${ARGS[2]}"
-        setting_known "$NAME" || die "$(
+        braid_setting_known "$NAME" || die "$(
             printf '%s\n' \
                 "'$NAME' is not a braid setting." \
                 "  braid config            every name there is" \
                 "  docs/configuration.md   what each one does"
         )"
+
+        if [[ "$MACHINE_FILE" -eq 1 ]] && ! braid_machine_allows "$NAME"; then
+            die "$(
+                printf '%s\n' \
+                    "$NAME is this repository's to decide, not one machine's." \
+                    "  a file nobody else can see must not overrule a reviewed decision." \
+                    "" \
+                    "  braid config set $NAME <value>   in braid.sh, where it is argued with"
+            )"
+        fi
 
         BEFORE="${!NAME:-}"
         FROM=$(setting_layer "$NAME")

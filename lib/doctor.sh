@@ -165,6 +165,15 @@ fi
 # and its `:=` assignments would otherwise read as somebody's environment. Only an export
 # survives into env, which is exactly the distinction being reported.
 EXPORTED=$(env)
+# The machine file is read as data and only what a machine may say is applied. Anything
+# else in it does nothing, and a file that does nothing silently is the reason this line
+# exists.
+MACHINE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/braid/config"
+while IFS='|' read -r refused why; do
+    [[ -n "$refused" ]] || continue
+    meh "$MACHINE_FILE: $refused $why"
+done <<<"$_BRAID_MACHINE_REFUSED"
+
 while IFS='|' read -r gone instead; do
     [[ -n "$gone" ]] || continue
     where=""

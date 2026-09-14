@@ -21,17 +21,26 @@ team made and reviewed — the branch prefix, which agents are supported, what `
 runs. A machine's settings are facts about one computer — how many agents it survives,
 which agent that person prefers. Conflating them is how one laptop configures a team.
 
-> [!WARNING]
-> **The machine layer currently outranks the repository for *every* variable**, including
-> the ones that exist precisely so that one laptop cannot configure a team. A
-> `BRAID_AGENTS=codex` written once in `~/.config/braid/config` silently un-supports
-> `claude` in every repository on that machine, and nothing reports it.
->
-> That is the behaviour, not the intent, and it is stated here because a reference that
-> omits it is worse than none. Narrowing which keys a machine may override — and having
-> `braid doctor` name every value that came from outside the committed file — is designed
-> and not built. There is also **no per-repository, per-person layer**, which is what a
-> coworker running a different agent actually needs.
+`~/.config/braid/config` is read as **data**, never executed: `KEY=value`, one per line,
+`#` for a comment. A line that is not an assignment is reported rather than run, and only
+what a machine may say is applied — a machine fact is how many workers this laptop
+survives, which launcher it has, where it keeps worktrees, which agent this person
+prefers, and what that person is willing to spend. Everything else in that file is a
+decision somebody reviewed, and a file nobody else can see must not overrule one.
+
+Three are refused for a different reason than scope: `BRAID_PROTECTED_BRANCHES`,
+`BRAID_PUSH_GUARD` and `BRAID_AGENT_ROLE` decide what a worker may push to, and an
+uncommitted file that widens any of them is a hole rather than a preference.
+
+`braid config` and `braid doctor` report every key that file named and braid did not
+take, saying which of the three reasons applied.
+
+> [!NOTE]
+> There is still **no per-repository, per-person layer**, which is what a coworker running
+> a different agent actually needs — a model named in `braid.sh` is a claim about
+> everyone, and naming their own means a file global to their machine. Until that layer
+> exists, the model and effort values are allowed from the machine file for want of
+> anywhere better.
 
 `braid.sh` is read from **the branch you are standing on**, not from the primary
 checkout, so a hook a feature adds mid-flight governs that feature's own run.

@@ -361,6 +361,35 @@ OUT=$(cd "$REPO" && "$BRAID" doctor 2>&1)
 has "the machine file is read at all" "9 workers at once" "$OUT"
 OUT=$(cd "$REPO" && BRAID_MAX_WORKERS=2 "$BRAID" doctor 2>&1)
 has "and one command still beats this machine" "2 workers at once" "$OUT"
+# What a machine may say is what is true of the machine. Everything else in that file is
+# a decision somebody reviewed, and a file nobody else can see must not overrule one.
+cat >"$XDG_CONFIG_HOME/braid/config" <<'CFG'
+# a comment, and a blank line follow
+
+BRAID_MAX_WORKERS=3
+BRAID_AGENTS=codex
+BRAID_PUSH_GUARD=0
+BRAID_NONSENSE=x
+not even an assignment
+CFG
+OUT=$(cd "$REPO" && "$BRAID" config list 2>&1)
+has "a machine fact is taken" "BRAID_MAX_WORKERS" "$OUT"
+has "and attributed to the machine" "machine" "$OUT"
+has "a repository's decision is refused" \
+    "BRAID_AGENTS is this repository's to decide" "$OUT"
+has "the push guard is refused for its own reason" \
+    "BRAID_PUSH_GUARD decides what a worker may push to" "$OUT"
+has "a name braid does not have is told apart from both" \
+    "BRAID_NONSENSE is not a braid setting" "$OUT"
+has "and a line that is not an assignment is not run" \
+    "is not KEY=value" "$OUT"
+# The refusal has to be real, not only reported: the value braid uses is still the
+# repository's, and BRAID_AGENTS resolving to codex here would break every later phase.
+OUT=$(cd "$REPO" && "$BRAID" config get BRAID_AGENTS 2>/dev/null)
+refute "and the refused value never reaches resolution" test "$OUT" = "codex"
+OUT=$(cd "$REPO" && "$BRAID" config set BRAID_AGENTS codex --machine 2>&1)
+has "writing one there is refused too, with where it belongs" \
+    "braid config set BRAID_AGENTS" "$OUT"
 rm -f "$XDG_CONFIG_HOME/braid/config"
 
 # Transitional, and deleted with the table it covers: braid doctor carries a list of

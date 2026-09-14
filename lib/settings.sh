@@ -25,23 +25,89 @@ source "$BRAID_HOME/lib/git.sh"
 
 # ~/.config/braid/config — this machine, not this repository. Sourced before the
 # repository's file so that braid.sh's `:=` defaults do not clobber it.
+# What a machine may say, which is: what is true of the machine. Anything else in that
+# file is a decision this repository made and somebody reviewed, and a file nobody else
+# can see must not be able to overrule one — that is not a missing feature, it is the
+# reason the layers exist at all.
+#
+# Two are refused for a different reason than the rest. BRAID_PROTECTED_BRANCHES and
+# BRAID_PUSH_GUARD decide what a worker may push to; an uncommitted file that widens
+# either is a hole rather than a preference, and BRAID_AGENT_ROLE turns the guard off
+# outright.
+#
+# The model and effort families are here because a person's budget is a real fact about
+# that person and there is nowhere better yet. When a per-repository, per-person layer
+# exists they belong there instead and this list gets shorter.
+_BRAID_MACHINE_SETTINGS="BRAID_MAX_WORKERS BRAID_LAUNCHER BRAID_LAUNCHER_STRICT
+BRAID_WORKTREE_ROOT BRAID_STALE_SECONDS BRAID_AGENT
+BRAID_MODEL_DESIGN BRAID_MODEL_ORCHESTRATE BRAID_MODEL_WORK
+BRAID_MODEL_LOW BRAID_MODEL_STANDARD BRAID_MODEL_HIGH
+BRAID_EFFORT_DESIGN BRAID_EFFORT_ORCHESTRATE BRAID_EFFORT_WORK
+BRAID_EFFORT_LOW BRAID_EFFORT_STANDARD BRAID_EFFORT_HIGH"
+
+braid_setting_known() {
+    local name="${1:?name}" candidate
+    for candidate in $_BRAID_SETTINGS; do
+        [[ "$candidate" == "$name" ]] && return 0
+    done
+    return 1
+}
+
+braid_machine_allows() {
+    local name="${1:?name}" candidate
+    for candidate in $_BRAID_MACHINE_SETTINGS; do
+        [[ "$candidate" == "$name" ]] && return 0
+    done
+    return 1
+}
+
+# Read as data, never executed. A file braid does not write cannot be asked to assign
+# with `:=`, and sourcing it meant the machine outranked the one thing it must lose to —
+# a value somebody set for a single command. Applying only what is still unset is that
+# order, without a trick to restore it afterwards.
+#
+# Refusals are collected rather than printed. This runs inside every command, and a
+# warning on all of them is a warning nobody reads; `braid doctor` and `braid config`
+# report what was refused, once, where somebody is looking for it.
+_BRAID_MACHINE_REFUSED=""
 braid_machine_config() {
-    local file="${XDG_CONFIG_HOME:-$HOME/.config}/braid/config" exported
+    local file="${XDG_CONFIG_HOME:-$HOME/.config}/braid/config" line name value why
     [[ -f "$file" ]] || return 0
-    # What the environment already said. The file is sourced, and a bare `VAR=value` in
-    # it therefore reaches a variable somebody exported for this one command — the
-    # opposite of the order stated above, where one command outranks one machine. The
-    # environment is captured and re-applied rather than the file being asked to use
-    # `:=`, because braid does not write that file and cannot require anything of it.
-    #
-    # Rewritten to `export` rather than eval'd as the `declare -x` bash prints: `declare`
-    # inside a function is local, so the restored values would die with this one, and
-    # `declare -g` is bash 4.2. Two plain substitutions rather than one alternation,
-    # because BSD sed is what macOS ships.
-    exported=$(export -p | sed -n 's/^declare -x /export /p' | grep '^export BRAID_' || true)
-    # shellcheck disable=SC1090
-    source "$file"
-    [[ -z "$exported" ]] || eval "$exported"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        case "$line" in
+            "" | [[:space:]]* | \#*) continue ;;
+        esac
+        if [[ "$line" != *=* || "$line" =~ ^[^A-Za-z_] ]]; then
+            _BRAID_MACHINE_REFUSED="$_BRAID_MACHINE_REFUSED
+${line%%=*}|is not KEY=value, and this file is read rather than run"
+            continue
+        fi
+        name="${line%%=*}"
+        value="${line#*=}"
+        # One layer of quoting, because somebody will write them and a file read as data
+        # has no shell to take them off.
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        if ! braid_machine_allows "$name"; then
+            case "$name" in
+                BRAID_PROTECTED_BRANCHES | BRAID_PUSH_GUARD | BRAID_AGENT_ROLE)
+                    why="decides what a worker may push to, and this file is not committed"
+                    ;;
+                *)
+                    braid_setting_known "$name" &&
+                        why="is this repository's to decide, not one machine's" ||
+                        why="is not a braid setting"
+                    ;;
+            esac
+            _BRAID_MACHINE_REFUSED="$_BRAID_MACHINE_REFUSED
+$name|$why"
+            continue
+        fi
+        # Unset only: the environment said it first and outranks this file.
+        [[ -n "${!name:-}" ]] || export "$name=$value"
+    done <"$file"
 }
 
 # --- the project seam ---------------------------------------------------------
