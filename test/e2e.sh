@@ -399,9 +399,9 @@ hasnt "and mentions no file of the project's" "worker-rules.md" "$DOC"
 
 phase "the push guard"
 # This shipped as documentation only: BRAID_PUSH_GUARD was a config default nothing read,
-# while the README, the worker contract and two adapters all said the hook existed. For
-# Codex and generic it is the only remote protection there is, so its absence meant they
-# had none at all.
+# while the README, the worker contract and three adapters all said the hook existed. For
+# Codex, Cursor and generic it is the only remote protection there is, so its absence
+# meant they had none at all.
 git init -q --bare "$TMP/remote"
 git remote add origin "$TMP/remote"
 is "a worker's hooks come from .braid/" ".braid/githooks" \

@@ -27,6 +27,7 @@ SUITES=(
     "compat:the invariants that rot silently — bash 3.2, stdlib python, the manifest"
     "slice:the braid block parser"
     "schedule:deriving waves from blockers, serialisation and capacity"
+    "agents:the agent adapters — one contract, every CLI"
     "e2e:a whole feature, end to end, in a repository created thirty seconds ago"
 )
 

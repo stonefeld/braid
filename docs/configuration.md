@@ -45,7 +45,7 @@ checkout, so a hook a feature adds mid-flight governs that feature's own run.
 
 | | |
 |---|---|
-| `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex generic`). A committed decision: `braid setup` asks for it when it first writes `braid.sh`, `braid setup --agents "codex claude"` restates it, `braid setup --add-agent NAME` appends to it |
+| `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex cursor-agent generic`). A committed decision: `braid setup` asks for it when it first writes `braid.sh`, `braid setup --agents "codex claude"` restates it, `braid setup --add-agent NAME` appends to it |
 | `BRAID_AGENT` | one machine's or one session's preference |
 | `BRAID_AGENT_DESIGN`<br>`BRAID_AGENT_ORCHESTRATE`<br>`BRAID_AGENT_WORK` | pin one seat. In `braid.sh` it is a repository decision — the orchestrator on the agent with hooks, workers on another — and `braid setup` offers to write them |
 | `BRAID_AGENT_CMD` | for `BRAID_AGENT=generic`: the command line, with `{model}` and `{prompt}` |
@@ -68,19 +68,19 @@ A preference outside the repository's list is an error, never a silent fallback.
 **Two families, and they answer different questions.** Seats are named by role; a
 worker's model comes from the complexity its slice declares.
 
-| | Answers | Default for Claude Code |
-|---|---|---|
-| `BRAID_MODEL_DESIGN` | which model the design seat runs | `fable` |
-| `BRAID_MODEL_ORCHESTRATE` | which model the orchestrator runs | `opus` |
-| `BRAID_MODEL_WORK` | a worker's model when nothing else says | `sonnet` |
-| `BRAID_MODEL_LOW` | what a `complexity: low` slice means here | `haiku` |
-| `BRAID_MODEL_STANDARD` | what a `complexity: standard` slice means | `sonnet` |
-| `BRAID_MODEL_HIGH` | what a `complexity: high` slice means | `opus` |
+| | Answers | Claude Code | Cursor (`cursor-agent`) |
+|---|---|---|---|
+| `BRAID_MODEL_DESIGN` | which model the design seat runs | `fable` | `cursor-grok-4.6-high` |
+| `BRAID_MODEL_ORCHESTRATE` | which model the orchestrator runs | `opus` | `cursor-grok-4.6-high` |
+| `BRAID_MODEL_WORK` | a worker's model when nothing else says | `sonnet` | `composer-2.5` |
+| `BRAID_MODEL_LOW` | what a `complexity: low` slice means here | `haiku` | `composer-2.5-fast` |
+| `BRAID_MODEL_STANDARD` | what a `complexity: standard` slice means | `sonnet` | `composer-2.5` |
+| `BRAID_MODEL_HIGH` | what a `complexity: high` slice means | `opus` | `cursor-grok-4.6-high` |
 
-Those defaults come from the agent adapter — `lib/agents/claude.sh` — which is the one
-file a vendor's model names are allowed to appear in. They are a guess about somebody
-else's budget, and they are the largest lever on what a wave costs, so `braid setup` puts
-the resolved table in front of you on a first run and writes down whatever you change:
+Those defaults come from the agent adapters, which are the one place a vendor's model
+names are allowed to appear in code. They are a guess about somebody else's budget, and
+they are the largest lever on what a wave costs, so `braid setup` puts the resolved table
+in front of you on a first run and writes down whatever you change:
 
 ```bash
 : "${BRAID_MODEL_DESIGN:=sonnet}"      # in braid.sh — committed, for everyone
@@ -110,6 +110,8 @@ do not take the same flags.
 | `BRAID_AGENT_ARGS` | Codex: the flags both halves take (`--sandbox workspace-write`) |
 | `BRAID_APPROVAL_POLICY` | Codex: what the interactive half does about approvals (`never`). `codex exec` has nobody to ask and rejects the flag outright |
 | `BRAID_PERMISSION_MODE` | Claude Code: `--permission-mode` (`bypassPermissions`) |
+| `BRAID_CURSOR_AGENT_ARGS` | Cursor: the flags both halves take (`--force`) |
+| `BRAID_CURSOR_AGENT_HEADLESS_ARGS` | Cursor: flags only its print-mode half takes (`--trust`) |
 
 `braid doctor` probes these against the installed CLI's own `--help` and says so when a
 flag has been renamed — before a wave, rather than as eight workers that died at launch.

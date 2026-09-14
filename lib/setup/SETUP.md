@@ -79,10 +79,10 @@ session — it had to, because you are the first agent on it. Read `BRAID_AGENTS
 changed. Do not ask it again from scratch.
 
 What is worth adding, once, if the list holds one name: a coworker running a different
-agent needs to appear here, and that costs something — an agent without hooks takes its
-contract from the prompt instead of from a session hook, and its status from
-`.braid/finish.sh` instead of a stop hook. Both work. `braid setup --add-agent <name>`
-is how it gets added later.
+agent needs to appear here, and that costs something — an agent without hooks braid
+installs into takes its contract from the prompt instead of from a session hook, and its
+status from `.braid/finish.sh` instead of a stop hook. Both work.
+`braid setup --add-agent <name>` is how it gets added later.
 
 ### What each seat and each complexity costs
 
@@ -97,9 +97,9 @@ Two things are worth checking rather than restating:
   their CLI is configured for, so `complexity: low` and `complexity: high` cost the same.
   That is a fine answer for a repository that does not care, and a surprise for one that
   thought it had tiers. Say which of the two this is.
-- **Names.** Only offer a model name you have seen the installed CLI list — `claude` and
-  `codex` both have their own picker. Do not recall one from training; those move, and a
-  wrong one fails at launch rather than at the moment you wrote it.
+- **Names.** Only offer a model name you have seen the installed CLI list. Each supported
+  agent has its own picker. Do not recall one from training; those move, and a wrong one
+  fails at launch rather than at the moment you wrote it.
 
 Record changes in `braid.sh`, where setup put the others:
 

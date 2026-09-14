@@ -249,7 +249,7 @@ winner into a committed file lets one person's laptop decide a team's configurat
 **Repository** declares what it supports, in preference order, committed:
 
 ```bash
-: "${BRAID_AGENTS:=claude codex}"    # supported here, best first
+: "${BRAID_AGENTS:=claude codex cursor-agent}"    # supported here, best first
 ```
 
 **Machine** declares a preference in `~/.config/braid/config`. **Resolution**, highest
@@ -264,9 +264,10 @@ priority first:
 ```
 
 **A preference outside the repository's list never silently falls back.** Adding an
-agent is a decision, not a discovery: Codex has no hooks, so the contract moves into
-the prompt and status comes from `finish.sh` — someone has to confirm that is enough
-*here*. So it says so, and points at `braid setup --add-agent codex`, which commits.
+agent is a decision, not a discovery: neither Codex nor Cursor has hooks braid installs
+into, so the contract moves into the prompt and status comes from `finish.sh` — someone
+has to confirm that is enough *here*. So it says so, and points at
+`braid setup --add-agent codex`, which commits.
 
 Agents are also selectable per seat, for the reason that matters: the orchestrator is
 the only seat that can push or open pull requests, and it is the only place where a
@@ -710,6 +711,18 @@ What must be forbidden is forbidden separately, so it survives that:
   Closing this needs something braid does not control: a trust scope that is not a path.
   Until then the contract travels in the prompt, status comes from `.braid/finish.sh`,
   and the per-worktree `pre-push` hook stands in for the `PreToolUse` guard.
+- **Cursor's hooks.** It has them too, in `.cursor/hooks.json`, project-level and
+  committed the way Claude's live in `.claude/settings.json` — so unlike Codex the
+  obstacle is not the trust model. It is that CLI support is partial and
+  version-dependent: depending on the build only some of `beforeShellExecution` /
+  `afterShellExecution`, `postToolUse`, `stop` and `sessionStart` fire under
+  `cursor-agent`, and at least one release fired none. A contract delivered by
+  `sessionStart` would arrive on some machines and never on others, which is worse
+  than not using hooks at all — the failure is silent and per-machine. `sessionStart`
+  is also fire-and-forget, so it could not deny a `git push` mid-session even where it
+  does fire. Closing this needs a support matrix Cursor publishes and honours. Until
+  then, as with Codex: contract in the prompt, status from `.braid/finish.sh`, and the
+  per-worktree `pre-push` hook in place of the `PreToolUse` guard.
 - **A `files` field.** See §6.
 - **A `braid_provision_feature` hook.** See §9.
 - **A pinned engine version per repository** (`braid = "^0.3"`), checked by every command,

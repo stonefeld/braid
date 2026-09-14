@@ -107,7 +107,7 @@ braid_config() {
     # Which agents this repository supports, best first. A committed decision, narrowed
     # by `braid setup`; until then braid accepts any adapter it has, because before
     # setup the repository has not decided anything for a preference to contradict.
-    : "${BRAID_AGENTS:=claude codex generic}"
+    : "${BRAID_AGENTS:=claude codex cursor-agent generic}"
     : "${BRAID_BRANCH_PREFIX:=agent}"
     : "${BRAID_PROTECTED_BRANCHES:=main master}"
     : "${BRAID_WORKTREE_ROOT:=$HOME/.braid/worktrees/$(basename "$checkout")}"
