@@ -13,11 +13,11 @@ keep true.
 |---|---|
 | `bin/braid` | the dispatcher, symlinked onto `PATH` at install |
 | `lib/` | the engine — one file per command, plus `core.sh` |
-| `lib/agents/` | one adapter per agent CLI, ~30 lines each |
+| `lib/agents/` | one adapter per agent CLI, ~30 lines each — the contract is [its README](lib/agents/README.md) |
 | `lib/hooks/` | Claude Code hooks |
 | `lib/launchers/` | one per place a worker can run, shadowable from `~/.config/braid/` |
 | `lib/skills/` | the skills braid owns, installed to the user's agent |
-| `lib/templates/` | `braid.sh` presets and slice templates |
+| `lib/templates/` | the `braid.sh` presets |
 | `docs/` | the worker contract, and the configuration reference |
 | `test/` | `e2e.sh`, plus the parser, the scheduler and the compat invariants |
 | `test.sh` | the runner — `./test.sh [suite…]` |

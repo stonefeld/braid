@@ -115,9 +115,11 @@ chmod +x "$TMP/bin/cursor-agent"
 
 # --- every adapter honours the same interface ---------------------------------
 
+# What the engine calls without checking first, and nothing else: an adapter that omits
+# an optional member is a working adapter, and a suite stricter than the contract makes
+# the contract the wrong thing to read. lib/agents/README.md is the contract.
 REQUIRED="agent_available agent_version agent_seat_model agent_complexity_model
-    agent_models agent_injects_contract agent_loads_skills agent_auto_mode
-    agent_auto_mode_probe agent_command agent_transcript_dir"
+    agent_models agent_injects_contract agent_auto_mode agent_command"
 for file in lib/agents/*.sh; do
     name=$(basename "$file" .sh)
     ADAPTER="$BRAID_HOME/$file"
