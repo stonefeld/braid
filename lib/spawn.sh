@@ -84,6 +84,10 @@ while [[ $# -gt 0 ]]; do
             PROMPT_OVERRIDE=$(flag_value --prompt "${2-}") || exit 1
             shift 2
             ;;
+        --)
+            shift
+            break
+            ;;
         -h | --help)
             usage
             exit 0

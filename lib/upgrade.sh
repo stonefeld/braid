@@ -2,7 +2,7 @@
 # Update the engine, without losing what you changed to unblock yourself.
 #
 #   braid upgrade               to the latest release
-#   braid upgrade --check       say what would happen, change nothing
+#   braid upgrade --dry-run     say what would happen, change nothing
 #   braid upgrade --ref v0.4.0  a particular tag; --ref main for the unreleased tip
 #   braid upgrade --from DIR    a working copy, for developing braid itself
 #
@@ -24,7 +24,7 @@ set -uo pipefail
 # shellcheck source=core.sh
 source "$BRAID_HOME/lib/core.sh"
 
-CHECK=0
+DRY_RUN=0
 # Empty means the latest release, resolved below. It used to be `main`, which made the
 # documented way to update braid an unannounced jump to whatever was mid-flight.
 REF=""
@@ -34,8 +34,8 @@ KEEP=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --check)
-            CHECK=1
+        --dry-run)
+            DRY_RUN=1
             shift
             ;;
         --ref)
@@ -155,7 +155,7 @@ done < <(cd "$NEW" && find bin lib docs VERSION -type f 2>/dev/null | sed 's|^\.
 REPLACED="${XDG_STATE_HOME:-$HOME/.local/state}/braid/replaced/$(date +%Y%m%d-%H%M%S)"
 for path in $TAKE; do
     CONFLICTS=" $(printf '%s' " $CONFLICTS " | sed "s| $path | |") "
-    if [[ -f "$BRAID_HOME/$path" && "$CHECK" -eq 0 ]]; then
+    if [[ -f "$BRAID_HOME/$path" && "$DRY_RUN" -eq 0 ]]; then
         mkdir -p "$REPLACED/$(dirname "$path")"
         cp "$BRAID_HOME/$path" "$REPLACED/$path"
         info "yours saved: $REPLACED/$path"
@@ -187,8 +187,8 @@ if [[ -n "$CONFLICTS" ]]; then
     exit 6
 fi
 
-if [[ "$CHECK" -eq 1 ]]; then
-    note "--check: nothing written"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+    note "--dry-run: nothing written"
     exit 0
 fi
 

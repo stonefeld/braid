@@ -47,6 +47,10 @@ while [[ $# -gt 0 ]]; do
             FORCE=1
             shift
             ;;
+        --)
+            shift
+            break
+            ;;
         -h | --help)
             braid_help "$0"
             exit 0

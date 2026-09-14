@@ -478,6 +478,15 @@ hasnt "rather than running" "checking" "$OUT"
 OUT=$(cd "$REPO" && "$BRAID" next --bogus 2>&1)
 has "and says so about anything else" "this command takes none" "$OUT"
 
+# `--` ends option parsing, so a positional that starts with a dash is still a
+# positional. Nothing handled it, in any command.
+OUT=$(cd "$REPO" && "$BRAID" plan -- --not-a-feature 2>&1)
+hasnt "-- ends the flags" "unknown argument" "$OUT"
+
+# "say what would happen and change nothing" had two spellings across four commands.
+OUT=$(cd "$REPO" && "$BRAID" upgrade --dry-run 2>&1)
+hasnt "and one spelling means it everywhere" "unknown argument" "$OUT"
+
 phase "changing a value without an agent and without an editor"
 cp "$BS" "$TMP/braid.sh.before-config"
 

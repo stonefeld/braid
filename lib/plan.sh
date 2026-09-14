@@ -40,6 +40,10 @@ while [[ $# -gt 0 ]]; do
             PRD="${PRD#\#}"
             shift 2
             ;;
+        --)
+            shift
+            break
+            ;;
         -h | --help)
             braid_help "$0"
             exit 0

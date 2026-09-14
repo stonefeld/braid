@@ -45,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             export BRAID_AGENT_DESIGN="$VALUE"
             shift 2
             ;;
+        --)
+            shift
+            break
+            ;;
         -h | --help)
             braid_help "$0"
             exit 0
