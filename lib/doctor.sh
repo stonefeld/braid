@@ -150,6 +150,20 @@ elif declare -F braid_agent_command >/dev/null; then
     meh "braid_agent_command replaces both launches — add braid_agent_command_headless if it opens a TUI"
 fi
 
+# What braid would make now, against what is here. The filesystem is derived from the
+# configuration, so the two disagreeing means somebody changed an answer and nothing has
+# acted on it yet — which is `braid init`, and which is silent about everything that
+# already matches.
+DRIFT=""
+case " $BRAID_AGENTS " in
+    *" claude "*) [[ -f "$CHECKOUT/.claude/settings.json" ]] || DRIFT="$DRIFT .claude/settings.json" ;;
+esac
+if [[ "$BRAID_SLICE_SOURCE" == files && ! -d "$CHECKOUT/$BRAID_FEATURES_DIR" ]]; then
+    DRIFT="$DRIFT $BRAID_FEATURES_DIR/"
+fi
+[[ -z "$DRIFT" ]] ||
+    meh "this configuration calls for$DRIFT, which is not here — braid init makes it"
+
 # Transitional. This block and its test go together, in the release after nobody has a
 # braid.sh old enough to hold one of these names.
 #

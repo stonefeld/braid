@@ -172,7 +172,7 @@ PY
         fi
         case "$NAME" in
             BRAID_AGENTS | BRAID_SLICE_SOURCE)
-                note "what braid scaffolds follows this — run braid init --no-learn to reconcile it"
+                note "what braid scaffolds follows this — braid init makes what it now calls for"
                 ;;
         esac
         ;;

@@ -140,6 +140,24 @@ refute "and not where no agent uses them" test -d "$HOOKED/.claude"
 )
 check "a re-run that adds no hook rewrites no file" test "$?" -eq 0
 
+# An agent installed after braid has no links, and a skill that arrives in an upgrade is
+# linked nowhere for anybody. The installer was the only thing that ever linked them, so
+# the remedy for either was rerunning `curl | sh`.
+refute "no skills are linked for an agent nobody has" test -d "$HOME/.agents/skills"
+mkdir -p "$HOME/.codex"
+sh "$XDG_DATA_HOME/braid/lib/link-skills.sh" "$XDG_DATA_HOME/braid" >/dev/null 2>&1
+check "an agent that appears later gets them" test -L "$HOME/.codex/skills/braid-plan"
+check "through the directory agents share" test -L "$HOME/.agents/skills/braid-plan"
+
+# Configuration and filesystem disagreeing means somebody changed an answer and nothing
+# has acted on it. doctor is where that is said; braid init is what acts.
+OUT=$(cd "$HOOKED" && BRAID_AGENTS=claude "$BRAID" doctor 2>&1)
+hasnt "doctor is quiet when the scaffolding matches" "which is not here" "$OUT"
+(cd "$HOOKED" && rm -rf .claude)
+OUT=$(cd "$HOOKED" && BRAID_AGENTS=claude "$BRAID" doctor 2>&1)
+has "and names what the configuration now calls for" ".claude/settings.json, which is not here" "$OUT"
+has "and what makes it" "braid init" "$OUT"
+
 # The one command somebody runs before they know anything about braid. It used to open
 # whatever tier the adapter names for `design` — for Claude that is the most expensive
 # model there is — with no flag to change it and nothing on screen saying you could.

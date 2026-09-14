@@ -291,40 +291,11 @@ fi
 # hold relative links into it. braid joins that rather than inventing a third place, so
 # installing once is enough however many agents are on the machine.
 #
-# Linked, not copied, so `braid upgrade` updates them with everything else. A directory
-# that is not a symlink is somebody's own version and is left alone.
-link_skill() {
-    from="$1"
-    to="$2"
-    if [ -d "$to" ] && [ ! -L "$to" ]; then
-        meh "$(basename "$to") kept — it is yours, not a link"
-        return 1
-    fi
-    rm -f "$to"
-    ln -s "$from" "$to"
-}
-
-if [ -d "$DATA/lib/skills" ]; then
-    SHARED="$HOME/.agents/skills"
-    mkdir -p "$SHARED"
-    for skill in "$DATA"/lib/skills/*/; do
-        [ -d "$skill" ] || continue
-        name=$(basename "$skill")
-        link_skill "${skill%/}" "$SHARED/$name" || continue
-        ok "/$name"
-
-        # And into each agent that keeps its own directory, the way the others already
-        # do it — relative, so the chain survives the home directory moving. Only where
-        # the directory exists: creating one would be braid configuring an agent nobody
-        # installed.
-        for agent_dir in "$HOME/.claude/skills" "$HOME/.codex/skills" \
-            "$HOME/.cursor/skills"; do
-            [ -d "$(dirname "$agent_dir")" ] || continue
-            mkdir -p "$agent_dir"
-            link_skill "../../.agents/skills/$name" "$agent_dir/$name" >/dev/null 2>&1 || true
-        done
-    done
-fi
+# The same script `braid upgrade` runs, because an install is not the only moment this
+# is true — see lib/link-skills.sh.
+sh "$DATA/lib/link-skills.sh" "$DATA" | while IFS=: read -r name into; do
+    ok "/$name →$into"
+done
 
 # --- what is on this machine --------------------------------------------------
 

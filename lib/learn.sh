@@ -83,7 +83,7 @@ agent_check_effort "$EFFORT"
 # of this that arrives before the thing it describes.
 note "about to open a session to learn about this repository:"
 info "agent:  $BRAID_RUN_AGENT${MODEL:+  model: $MODEL   (the tier this repository calls 'design')}${EFFORT:+  effort: $EFFORT}"
-info "it will ask a handful of questions and write braid.sh and docs/agents/"
+info "it will ask a handful of questions, write braid.sh, and leave notes under docs/ for the agents that come after it"
 info "another:  braid learn --model <name>  |  --effort <level>  |  --agent <name>"
 info "the whole table: braid doctor  |  change it: braid config"
 

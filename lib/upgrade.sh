@@ -236,5 +236,12 @@ if [[ -d "$OVERRIDES" ]]; then
     done
 fi
 
+# An agent installed since braid was, or a skill that arrived in this upgrade, has no
+# links until something makes them — and nothing did. The installer was the only place
+# this ran, so the remedy for either was to rerun `curl | sh`.
+sh "$BRAID_HOME/lib/link-skills.sh" "$BRAID_HOME" | while IFS=: read -r name into; do
+    ok "/$name →$into"
+done
+
 echo >&2
 ok "braid $WANT"
