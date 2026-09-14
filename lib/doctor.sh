@@ -140,6 +140,16 @@ for hook in provision verify teardown teardown_feature slice_launchable; do
     fi
 done
 
+# The launch hook is not a no-op seam like the five above — it is absent or it is a
+# replacement — and which of its two forms a project wrote decides what a detached worker
+# runs. One form covers both paths, which is right until the replacement is itself a TUI:
+# braid hands it to a launcher with no terminal and the worker hangs with no output.
+if declare -F braid_agent_command_headless >/dev/null; then
+    ok "braid_agent_command: both forms defined"
+elif declare -F braid_agent_command >/dev/null; then
+    meh "braid_agent_command replaces both launches — add braid_agent_command_headless if it opens a TUI"
+fi
+
 # Which of the three states this repository's worker contract is in. A replacement is
 # not wrong, but it is the one state where nothing braid ships afterwards reaches the
 # workers here, and that is worth saying out loud once a release.

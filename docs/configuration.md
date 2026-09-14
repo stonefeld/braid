@@ -170,6 +170,19 @@ braid_agent_command() {           # $1 worktree  $2 model  $3 prompt  $4 effort
 The first three arguments are unchanged. Existing overrides keep working; `$4` is empty
 when no effort is configured.
 
+It replaces **both** launches: the seat you open in a terminal and the detached worker,
+which is the path most launches take. braid cannot tell one command line from another, so
+if your replacement opens a TUI it will hang a worker started without a tty — give it a
+headless form, which wins wherever it is defined:
+
+```bash
+braid_agent_command_headless() { # same four arguments
+    printf 'my-agent --print %q' "$3"
+}
+```
+
+`braid doctor` says which of the two forms it found.
+
 ---
 
 ## The project seam — `braid.sh`

@@ -282,6 +282,39 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- the project's launch hook, on both paths ---------------------------------
+
+# braid_agent_command is documented as the way to replace the launch command wholesale,
+# and the detached worker is the path most launches take. An adapter defining
+# agent_command_headless must not quietly outrank it, or the override covers the seat you
+# watch and not the workers you do not.
+with_hook() {
+    (
+        # shellcheck disable=SC1090  # BRAID_HOME is this checkout
+        source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
+        # shellcheck disable=SC1091  # one adapter that defines a headless form
+        source "$BRAID_HOME/lib/agents/cursor-agent.sh"
+        eval "$1"
+        "${@:2}"
+    )
+}
+
+OUT=$(with_hook 'braid_agent_command() { printf PROJECT; }' \
+    agent_cmd_headless /tmp/wt a-model a-prompt "")
+is "a project's launch hook reaches a detached worker" "PROJECT" "$OUT"
+
+OUT=$(with_hook 'braid_agent_command() { printf PROJECT; }' \
+    agent_cmd /tmp/wt a-model a-prompt "")
+is "and still reaches the seat you are watching" "PROJECT" "$OUT"
+
+OUT=$(with_hook 'braid_agent_command() { printf PROJECT; }
+braid_agent_command_headless() { printf HEADLESS; }' \
+    agent_cmd_headless /tmp/wt a-model a-prompt "")
+is "a headless-specific hook wins where the project wrote one" "HEADLESS" "$OUT"
+
+OUT=$(with_hook ':' agent_cmd_headless /tmp/wt a-model a-prompt "")
+has "and with no hook the adapter's headless form still runs" "cursor-agent" "$OUT"
+
 # --- the worker's model chain -------------------------------------------------
 
 # The reference calls BRAID_MODEL_WORK "a worker's model when nothing else says", which

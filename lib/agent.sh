@@ -289,10 +289,21 @@ agent_cmd() {
 
 # For a launcher with no terminal. An interactive TUI started without a tty either
 # refuses or hangs, and a hung worker with no output is the worst state to debug.
+#
+# The project's hook outranks the adapter here exactly as it does above. "Replace the
+# launch command wholesale" has to mean both commands or it means the seat you sit in
+# front of and not the workers you do not — and detached is the path most launches take.
+#
+# A project whose replacement is itself a TUI needs the second hook, because braid cannot
+# tell one command line from another. `braid doctor` says which of the two it found.
 agent_cmd_headless() {
-    if declare -F agent_command_headless >/dev/null; then
+    if declare -F braid_agent_command_headless >/dev/null; then
+        braid_agent_command_headless "$@"
+    elif declare -F braid_agent_command >/dev/null; then
+        braid_agent_command "$@"
+    elif declare -F agent_command_headless >/dev/null; then
         agent_command_headless "$@"
     else
-        agent_cmd "$@"
+        agent_command "$@"
     fi
 }
