@@ -274,8 +274,12 @@ for name in $BRAID_AGENTS; do
     (
         # shellcheck disable=SC1090
         source "$(agent_file "$name")"
-        declare -F agent_auto_mode_probe >/dev/null || exit 0
-        if agent_auto_mode_probe; then
+        # Absent is reported rather than skipped, the way the effort branch below already
+        # does it: an adapter braid cannot probe is a thing to know before a wave, and
+        # silence reads the same as a pass.
+        if ! declare -F agent_auto_mode_probe >/dev/null; then
+            info "$name unattended mode: $(agent_auto_mode) — braid cannot check it"
+        elif agent_auto_mode_probe; then
             ok "$name unattended mode: $(agent_auto_mode)"
         else
             meh "$name does not seem to accept '$(agent_auto_mode)' — workers would die at launch"

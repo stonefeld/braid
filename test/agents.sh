@@ -284,6 +284,21 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- a probe that asks nothing ------------------------------------------------
+
+# A probe exists to ask the installed CLI whether the flags this adapter sets still
+# exist. generic sets none — the whole command line came from the person — so it has
+# nothing to ask, and saying so by absence is the contract. Returning success instead
+# reports a green check for a thing nobody verified, in the one adapter whose flags
+# braid has never seen.
+ADAPTER="$BRAID_HOME/lib/agents/generic.sh"
+refute "generic probes no unattended mode it cannot see" \
+    with_adapter declare -F agent_auto_mode_probe
+refute "and probes no effort control it cannot see" \
+    with_adapter declare -F agent_effort_probe
+check "while still naming where unattended mode lives" \
+    with_adapter agent_auto_mode
+
 # --- who decides whether an adapter can run -----------------------------------
 
 # `generic` is available exactly when it has been given a command to run, which is the

@@ -36,12 +36,12 @@ agent_injects_contract() { return 1; }
 # reason braid can claim to work with something it has never heard of.
 agent_loads_skills() { return 1; }
 
-# Nothing to probe: whatever unattended means for your agent is already in the template
-# you gave BRAID_AGENT_CMD.
+# Nothing to probe, and therefore no probe. A probe asks the installed CLI whether the
+# flags this adapter sets still exist; this adapter sets none, because the whole command
+# line came from the person. `braid doctor` reports the absence, which is true, rather
+# than a check that returned success without asking anything.
 agent_auto_mode() { printf 'in BRAID_AGENT_CMD'; }
-agent_auto_mode_probe() { return 0; }
 agent_effort_mode() { printf '{effort} in BRAID_AGENT_CMD'; }
-agent_effort_probe() { return 0; }
 
 agent_command() {
     local worktree="$1" model="$2" prompt="$3" effort="${4:-}" template="$BRAID_AGENT_CMD"
