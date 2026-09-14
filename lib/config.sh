@@ -23,11 +23,22 @@ source "$BRAID_HOME/lib/git.sh"
 # ~/.config/braid/config — this machine, not this repository. Sourced before the
 # repository's file so that braid.sh's `:=` defaults do not clobber it.
 braid_machine_config() {
-    local file="${XDG_CONFIG_HOME:-$HOME/.config}/braid/config"
-    if [[ -f "$file" ]]; then
-        # shellcheck disable=SC1090
-        source "$file"
-    fi
+    local file="${XDG_CONFIG_HOME:-$HOME/.config}/braid/config" exported
+    [[ -f "$file" ]] || return 0
+    # What the environment already said. The file is sourced, and a bare `VAR=value` in
+    # it therefore reaches a variable somebody exported for this one command — the
+    # opposite of the order stated above, where one command outranks one machine. The
+    # environment is captured and re-applied rather than the file being asked to use
+    # `:=`, because braid does not write that file and cannot require anything of it.
+    #
+    # Rewritten to `export` rather than eval'd as the `declare -x` bash prints: `declare`
+    # inside a function is local, so the restored values would die with this one, and
+    # `declare -g` is bash 4.2. Two plain substitutions rather than one alternation,
+    # because BSD sed is what macOS ships.
+    exported=$(export -p | sed -n 's/^declare -x /export /p' | grep '^export BRAID_' || true)
+    # shellcheck disable=SC1090
+    source "$file"
+    [[ -z "$exported" ]] || eval "$exported"
 }
 
 # --- the project seam ---------------------------------------------------------

@@ -335,6 +335,19 @@ git checkout -q -b feat/auth
 
 # --- slices -------------------------------------------------------------------
 
+phase "the configuration layers, in the order they are documented in"
+
+# ~/.config/braid/config is sourced, so a bare assignment in it reaches a variable
+# somebody exported for one command. The reference states the opposite order — one
+# command beats this machine — and that order is the whole reason the layers exist.
+mkdir -p "$XDG_CONFIG_HOME/braid"
+printf 'BRAID_MAX_WORKERS=9\n' >"$XDG_CONFIG_HOME/braid/config"
+OUT=$(cd "$REPO" && "$BRAID" doctor 2>&1)
+has "the machine file is read at all" "9 workers at once" "$OUT"
+OUT=$(cd "$REPO" && BRAID_MAX_WORKERS=2 "$BRAID" doctor 2>&1)
+has "and one command still beats this machine" "2 workers at once" "$OUT"
+rm -f "$XDG_CONFIG_HOME/braid/config"
+
 phase "slices and a schedule"
 D="braid/features/auth"
 mkdir -p "$D"
