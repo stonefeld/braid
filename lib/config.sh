@@ -83,30 +83,32 @@ machine_refusals() {
     done <<<"$_BRAID_MACHINE_REFUSED"
 }
 
+# Every name, set or not. A listing of only what somebody already decided answers the
+# question you did not have — the point of a command that writes configuration without
+# opening a file is finding out what there is to write.
 config_list() {
-        note "resolved for $(current_branch), from $_BRAID_PROJECT_FILE"
-        echo >&2
-        OUTSIDE=0
-        for NAME in $_BRAID_SETTINGS; do
-            FROM=$(setting_layer "$NAME")
-            [[ "$FROM" == default && -z "${!NAME:-}" ]] && continue
-            case "$FROM" in
-                environment | machine) OUTSIDE=1 ;;
-            esac
-            printf '  %-28s %-11s %s\n' "$NAME" "$FROM" "$(unset_or "${!NAME:-}")" >&2
-        done
-        echo >&2
-        info "everything not shown is unset, and whatever is under it decides"
-        [[ "$OUTSIDE" -eq 0 ]] ||
-            meh "some values came from outside braid.sh, so they are not what your coworkers get"
-        machine_refusals
+    note "resolved for $(current_branch), from $_BRAID_PROJECT_FILE"
+    echo >&2
+    OUTSIDE=0
+    for NAME in $_BRAID_SETTINGS; do
+        FROM=$(setting_layer "$NAME")
+        case "$FROM" in
+            environment | machine) OUTSIDE=1 ;;
+        esac
+        printf '  %-28s %-11s %s\n' "$NAME" "$FROM" "${!NAME:-—}" >&2
+    done
+    echo >&2
+    info "— is unset, and whatever is under it decides"
+    [[ "$OUTSIDE" -eq 0 ]] ||
+        meh "some values came from outside braid.sh, so they are not what your coworkers get"
+    machine_refusals
 }
 
 case "${ARGS[0]:-}" in
     get)
         NAME="${ARGS[1]:-}"
         [[ -n "$NAME" ]] || die "braid config get <name>"
-        braid_setting_known "$NAME" || die "'$NAME' is not a braid setting — braid config lists them"
+        braid_setting_known "$NAME" || die "'$NAME' is not a braid setting — braid config list names them all"
         printf '%s\n' "${!NAME:-}"
         ;;
 
@@ -118,7 +120,7 @@ case "${ARGS[0]:-}" in
         braid_setting_known "$NAME" || die "$(
             printf '%s\n' \
                 "'$NAME' is not a braid setting." \
-                "  braid config            every name there is" \
+                "  braid config list       every name there is" \
                 "  docs/reference/configuration.md   what each one does"
         )"
 
