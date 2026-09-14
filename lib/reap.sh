@@ -111,12 +111,11 @@ reap_one() {
     # indistinguishable from one that never started, and `braid next` would call a wave
     # unstarted that had in fact been integrated and reaped.
     #
-    # It used to be the last statement in this function, below a `die`, which is how it
-    # was lost on every single reap under a launcher that owns the worktree — the
-    # comment describing the harm sat directly under the line that caused it. It is a
-    # cheap idempotent update-ref, the ancestry check above has already proved the claim
-    # it records, and nothing below needs to succeed for it to stay true. Writing it here
-    # makes the rest of this function safe to fail anywhere.
+    # First, and above everything that can fail. It is a cheap idempotent update-ref,
+    # the ancestry check above has already proved the claim it records, and nothing below
+    # needs to succeed for it to stay true — so writing it here makes the rest of this
+    # function safe to fail anywhere, including under a launcher that removes the
+    # worktree out from under it.
     #
     # A ref rather than a branch, so it stays out of `git branch`, out of the way, and
     # still answers "what commit did this slice land as" months later.

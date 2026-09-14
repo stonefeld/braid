@@ -59,9 +59,9 @@ from an agent development environment's API and never from a file that a command
 wrote down and could now be stale. If a state can be derived, derive it.
 
 **Fail loudly, and toward the safe side.** A missing or malformed field is an error,
-not a default. The old code defaulted a missing `Needs setup` to "no", which is the
-cheap path — so a typo silently ran a task without the setup it needed and failed
-strangely half an hour later.
+not a default. Defaulting `setup:` to "no" is the cheap path and the wrong one: a typo
+then runs a task without the setup it needed, and it fails strangely half an hour
+later rather than at the moment it was misread.
 
 **One spelling per agent.** Nothing braid prints is a brand: commands print the adapter
 id — `claude`, `codex`, `cursor-agent`, `generic` — which is also what a person types into
@@ -70,6 +70,17 @@ every adapter braid ships answers "is my binary on PATH". Prose may name the pro
 the product is the subject, and each document pairs the two the first time: **Cursor**
 (`cursor-agent`). Where a sentence is about a value braid reads or prints, it uses the id
 — a reader holding a document beside command output should never have to translate.
+
+**The code tells the present; the commits tell the past.** A comment explains why the
+code is the way it is, never what it used to be — that is what `git log` is for, and a
+comment repeating it ages into a claim nobody verifies. Where the thing you wanted to
+write down is "do not go back to X", write a test: a test refuses, a paragraph hopes to
+be read. If the guard cannot be written as a test, the comment was describing a change
+rather than a trap, and it belongs in the commit message.
+
+`DESIGN.md` is the exception, because naming decisions is its whole job — and even there
+a superseded one reads as "this was decided, then superseded by that" rather than as a
+story.
 
 **English.** Code, comments, docs, commit messages. What language a *project using*
 braid writes its issues in is that project's choice, configured at setup — but the
@@ -93,8 +104,13 @@ derivation). CI runs all four on macOS and Linux, one step each so a red build n
 which.
 
 **Add to them when behaviour changes, and check the new test fails without the change.**
-Two fixes here shipped with tests that passed against the bug they were meant to catch;
-both were caught by running the suite against the old code on purpose, not by reading it.
+Reading a test and believing it would have caught the bug is not the same as watching it
+fail; the cheap way to be sure is to run the suite against the code without the fix.
+
+```bash
+git stash && ./test.sh e2e ; git stash pop     # it should go red
+```
+
 Do not add unit tests for `slugify`.
 
 ## Commits

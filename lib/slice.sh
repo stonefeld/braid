@@ -12,13 +12,11 @@
 # input. Acceptance criteria, scope and prose stay outside, where they are read by a
 # worker rather than by a program.
 #
-# A fence rather than `**Key:** value` lines, for three reasons that all came from the
-# same bug. The old parser was `grep -i -m1 "$key"` over the whole body, so a sentence
-# mentioning a key beat the field itself; it then took the first word, which made any
-# multi-value field unparseable. A fence cannot be reached by prose. It renders as a
-# distinct block in a GitHub issue. And it *looks* like machine configuration, so nobody
-# translates it into another language — which silently broke spawns in the codebase this
-# lesson came from.
+# A fence rather than `**Key:** value` lines, for three reasons. Prose cannot reach into
+# a fence, so a sentence mentioning a key cannot be mistaken for the field. It renders as
+# a distinct block in a GitHub issue. And it *looks* like machine configuration, so
+# nobody translates it into another language — a translated key breaks the parse silently,
+# at the moment a wave starts.
 
 [[ -n "${_BRAID_SLICE_SH:-}" ]] && return 0
 _BRAID_SLICE_SH=1
@@ -80,8 +78,8 @@ slice_field() {
         key=$(printf '%s' "${line%%:*}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
         [[ "$key" == "$want" ]] || continue
         value="${line#*:}"
-        # Trimmed at both ends, and kept whole — a multi-value field is the reason the
-        # old parser's `awk '{print $1}'` made blocked-by unreadable.
+        # Trimmed at both ends, and kept whole. Taking the first word instead would
+        # make every multi-value field — `blocked-by: 280, 281` — unreadable.
         value="${value#"${value%%[![:space:]]*}"}"
         value="${value%"${value##*[![:space:]]}"}"
         printf '%s' "$value"

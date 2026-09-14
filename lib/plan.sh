@@ -103,9 +103,9 @@ while read -r id; do
     [[ -n "$id" ]] || continue
     body=$(BRAID_RUN_FEATURE="$FEATURE" fetch_slice "$id")
     slice_validate "$body"
-    # Each field in its own substitution, each failure caught here: a `die` inside
-    # `$(...)` ends only the subshell, and the plan used to carry on with an empty
-    # column as if the slice had answered.
+    # Each field in its own substitution, each failure caught here. A `die` inside
+    # `$(...)` ends only the subshell, so an uncaught one leaves an empty column that
+    # reads exactly like a slice which answered.
     complexity=$(slice_complexity "$body") || die "#$id: unusable braid block"
     setup=$(slice_setup "$body") || die "#$id: unusable braid block"
     blockers=$(slice_blocked_by "$body") || die "#$id: unusable braid block"
@@ -148,11 +148,9 @@ import sys
 feature, waves = sys.argv[1], sys.argv[2]
 document = os.environ.get("BRAID_RUN_PLAN_DOCUMENT", "")
 
-# Waves and nothing else. `prd: #N` used to sit here as the pointer back to the tracker,
-# and nothing reads it any more: with files there is no PRD issue to point at, and with a
-# tracker this document *is* that issue, so the line said `prd: #100` inside issue #100.
-# A field nothing reads is worse than an absent one — it is the same argument that
-# removed `files:`.
+# Waves and nothing else. A pointer back to the tracker has nowhere to point: in files
+# mode there is no PRD issue, and with a tracker this document *is* that issue. A field
+# nothing reads is worse than an absent one, because somebody maintains it.
 fence = "```braid\n" + waves.strip() + "\n```"
 
 SECTIONS = """

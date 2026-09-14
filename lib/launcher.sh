@@ -72,9 +72,9 @@ launcher_load() {
     # replace any of them. Called through the launcher interface rather than by name,
     # which is why they look unreachable from here.
     #
-    # The default for ownership is **no**, so a launcher somebody wrote before this
-    # existed keeps the old behaviour, and reap tolerates a directory that vanished
-    # anyway rather than trusting the declaration alone.
+    # The default for ownership is **no**, so a launcher that never mentions it behaves
+    # the way every launcher did before any of them could — and reap tolerates a
+    # directory that vanished anyway rather than trusting the declaration alone.
     # shellcheck disable=SC2317,SC2329
     launcher_headless() { return 1; }
     # shellcheck disable=SC2317,SC2329

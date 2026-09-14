@@ -25,8 +25,8 @@ set -uo pipefail
 source "$BRAID_HOME/lib/core.sh"
 
 DRY_RUN=0
-# Empty means the latest release, resolved below. It used to be `main`, which made the
-# documented way to update braid an unannounced jump to whatever was mid-flight.
+# Empty means the latest release, resolved below — never the branch, which would make
+# the documented way to update braid an unannounced jump to whatever is mid-flight.
 REF=""
 FROM=""
 TAKE=""

@@ -120,9 +120,9 @@ The title is the commit title. The body says, in this order:
 4. `Closes #N`, one per line, before any prose. `Closes #1, #2` closes only #1.
 
 **A change in behaviour comes with a test that fails without it.** Not "a test passes" —
-a test that *fails on the old code*. Two of the fixes in this repository shipped with
-tests that passed against the bug they were supposed to catch, and both were found by
-checking rather than by assuming:
+a test that *fails on the code without the fix*. Reading a test and believing it would
+have caught the bug is not the same as watching it fail, and the difference is one
+command:
 
 ```bash
 git stash && ./test.sh e2e ; git stash pop     # it should go red

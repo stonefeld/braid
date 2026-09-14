@@ -67,14 +67,12 @@ refuse_worker_seat
 # braid.sh, .gitignore, .claude/settings.json — is committed and reviewed, so it belongs
 # on the branch you are on, where you can commit it and open a pull request for it.
 #
-# The old behaviour was not "write to the trunk", which would at least be a rule: it was
-# "write to whatever branch the primary checkout happens to be standing on", and with a
-# worktree per feature that checkout is just another worktree nobody is coordinating. It
-# also disagreed with where braid_config *reads* braid.sh from, which is the branch you
-# are on — so setup could leave you configured and doctor could still say you were not.
+# It has to be the branch braid_config *reads* braid.sh from, which is also the one you
+# are standing on. Any other choice can leave you configured and doctor saying you are
+# not.
 #
-# Wanting the configuration on the trunk is a perfectly good workflow. It is spelled
-# "stand on the trunk and run this", and braid no longer decides it for you.
+# Wanting the configuration on the trunk is a perfectly good workflow, and it is spelled
+# "stand on the trunk and run this" rather than decided for you.
 CHECKOUT=$(current_worktree)
 cd "$CHECKOUT" || die "cannot enter $CHECKOUT"
 
@@ -114,9 +112,8 @@ agents_write() {
 # detecting PATH and committing the winner is how one laptop configures a team.
 #
 # It belongs here rather than in the session below, because the session is itself
-# launched by one of these agents. A repository whose people run Codex used to be
-# scaffolded `BRAID_AGENTS=claude` and then handed a Claude session to be told about
-# it — the wrong agent, asking the wrong question, after the answer was already written.
+# launched by one of these agents. Asking afterwards means the wrong agent asking the
+# wrong question, after the answer it depends on has already been written down.
 agents_ask() {
     local installed shipped answer name reply=""
     installed=$(agents_installed || true)
@@ -304,7 +301,8 @@ case " $BRAID_AGENTS " in
     *" claude "*)
         mkdir -p .claude
         # Checked directly rather than through $?: the registration refuses to touch a
-        # settings.json it cannot parse, and this used to report success over that.
+        # settings.json it cannot parse, and a refusal reported as success is worse than
+        # either.
         if ! python3 "$BRAID_HOME/lib/hooks/register.py"; then
             die "could not register the hooks — nothing was changed"
         fi

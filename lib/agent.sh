@@ -279,10 +279,9 @@ agent_check_effort() {
 # Checked only where the adapter says what it accepts. A typo in a model name is
 # otherwise discovered by the agent, in a panel, several minutes later.
 #
-# Compared name by name rather than with `grep -w`, which was both too loose and a
-# regex. Model names are full of hyphens and dots, and neither is a word character to
-# grep: against `gpt-5.6-sol gpt-5.6-terra` it accepted plain `gpt-5`, and `astra`, and
-# would have read the dots in the name it was given as "any character".
+# Compared name by name, never by a pattern. Model names are full of hyphens and dots
+# and neither is a word character, so matching one is both too loose — a prefix passes —
+# and a regex, reading the dots in whatever it was handed as "any character".
 agent_check_model() {
     local model="${1:-}" valid candidate
     [[ -n "$model" ]] || return 0

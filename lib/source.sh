@@ -19,9 +19,9 @@ source "$BRAID_HOME/lib/slice.sh"
 # shellcheck source=settings.sh
 source "$BRAID_HOME/lib/settings.sh"
 
-# The one definition of where a feature's slices and plan live. Three commands used to
-# build this path themselves, which is why fixing it in one place would have left three
-# reading the wrong tree.
+# The one definition of where a feature's slices and plan live. Built here and nowhere
+# else, so that changing it changes it for every command rather than for whichever ones
+# somebody remembered.
 # Why the tracker did not answer. Called only after something has already failed, so it
 # can afford to ask questions the fast path never pays for — and "could not read #123"
 # with no reason costs a great deal more than the second this takes.

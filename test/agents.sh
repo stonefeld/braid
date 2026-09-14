@@ -376,6 +376,23 @@ is "an adapter may name an effort for a complexity level" "medium" "$OUT"
 OUT=$(with_hook ':' agent_effort design)
 is "an adapter that names none is not an error" "" "$OUT"
 
+# --- what counts as the same model name ---------------------------------------
+
+# Compared name by name, never by a pattern. Model names are full of hyphens and dots and
+# neither is a word character, so a `grep -w` against `fable opus sonnet haiku` is both
+# too loose and a regex: it matches a prefix, and it reads a dot in the name it was given
+# as "any character".
+for near in fab opus- s.nnet "opus sonnet" ""; do
+    [[ -n "$near" ]] || continue
+    PATH="$TMP/bin:$PATH" BRAID_AGENTS="claude" BRAID_AGENT="claude" \
+        refute "a model name that is merely close is not accepted ('$near')" \
+        with_engine agent_check_model "$near"
+done
+for exact in fable opus sonnet haiku; do
+    PATH="$TMP/bin:$PATH" BRAID_AGENTS="claude" BRAID_AGENT="claude" \
+        check "and the ones it names are ('$exact')" with_engine agent_check_model "$exact"
+done
+
 # --- the rule about naming a model --------------------------------------------
 
 # An adapter may name a model only where the name is an alias that outlives the model

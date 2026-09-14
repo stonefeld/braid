@@ -35,11 +35,10 @@ info() { printf '  --    %s\n' "$*" >&2; }
 # to put in front of anything slow, and it must never carry information that is not
 # The value of a flag that takes one.
 #
-# Two things `"${2:?--model needs a name}"` did not do. A missing value surfaced as bash's
-# own message — `lib/spawn.sh: line 53: 2: --model needs a name` — without the prefix every
-# other error in braid carries. And nothing checked that the value was not itself a flag,
-# so `braid spawn --model --effort high` ran on a model called `--effort` and took `high`
-# for the slice.
+# Two things a bare `"${2:?…}"` does not do. A missing value surfaces as bash's own
+# message rather than through die, without the prefix every other error carries. And
+# nothing stops the value being another flag, so `braid spawn --model --effort 01-login`
+# runs on a model called `--effort` and takes the next word for the slice.
 #
 # It dies inside a command substitution, which only kills the subshell, so a caller has to
 # propagate:  MODEL=$(flag_value --model "${2-}") || exit 1
