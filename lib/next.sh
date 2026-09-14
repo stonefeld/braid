@@ -63,7 +63,7 @@ SLICES=()
 while read -r id; do
     [[ -n "$id" ]] || continue
     SLICES+=("$id")
-done < <(BRAID_FEATURE="$FEATURE" list_slices "$FEATURE" 2>/dev/null || true)
+done < <(BRAID_RUN_FEATURE="$FEATURE" list_slices "$FEATURE" 2>/dev/null || true)
 
 if [[ "${#SLICES[@]}" -eq 0 ]]; then
     if [[ "$BRAID_SLICE_SOURCE" == github ]]; then
@@ -224,7 +224,7 @@ if [[ -n "$NEXT_WAVE" ]]; then
     why "${#TODO[@]} slices not started."
     # Said once, at the point where the seat changes. From inside the orchestrator this
     # is the command it runs itself, so repeating the suggestion later would be noise.
-    if [[ -z "${BRAID_SEAT:-}" ]]; then
+    if [[ -z "${BRAID_RUN_SEAT:-}" ]]; then
         why "the orchestrator runs the waves, in a session of its own."
         step "braid orchestrate      (or run it here: braid wave $NEXT_WAVE)"
     else

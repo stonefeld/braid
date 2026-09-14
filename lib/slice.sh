@@ -26,7 +26,7 @@ _BRAID_SLICE_SH=1
 # shellcheck source=core.sh
 source "$BRAID_HOME/lib/core.sh"
 
-BRAID_SLICE_KEYS="complexity setup blocked-by"
+_BRAID_SLICE_KEYS="complexity setup blocked-by"
 
 # The contents of the first ```braid fence, or nothing. Anchored to the fence markers at
 # the start of a line: there is no way for body prose to be mistaken for a field.
@@ -56,11 +56,11 @@ slice_validate() {
         key=$(printf '%s' "${line%%:*}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
 
         known=0
-        for candidate in $BRAID_SLICE_KEYS; do
+        for candidate in $_BRAID_SLICE_KEYS; do
             [[ "$key" == "$candidate" ]] && known=1
         done
         [[ "$known" -eq 1 ]] ||
-            die "braid block: unknown key '$key' (expected: $BRAID_SLICE_KEYS)"
+            die "braid block: unknown key '$key' (expected: $_BRAID_SLICE_KEYS)"
 
         case " $seen " in
             *" $key "*) die "braid block: '$key' appears twice" ;;

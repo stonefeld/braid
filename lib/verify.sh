@@ -20,7 +20,7 @@ braid_config
 # state — braid has to work in one created twenty minutes ago — but an orchestrator
 # that reads "pass" from a check that ran nothing would integrate on it.
 if ! braid_overridden braid_verify; then
-    warn "no braid_verify in $BRAID_PROJECT_FILE — there is no mechanical gate, only the human one"
+    warn "no braid_verify in $_BRAID_PROJECT_FILE — there is no mechanical gate, only the human one"
     exit 0
 fi
 

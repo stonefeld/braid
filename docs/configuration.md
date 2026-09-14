@@ -285,7 +285,29 @@ ignored. The composed text is written once, at spawn, to the worktree's
 | `BRAID_DESIGN_STEPS` | what this house runs before there are slices — printed, never run | empty |
 | `BRAID_STALE_SECONDS` | silence before a worker is called `stale` | `1200` |
 | `BRAID_PUSH_GUARD` | install a `pre-push` hook in every worker worktree | `1` |
-| `BRAID_NAME` | this repository's name, for anything that displays one | the directory |
+| `BRAID_LAUNCHER_STRICT` | stop rather than fall through to `detached` when a launcher fails | `0` |
+| `BRAID_AGENT_ROLE` | `worker` \| `orchestrator` \| `off` — what the remote guard treats this session as | from the branch |
+| `BRAID_HOME` | where the engine lives, for running a working copy without installing it | resolved from the dispatcher |
+
+`BRAID_AGENT_ROLE` decides what the push guard allows, so it is the one row here that
+buys you something by being wrong. `off` disables the guard for a session. The default
+reads the branch — a worker branch is a worker — and that is almost always right.
+
+## The three kinds of name
+
+Everything above is configuration: braid reads it, a person may set it, and each one is
+in this document. Two other prefixes are not, and setting either is always a mistake.
+
+| | Exported | Set by a person |
+|---|---|---|
+| `BRAID_*` | some | yes — this document is the whole list |
+| `BRAID_RUN_*` | yes | **never.** A fact braid worked out during one command and passed to a child process: which agent resolved, which feature is running, which file a launcher came from |
+| `_BRAID_*` | no | **never.** Internal to one file — a sourcing guard, a value one command computed for itself |
+
+`BRAID_RUN_*` is exported because a launcher, a hook or a `braid.sh` runs in another
+process and has to see it. It is not configuration: `BRAID_RUN_FEATURE` decides which
+slices resolve, and a person who sets it changes that silently. A test holds the three
+apart, so a name in the wrong one fails the suite rather than a wave.
 
 ### `BRAID_WORKER_IGNORE`
 

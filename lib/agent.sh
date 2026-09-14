@@ -156,18 +156,18 @@ agent_file() {
 }
 
 # Source the adapter for a seat. After this the agent_* functions below are the
-# adapter's, and BRAID_AGENT_RESOLVED says which one answered.
+# adapter's, and BRAID_RUN_AGENT says which one answered.
 agent_load() {
     local seat="${1:?seat}" resolved
     # agent_resolve dies inside a command substitution, which only kills the subshell —
     # so its status has to be propagated or the caller sources lib/agents/.sh and
     # reports a missing file instead of the reason it actually failed.
     resolved=$(agent_resolve "$seat") || exit 1
-    BRAID_AGENT_RESOLVED="${resolved%% *}"
-    BRAID_AGENT_REASON="${resolved#* }"
+    BRAID_RUN_AGENT="${resolved%% *}"
+    BRAID_RUN_AGENT_REASON="${resolved#* }"
     # shellcheck disable=SC1090
-    source "$(agent_file "$BRAID_AGENT_RESOLVED")"
-    export BRAID_AGENT_RESOLVED BRAID_AGENT_REASON
+    source "$(agent_file "$BRAID_RUN_AGENT")"
+    export BRAID_RUN_AGENT BRAID_RUN_AGENT_REASON
 }
 
 # --- models -------------------------------------------------------------------
@@ -270,7 +270,7 @@ agent_check_effort() {
     esac
     if ! declare -F agent_effort_mode >/dev/null &&
         ! declare -F braid_agent_command >/dev/null; then
-        die "${BRAID_AGENT_RESOLVED:-agent} does not support reasoning effort"
+        die "${BRAID_RUN_AGENT:-agent} does not support reasoning effort"
     fi
 }
 
@@ -289,7 +289,7 @@ agent_check_model() {
     for candidate in $valid; do
         [[ "$candidate" == "$model" ]] && return 0
     done
-    die "unknown model '$model' for $BRAID_AGENT_RESOLVED (accepts: $valid)"
+    die "unknown model '$model' for $BRAID_RUN_AGENT (accepts: $valid)"
 }
 
 # How to put one of braid's own skills in front of an agent. An agent that loads skills

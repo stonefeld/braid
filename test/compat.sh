@@ -324,6 +324,39 @@ else
     bad "remote guard cases fail — run: python3 lib/hooks/test_guard_remote.py"
 fi
 
+# --- the three kinds of name --------------------------------------------------
+
+# A variable that looks like configuration and is not is the quiet kind of wrong:
+# BRAID_RUN_FEATURE decides which slices resolve, and somebody who exports it changes
+# that without being told. The prefixes are the whole rule — BRAID_* is configuration and
+# is documented, BRAID_RUN_* crosses into a child process, _BRAID_* never leaves its file
+# — and a rule nobody can check is a rule that lasts one release.
+UNDOCUMENTED=""
+while read -r name; do
+    [[ -n "$name" ]] || continue
+    case "$name" in
+        BRAID_RUN_*) continue ;;
+        *_) continue ;; # a seat_var prefix, assembled at runtime
+    esac
+    # Anchored: BRAID_FEATURE is not documented by a line about BRAID_FEATURES_DIR, and
+    # a loose match is exactly how it hid.
+    grep -qE "(^|[^A-Za-z0-9_])$name([^A-Za-z0-9_]|\$)" docs/configuration.md ||
+        UNDOCUMENTED="$UNDOCUMENTED $name"
+done < <(grep -rhoE '(^|[^A-Za-z0-9_])BRAID_[A-Z0-9_]+' lib bin 2>/dev/null |
+    grep -oE 'BRAID_[A-Z0-9_]+' | sort -u)
+if [[ -z "$UNDOCUMENTED" ]]; then
+    ok "every BRAID_* the engine reads is in the configuration reference"
+else
+    bad "undocumented, or misnamed:$UNDOCUMENTED"
+fi
+
+LEAKED=$(grep -rhoE 'export +_BRAID_[A-Z0-9_]+' lib bin 2>/dev/null | sort -u)
+if [[ -z "$LEAKED" ]]; then
+    ok "no _BRAID_ name is exported"
+else
+    bad "exported, and _BRAID_ means it never leaves this file: $LEAKED"
+fi
+
 echo
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 echo

@@ -113,7 +113,7 @@ BASE="${BASE:-$(current_branch)}"
 
 # The feature is the branch, which is how a bare id resolves without being told where
 # to look.
-export BRAID_FEATURE="${BRAID_FEATURE:-$(branch_slug "$BASE")}"
+export BRAID_RUN_FEATURE="${BRAID_RUN_FEATURE:-$(branch_slug "$BASE")}"
 BODY=$(fetch_slice "$SLICE")
 [[ -n "$BODY" ]] || die "slice '$SLICE' is empty"
 # Two names, and they are not the same thing. The **id** is what the plan calls this
@@ -169,7 +169,7 @@ unwind() {
 }
 trap unwind EXIT
 
-note "worktree $WORKTREE off $BASE ($BRAID_AGENT_RESOLVED${MODEL:+ $MODEL}${EFFORT:+, effort $EFFORT}, setup: $NEEDS_SETUP)"
+note "worktree $WORKTREE off $BASE ($BRAID_RUN_AGENT${MODEL:+ $MODEL}${EFFORT:+, effort $EFFORT}, setup: $NEEDS_SETUP)"
 mkdir -p "$(dirname "$WORKTREE")"
 git -C "$CHECKOUT" worktree add -b "$BRANCH" "$WORKTREE" "$BASE" >/dev/null
 CREATED="$WORKTREE"
@@ -182,7 +182,7 @@ mkdir -p "$WORKTREE/.braid"
 exclude_braid_dir "$WORKTREE"
 printf '%s' "$BASE" >"$WORKTREE/.braid/base"
 printf '%s' "$SLICE_ID" >"$WORKTREE/.braid/slice-id"
-printf '%s' "$BRAID_AGENT_RESOLVED" >"$WORKTREE/.braid/agent"
+printf '%s' "$BRAID_RUN_AGENT" >"$WORKTREE/.braid/agent"
 printf '%s' "$MODEL" >"$WORKTREE/.braid/model"
 printf '%s' "$EFFORT" >"$WORKTREE/.braid/effort"
 printf '%s' "$COMPLEXITY" >"$WORKTREE/.braid/complexity"
@@ -262,7 +262,7 @@ fi
 
 # orca hangs the worker's card off whichever worktree spawned it — the feature's, when
 # you are sitting where you should be.
-export BRAID_PARENT_WORKTREE="$PARENT_WORKTREE"
+export BRAID_RUN_PARENT_WORKTREE="$PARENT_WORKTREE"
 
 read -r LAUNCHER CERTAINTY < <(launcher_resolve)
 launcher_load "$LAUNCHER"
@@ -309,8 +309,8 @@ fi
 # sitting in front of it has a terminal, an orchestrator calling through a tool does not.
 {
     printf 'launcher:  %s (%s)\n' "$LAUNCHER" "$CERTAINTY"
-    printf 'file:      %s\n' "${BRAID_LAUNCHER_FILE:-?}"
-    printf 'last call: %s\n' "${BRAID_LAUNCHER_PROBE:-unknown}"
+    printf 'file:      %s\n' "${BRAID_RUN_LAUNCHER_FILE:-?}"
+    printf 'last call: %s\n' "${BRAID_RUN_LAUNCHER_PROBE:-unknown}"
 } >"$WORKTREE/.braid/launch-error.log"
 
 # Strict everywhere braid was told where to go, never where it merely guessed — there,
@@ -326,7 +326,7 @@ if [[ "$STRICT" -eq 1 && -t 2 ]]; then
         "the worktree is ready. braid could not open it in $LAUNCHER." \
         "" \
         "  what it needed:  run the agent, visibly, in $WORKTREE" \
-        "  last call:       ${BRAID_LAUNCHER_PROBE:-unknown}" \
+        "  last call:       ${BRAID_RUN_LAUNCHER_PROBE:-unknown}" \
         "" \
         "  by hand:      cd $WORKTREE && $(agent_cmd "$WORKTREE" "$MODEL" 'the slice is in .braid/slice.md' "$EFFORT")" \
         "  teach braid:  ${XDG_CONFIG_HOME:-$HOME/.config}/braid/launchers/$LAUNCHER.sh")"

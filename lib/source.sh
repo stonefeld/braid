@@ -70,7 +70,7 @@ fetch_slice() {
 
     case "$BRAID_SLICE_SOURCE" in
         files)
-            match="$(slice_dir "${BRAID_FEATURE:-}")/$id.md"
+            match="$(slice_dir "${BRAID_RUN_FEATURE:-}")/$id.md"
             [[ -f "$match" ]] || die "no slice at $match"
             cat "$match"
             ;;
@@ -139,7 +139,7 @@ list_slices() {
             command -v gh >/dev/null 2>&1 || die "$(gh_trouble)"
             # Given on the command line the first time, read back out of the plan every
             # time after — which is why `braid plan --prd N` is said once and never again.
-            prd="${BRAID_PRD:-$(feature_prd "$feature" 2>/dev/null || true)}"
+            prd="${BRAID_RUN_PRD:-$(feature_prd "$feature" 2>/dev/null || true)}"
             [[ -n "$prd" ]] ||
                 die "$(printf '%s\n' \
                     "this feature has no PRD issue recorded." \

@@ -81,7 +81,7 @@ fi
 # Resolved before anything launches — every one of them fetched, not merely named. Half
 # a wave in flight and then "no such slice" is the worst moment to find out a name was
 # wrong, and with a tracker it is also the worst moment to find out the network is down.
-export BRAID_FEATURE="$FEATURE"
+export BRAID_RUN_FEATURE="$FEATURE"
 PATHS=()
 for slice in "${SLICES[@]}"; do
     [[ -n "$slice" ]] || continue

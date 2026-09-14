@@ -129,13 +129,11 @@ braid_config() {
     # Read from the branch you are standing on, not from the primary checkout: a hook a
     # feature adds to its own braid.sh has to govern that feature's run, which is the
     # entire reason to add one mid-feature.
-    BRAID_PROJECT_FILE="${BRAID_PROJECT_FILE:-$(branch_path braid.sh)}"
-    if [[ -f "$BRAID_PROJECT_FILE" ]]; then
+    _BRAID_PROJECT_FILE="${_BRAID_PROJECT_FILE:-$(branch_path braid.sh)}"
+    if [[ -f "$_BRAID_PROJECT_FILE" ]]; then
         # shellcheck disable=SC1090
-        source "$BRAID_PROJECT_FILE"
+        source "$_BRAID_PROJECT_FILE"
     fi
-
-    : "${BRAID_NAME:=$(basename "$checkout")}"
 
     # Which agents this repository supports, best first. A committed decision, narrowed
     # by `braid setup`; until then braid accepts any adapter it has, because before
@@ -181,8 +179,7 @@ braid_config() {
     # never raise it past what the machine said.
     : "${BRAID_MAX_WORKERS:=4}"
 
-    export BRAID_PROJECT_FILE
-    export BRAID_NAME BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
+    export BRAID_BRANCH_PREFIX BRAID_PROTECTED_BRANCHES BRAID_AGENTS
     export BRAID_WORKTREE_ROOT BRAID_MAX_WORKERS BRAID_FEATURES_DIR BRAID_SLICE_SOURCE
     export BRAID_WORKER_IGNORE BRAID_DESIGN_STEPS
 }

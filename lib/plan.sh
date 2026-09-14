@@ -90,13 +90,13 @@ fi
 # only the subshell — so a logged-out gh printed why it could not reach the tracker and
 # then plan carried on and said "no slices found for 'auth'", which is a different and
 # wrong explanation of the same event.
-IDS=$(BRAID_FEATURE="$FEATURE" BRAID_PRD="$PRD" list_slices "$FEATURE") || exit 1
+IDS=$(BRAID_RUN_FEATURE="$FEATURE" BRAID_RUN_PRD="$PRD" list_slices "$FEATURE") || exit 1
 
 TABLE=""
 COUNT=0
 while read -r id; do
     [[ -n "$id" ]] || continue
-    body=$(BRAID_FEATURE="$FEATURE" fetch_slice "$id")
+    body=$(BRAID_RUN_FEATURE="$FEATURE" fetch_slice "$id")
     slice_validate "$body"
     # Each field in its own substitution, each failure caught here: a `die` inside
     # `$(...)` ends only the subshell, and the plan used to carry on with an empty
@@ -134,14 +134,14 @@ EXISTING=$(fetch_plan "$FEATURE" 2>/dev/null || true)
 # Through the environment, not a pipe: `python3 -` already reads its program from stdin,
 # so a heredoc and a pipe cannot both be there — the heredoc wins and the document
 # silently arrives empty, which would rewrite somebody's PRD body as a bare template.
-UPDATED=$(BRAID_PLAN_DOCUMENT="$EXISTING" \
+UPDATED=$(BRAID_RUN_PLAN_DOCUMENT="$EXISTING" \
     python3 - "$FEATURE" "$WAVES" <<'PYEOF'
 import os
 import re
 import sys
 
 feature, waves = sys.argv[1], sys.argv[2]
-document = os.environ.get("BRAID_PLAN_DOCUMENT", "")
+document = os.environ.get("BRAID_RUN_PLAN_DOCUMENT", "")
 
 # Waves and nothing else. `prd: #N` used to sit here as the pointer back to the tracker,
 # and nothing reads it any more: with files there is no PRD issue to point at, and with a

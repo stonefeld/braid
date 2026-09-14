@@ -55,9 +55,9 @@ launcher_launch() {
         sleep 1
     done
 
-    if [[ -n "${BRAID_PARENT_WORKTREE:-}" ]]; then
+    if [[ -n "${BRAID_RUN_PARENT_WORKTREE:-}" ]]; then
         "$cli" worktree set --worktree "path:$worktree" \
-            --parent-worktree "path:$BRAID_PARENT_WORKTREE" \
+            --parent-worktree "path:$BRAID_RUN_PARENT_WORKTREE" \
             --display-name "$title" --workspace-status in-progress --json >/dev/null 2>&1 ||
             note "orca would not chain this card — the worker is fine either way"
     fi

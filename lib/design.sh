@@ -73,7 +73,7 @@ EFFORT="${EFFORT:-$(agent_effort design)}"
 agent_check_effort "$EFFORT"
 
 ensure_seat_dir "$(current_worktree)"
-note "$BRAID_AGENT_RESOLVED${MODEL:+ ($MODEL)}${EFFORT:+, effort $EFFORT} — the design seat, in $(current_worktree)"
+note "$BRAID_RUN_AGENT${MODEL:+ ($MODEL)}${EFFORT:+, effort $EFFORT} — the design seat, in $(current_worktree)"
 # To the person, before the session opens — not into the prompt. Putting it there would
 # make braid carry the workflow it spent this whole file refusing to carry; saying it out
 # loud only means you are not staring at a blank session wondering what this house does.

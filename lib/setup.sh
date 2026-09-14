@@ -90,7 +90,7 @@ done
 # whatever its source, so the only moment this is answerable is before it runs — and it
 # has to be answerable, because an answer to "which agents does this repository use"
 # must not overrule somebody who exported BRAID_AGENTS for this one command.
-BRAID_AGENTS_ENV="${BRAID_AGENTS:-}"
+_BRAID_AGENTS_ENV="${BRAID_AGENTS:-}"
 
 braid_config
 # A worker implements one slice and never configures the repository. Committing braid.sh
@@ -243,7 +243,7 @@ agents_ask() {
 seat_now() {
     (
         agent_load "${1:?seat}" 2>/dev/null || exit 1
-        printf '%s %s' "$BRAID_AGENT_RESOLVED" "$(agent_model "$1")"
+        printf '%s %s' "$BRAID_RUN_AGENT" "$(agent_model "$1")"
     ) 2>/dev/null
 }
 
@@ -461,14 +461,14 @@ if [[ -n "$ADD_AGENT" ]]; then
     # What the file says, or — when it says nothing — what this repository effectively
     # supports today. The old code appended to a hardcoded "claude", which quietly
     # narrowed a repository that had never narrowed itself.
-    BRAID_AGENTS_LISTED=$(agents_listed)
-    [[ -n "$BRAID_AGENTS_LISTED" ]] || BRAID_AGENTS_LISTED="$BRAID_AGENTS"
-    for listed in $BRAID_AGENTS_LISTED; do
+    _BRAID_AGENTS_LISTED=$(agents_listed)
+    [[ -n "$_BRAID_AGENTS_LISTED" ]] || _BRAID_AGENTS_LISTED="$BRAID_AGENTS"
+    for listed in $_BRAID_AGENTS_LISTED; do
         [[ "$listed" == "$ADD_AGENT" ]] || continue
         note "braid.sh already lists $ADD_AGENT"
         exit 0
     done
-    agents_write "$BRAID_AGENTS_LISTED $ADD_AGENT"
+    agents_write "$_BRAID_AGENTS_LISTED $ADD_AGENT"
     note "braid.sh now supports $ADD_AGENT"
     warn "commit this — it is a decision about the repository, not about your machine"
     exit 0
@@ -522,14 +522,14 @@ if [[ -n "$CHOSEN" ]]; then
     # process and not only the file. The environment still outranks it — somebody who
     # exported BRAID_AGENTS said something about *this run*, and answering a question
     # about the repository does not overrule that.
-    [[ -n "${BRAID_AGENTS_ENV:-}" ]] || export BRAID_AGENTS="$CHOSEN"
+    [[ -n "${_BRAID_AGENTS_ENV:-}" ]] || export BRAID_AGENTS="$CHOSEN"
 fi
 
 # Whatever route got here — asked, told, or a braid.sh somebody else committed — this is
 # the last moment before a session is opened, and "the list in the file names nothing
 # this machine can run" is a thing to hear now rather than as a resolution failure. Not
 # said when the environment set the list, where disagreeing with the file is the point.
-if [[ -z "${BRAID_AGENTS_ENV:-}" ]]; then
+if [[ -z "${_BRAID_AGENTS_ENV:-}" ]]; then
     LISTED=$(agents_listed)
     for name in $LISTED; do
         agent_usable "$name" && LISTED="" && break
@@ -600,7 +600,7 @@ agent_check_effort "$EFFORT"
 # they are already in the session and it is already running. A prompt is the only form
 # of this that arrives before the thing it describes.
 note "about to open a session to learn about this repository:"
-info "agent:  $BRAID_AGENT_RESOLVED${MODEL:+  model: $MODEL   (the tier this repository calls 'design')}${EFFORT:+  effort: $EFFORT}"
+info "agent:  $BRAID_RUN_AGENT${MODEL:+  model: $MODEL   (the tier this repository calls 'design')}${EFFORT:+  effort: $EFFORT}"
 info "it will ask a handful of questions and write braid.sh and docs/agents/"
 info "another:  braid setup --model <name>  |  --effort <level>  |  --agent <name>"
 info "the whole table: braid doctor  |  change it: braid setup --costs"

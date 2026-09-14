@@ -194,7 +194,7 @@ has "provider-only effort is refused by the portable interface" \
 OUT=$(BRAID_HOME="$XDG_DATA_HOME/braid" /bin/bash -c '
     # shellcheck disable=SC1091
     . "$BRAID_HOME/lib/agent.sh"
-    BRAID_AGENT_RESOLVED=legacy
+    BRAID_RUN_AGENT=legacy
     agent_check_effort high' 2>&1)
 has "an adapter without effort support refuses a configured value" \
     "legacy does not support reasoning effort" "$OUT"

@@ -34,8 +34,8 @@ source "$BRAID_HOME/lib/config.sh"
 # Set by a launcher just before each call it makes, and read by spawn when one fails —
 # so the error names the call that broke rather than only the launcher that made it.
 # Exported because the reader is a different file.
-export BRAID_LAUNCHER_PROBE=""
-export BRAID_LAUNCHER_FILE=""
+export BRAID_RUN_LAUNCHER_PROBE=""
+export BRAID_RUN_LAUNCHER_FILE=""
 
 # --- where the launcher comes from --------------------------------------------
 
@@ -48,7 +48,7 @@ export BRAID_LAUNCHER_FILE=""
 # thing a launcher must do to be debuggable part of its interface rather than a
 # convention somebody has to know.
 launcher_probe() {
-    BRAID_LAUNCHER_PROBE="$*"
+    BRAID_RUN_LAUNCHER_PROBE="$*"
 }
 
 launcher_file() {
@@ -83,8 +83,8 @@ launcher_load() {
     launcher_owns_worktree() { return 1; }
     # shellcheck disable=SC1090
     source "$file"
-    BRAID_LAUNCHER_FILE="$file"
-    export BRAID_LAUNCHER_FILE
+    BRAID_RUN_LAUNCHER_FILE="$file"
+    export BRAID_RUN_LAUNCHER_FILE
 }
 
 # The environment braid is running inside, if any. Both orca and herdr mark their own

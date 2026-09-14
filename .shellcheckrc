@@ -8,6 +8,6 @@
 disable=SC1091
 
 # SC2153 — "possible misspelling", triggered by pairs like BRAID_AGENT/BRAID_AGENTS and
-# BRAID_HOME/BRAID_NAME. Both members of each pair are real, deliberate, and documented;
-# the heuristic has no way to know that.
+# BRAID_AGENT/BRAID_AGENT_WORK. Both members of each pair are real, deliberate, and
+# documented; the heuristic has no way to know that.
 disable=SC2153

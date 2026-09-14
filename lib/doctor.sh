@@ -127,8 +127,8 @@ git -C "$CHECKOUT" rev-parse HEAD >/dev/null 2>&1 || fail "no commits yet"
 echo
 
 echo "configuration"
-if [[ -f "$BRAID_PROJECT_FILE" ]]; then
-    ok "braid.sh: $BRAID_PROJECT_FILE"
+if [[ -f "$_BRAID_PROJECT_FILE" ]]; then
+    ok "braid.sh: $_BRAID_PROJECT_FILE"
 else
     meh "no braid.sh — no provisioning and no gate. Fine for a first spawn."
 fi
@@ -201,7 +201,7 @@ fi
 echo
 
 echo "agents"
-info "supported here: $BRAID_AGENTS   ($BRAID_PROJECT_FILE)"
+info "supported here: $BRAID_AGENTS   ($_BRAID_PROJECT_FILE)"
 # Versions, not only names. The flag probes further down compare what an adapter sets
 # against the installed CLI's own --help, and when one disagrees the CLI's version is the
 # first thing worth knowing — every other dependency on this report already carries one.
@@ -239,7 +239,7 @@ doctor_cost_row() {
     agent_check_model "$model"
     agent_check_effort "$effort"
     printf "  %sok%s    %-12s %-${AGENT_W}s via %-24s %s  effort: %s\n" \
-        "$_C_GREEN" "$_C_OFF" "$label" "$BRAID_AGENT_RESOLVED" "$BRAID_AGENT_REASON" \
+        "$_C_GREEN" "$_C_OFF" "$label" "$BRAID_RUN_AGENT" "$BRAID_RUN_AGENT_REASON" \
         "${model:-(the CLI chooses)}" "${effort:-(the CLI chooses)}"
 }
 
