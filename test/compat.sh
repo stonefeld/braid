@@ -354,6 +354,43 @@ else
     bad "undocumented, or misnamed:$UNDOCUMENTED"
 fi
 
+# What crosses into another process, spelled out rather than derived. This is the list
+# that matters: a worker, a launcher, a hook and a project's braid.sh each run in their
+# own process and see exactly these names — so an addition is somebody else's code gaining
+# something to read and a person gaining something to set from outside. Deriving the list
+# from the code would make the test agree with whatever the code does, which is the one
+# thing it must not do.
+#
+# Literal exports only. setup.sh also exports names seat_var assembles, and seat_var can
+# only ever build BRAID_<PREFIX>_<SEAT> out of the prefixes and seats named in agent.sh.
+CROSSES="BRAID_AGENTS BRAID_AGENT_DESIGN BRAID_AGENT_ORCHESTRATE BRAID_AGENT_WORK
+BRAID_BRANCH_PREFIX BRAID_DESIGN_STEPS BRAID_FEATURES_DIR BRAID_HOME BRAID_MAX_WORKERS
+BRAID_PROTECTED_BRANCHES BRAID_SLICE_SOURCE BRAID_WORKER_IGNORE BRAID_WORKTREE_ROOT
+BRAID_RUN_AGENT BRAID_RUN_AGENT_REASON BRAID_RUN_FEATURE BRAID_RUN_LAUNCHER_FILE
+BRAID_RUN_LAUNCHER_PROBE BRAID_RUN_PARENT_WORKTREE"
+ACTUAL=$(grep -rhoE 'export +[A-Z_][A-Za-z0-9_ ]*' lib bin 2>/dev/null |
+    sed 's/export *//' | tr ' ' '\n' | grep -E '^BRAID_[A-Z0-9_]+$' | sort -u)
+UNLISTED=""
+while read -r name; do
+    [[ -n "$name" ]] || continue
+    case " ${CROSSES//$'\n'/ } " in *" $name "*) ;; *) UNLISTED="$UNLISTED $name" ;; esac
+done <<<"$ACTUAL"
+if [[ -z "$UNLISTED" ]]; then
+    ok "nothing crosses into another process that this list does not name"
+else
+    bad "exported and unlisted — decide it here first:$UNLISTED"
+fi
+
+GONE=""
+for name in $CROSSES; do
+    grep -qx "$name" <<<"$ACTUAL" || GONE="$GONE $name"
+done
+if [[ -z "$GONE" ]]; then
+    ok "and everything it names is still exported"
+else
+    bad "listed and no longer exported, so the list is stale:$GONE"
+fi
+
 LEAKED=$(grep -rhoE 'export +_BRAID_[A-Z0-9_]+' lib bin 2>/dev/null | sort -u)
 if [[ -z "$LEAKED" ]]; then
     ok "no _BRAID_ name is exported"

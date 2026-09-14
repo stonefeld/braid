@@ -150,6 +150,9 @@ elif declare -F braid_agent_command >/dev/null; then
     meh "braid_agent_command replaces both launches — add braid_agent_command_headless if it opens a TUI"
 fi
 
+# Transitional. This block and its test go together, in the release after nobody has a
+# braid.sh old enough to hold one of these names.
+#
 # A rename here is a rename: nothing is aliased, because an alias is a name people come
 # to depend on and then cannot be taken away — you end up maintaining both. What a removed
 # name gets instead is this. The list is data and deletes in one block; an alias is

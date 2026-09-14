@@ -352,8 +352,10 @@ OUT=$(cd "$REPO" && BRAID_MAX_WORKERS=2 "$BRAID" doctor 2>&1)
 has "and one command still beats this machine" "2 workers at once" "$OUT"
 rm -f "$XDG_CONFIG_HOME/braid/config"
 
-# A renamed variable is not aliased, so the only thing standing between a committed
-# setting and silence is being told. It is reported from braid.sh, where people write
+# Transitional, and deleted with the table it covers: braid doctor carries a list of
+# names this release retired, and both go when nobody has a braid.sh old enough to hold
+# one. Until then a renamed variable is not aliased, so the only thing standing between a
+# committed setting and silence is being told. It is reported from braid.sh, where people write
 # these, and from the environment separately — braid.sh has been sourced by the time
 # doctor looks, so only an export counts as the latter.
 cp "$BS" "$TMP/braid.sh.layers"
