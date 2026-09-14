@@ -59,7 +59,7 @@ trap 'rm -rf "$TMP"' EXIT
 export HOME="$TMP/home"
 export XDG_DATA_HOME="$TMP/share" XDG_CONFIG_HOME="$TMP/config" XDG_STATE_HOME="$TMP/state"
 export BRAID_WORKTREE_ROOT="$TMP/worktrees"
-export BRAID_AGENTS=generic BRAID_AGENT_CMD=true BRAID_LAUNCHER=detached
+export BRAID_AGENTS=generic BRAID_GENERIC_CMD=true BRAID_LAUNCHER=detached
 mkdir -p "$HOME"
 
 echo
@@ -112,7 +112,7 @@ has "registered hooks by name, not by path" "braid hook guard-remote" "$(cat .cl
 # The one command somebody runs before they know anything about braid. It used to open
 # whatever tier the adapter names for `design` — for Claude that is the most expensive
 # model there is — with no flag to change it and nothing on screen saying you could.
-OUT=$(BRAID_AGENT_CMD='echo model={model} effort={effort}' \
+OUT=$(BRAID_GENERIC_CMD='echo model={model} effort={effort}' \
     "$BRAID" setup --model haiku --effort medium </dev/null 2>&1)
 has "setup takes a model, like the seats that always could" "model=haiku" "$OUT"
 has "setup takes reasoning effort for its session" "effort=medium" "$OUT"
@@ -181,10 +181,10 @@ is "claude passes effort to interactive and headless commands" "2" \
 hasnt "claude omits an unset effort" "--effort" \
     "$(printf '%s\n' "$CLAUDE" | grep '^plain:')"
 
-OUT=$(BRAID_AGENT_CMD='echo model={model} effort={effort}' \
+OUT=$(BRAID_GENERIC_CMD='echo model={model} effort={effort}' \
     "$BRAID" design --model zebra --effort medium 2>&1)
 has "the generic adapter exposes effort too" "model=zebra effort=medium" "$OUT"
-OUT=$(BRAID_AGENT_CMD=true "$BRAID" design --effort max 2>&1)
+OUT=$(BRAID_GENERIC_CMD=true "$BRAID" design --effort max 2>&1)
 has "provider-only effort is refused by the portable interface" \
     "expected: low, medium, high, xhigh" "$OUT"
 
@@ -352,6 +352,22 @@ OUT=$(cd "$REPO" && BRAID_MAX_WORKERS=2 "$BRAID" doctor 2>&1)
 has "and one command still beats this machine" "2 workers at once" "$OUT"
 rm -f "$XDG_CONFIG_HOME/braid/config"
 
+# A renamed variable is not aliased, so the only thing standing between a committed
+# setting and silence is being told. It is reported from braid.sh, where people write
+# these, and from the environment separately — braid.sh has been sourced by the time
+# doctor looks, so only an export counts as the latter.
+cp "$BS" "$TMP/braid.sh.layers"
+# shellcheck disable=SC2016  # a braid.sh line, literal text rather than an expansion
+printf ': "${BRAID_PERMISSION_MODE:=plan}"\n' >>"$BS"
+OUT=$(cd "$REPO" && "$BRAID" doctor 2>&1)
+has "a renamed variable is not silently ignored" \
+    "BRAID_PERMISSION_MODE is set in braid.sh" "$OUT"
+has "and doctor says what it is called now" "BRAID_CLAUDE_PERMISSION_MODE" "$OUT"
+cp "$TMP/braid.sh.layers" "$BS"
+OUT=$(cd "$REPO" && BRAID_AGENT_CMD=anything "$BRAID" doctor 2>&1)
+has "an exported one is told apart from a committed one" \
+    "BRAID_AGENT_CMD is set in the environment" "$OUT"
+
 phase "slices and a schedule"
 D="braid/features/auth"
 mkdir -p "$D"
@@ -475,7 +491,7 @@ phase "the contract, for an agent with no hooks"
 # because the simulated agent does not read its prompt; a real wave did, immediately,
 # by finishing without committing.
 slice 99-contract low no "" "Do nothing."
-BRAID_AGENT_CMD='echo {prompt}' "$BRAID" spawn "$D/99-contract.md" >/dev/null 2>&1
+BRAID_GENERIC_CMD='echo {prompt}' "$BRAID" spawn "$D/99-contract.md" >/dev/null 2>&1
 sleep 1
 PROMPTED=$(cat "$(W 99-contract)/.braid/session.log" 2>/dev/null)
 has "the whole contract is in the prompt" "# Worker contract" "$PROMPTED"
@@ -492,7 +508,7 @@ phase "a project's own rules, appended to the contract"
 mkdir -p docs
 printf '# House rules\n\nNever migrate the shared schema.\n' >docs/worker-rules.md
 slice 98-rules low no "" "Do nothing."
-BRAID_AGENT_CMD='echo {prompt}' "$BRAID" spawn "$D/98-rules.md" >/dev/null 2>&1
+BRAID_GENERIC_CMD='echo {prompt}' "$BRAID" spawn "$D/98-rules.md" >/dev/null 2>&1
 sleep 1
 PROMPTED=$(cat "$(W 98-rules)/.braid/session.log" 2>/dev/null)
 COMPOSED=$(cat "$(W 98-rules)/.braid/contract.md" 2>/dev/null)
@@ -715,7 +731,7 @@ phase "the seat an orchestrator works from"
 # .braid/". An agent told that, in a worktree with no such directory, writes
 # .braid-verify-<slug>.log beside the checkout instead.
 rm -rf "$REPO/.braid"
-BRAID_AGENT_CMD=true "$BRAID" orchestrate --here >/dev/null 2>&1
+BRAID_GENERIC_CMD=true "$BRAID" orchestrate --here >/dev/null 2>&1
 check "orchestrate makes one before the agent starts" test -d "$REPO/.braid"
 printf 'a long test run\n' >"$REPO/.braid/verify.log"
 is "and nothing in it can be committed" "" "$(git status --porcelain -- .braid 2>/dev/null)"
@@ -796,8 +812,8 @@ has "doctor lists it with the rest of the configuration" "design steps: /grillin
 # Said to the person, never put into the agent's prompt. Naming a process is not carrying
 # one, and the prompt is exactly where that line would be crossed — so the assertion has
 # to separate the two streams, or it passes for the wrong reason.
-PROMPT=$(BRAID_AGENT_CMD='echo {prompt}' "$BRAID" design "the payments flow" 2>/dev/null)
-NOTES=$(BRAID_AGENT_CMD='echo {prompt}' "$BRAID" design "the payments flow" 2>&1 >/dev/null)
+PROMPT=$(BRAID_GENERIC_CMD='echo {prompt}' "$BRAID" design "the payments flow" 2>/dev/null)
+NOTES=$(BRAID_GENERIC_CMD='echo {prompt}' "$BRAID" design "the payments flow" 2>&1 >/dev/null)
 has "the prompt is what you asked for" "the payments flow" "$PROMPT"
 has "design names the steps to the person" "/grilling" "$NOTES"
 hasnt "and never into the agent's prompt" "/grilling" "$PROMPT"

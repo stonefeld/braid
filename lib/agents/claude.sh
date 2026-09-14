@@ -11,7 +11,7 @@
 #
 # Everything below the launch command is a bonus. braid works without any of it.
 
-: "${BRAID_PERMISSION_MODE:=bypassPermissions}"
+: "${BRAID_CLAUDE_PERMISSION_MODE:=bypassPermissions}"
 
 agent_available() { command -v claude >/dev/null 2>&1; }
 
@@ -69,7 +69,7 @@ agent_skill_prefix() { printf '/'; }
 # The flag that lets a worker run unattended. Probed, not assumed: if it is renamed,
 # every worker in a wave dies at launch, and the cause is one line inside a session log
 # nobody is reading yet.
-agent_auto_mode() { printf -- '--permission-mode %s' "$BRAID_PERMISSION_MODE"; }
+agent_auto_mode() { printf -- '--permission-mode %s' "$BRAID_CLAUDE_PERMISSION_MODE"; }
 agent_auto_mode_probe() { claude --help 2>/dev/null | grep -q -- '--permission-mode'; }
 agent_effort_mode() { printf -- '--effort'; }
 agent_effort_probe() { claude --help 2>/dev/null | grep -q -- '--effort'; }
@@ -78,7 +78,7 @@ agent_command() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
     command="claude --model $(printf '%q' "$model")"
-    command="$command --permission-mode $(printf '%q' "$BRAID_PERMISSION_MODE")"
+    command="$command --permission-mode $(printf '%q' "$BRAID_CLAUDE_PERMISSION_MODE")"
     [[ -z "$effort" ]] || command="$command --effort $(printf '%q' "$effort")"
     printf '%s %q' "$command" "$prompt"
 }
@@ -88,7 +88,7 @@ agent_command_headless() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
     command="claude -p --model $(printf '%q' "$model")"
-    command="$command --permission-mode $(printf '%q' "$BRAID_PERMISSION_MODE")"
+    command="$command --permission-mode $(printf '%q' "$BRAID_CLAUDE_PERMISSION_MODE")"
     [[ -z "$effort" ]] || command="$command --effort $(printf '%q' "$effort")"
     printf '%s %q' "$command" "$prompt"
 }

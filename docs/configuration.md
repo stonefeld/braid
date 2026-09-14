@@ -48,7 +48,7 @@ checkout, so a hook a feature adds mid-flight governs that feature's own run.
 | `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex cursor-agent generic`). A committed decision: `braid setup` asks for it when it first writes `braid.sh`, `braid setup --agents "codex claude"` restates it, `braid setup --add-agent NAME` appends to it |
 | `BRAID_AGENT` | one machine's or one session's preference |
 | `BRAID_AGENT_DESIGN`<br>`BRAID_AGENT_ORCHESTRATE`<br>`BRAID_AGENT_WORK` | pin one seat. In `braid.sh` it is a repository decision — the orchestrator on the agent with hooks, workers on another — and `braid setup` offers to write them |
-| `BRAID_AGENT_CMD` | for `BRAID_AGENT=generic`: the command line, with `{worktree}`, `{model}`, `{effort}` and `{prompt}` |
+| `BRAID_GENERIC_CMD` | for `BRAID_AGENT=generic`: the command line, with `{worktree}`, `{model}`, `{effort}` and `{prompt}` |
 
 Resolution, highest priority first:
 
@@ -168,9 +168,9 @@ do not take the same flags.
 
 | | |
 |---|---|
-| `BRAID_AGENT_ARGS` | Codex: the flags both halves take (`--sandbox workspace-write`) |
-| `BRAID_APPROVAL_POLICY` | Codex: what the interactive half does about approvals (`never`). `codex exec` has nobody to ask and rejects the flag outright |
-| `BRAID_PERMISSION_MODE` | Claude Code: `--permission-mode` (`bypassPermissions`) |
+| `BRAID_CODEX_ARGS` | Codex: the flags both halves take (`--sandbox workspace-write`) |
+| `BRAID_CODEX_APPROVAL_POLICY` | Codex: what the interactive half does about approvals (`never`). `codex exec` has nobody to ask and rejects the flag outright |
+| `BRAID_CLAUDE_PERMISSION_MODE` | Claude Code: `--permission-mode` (`bypassPermissions`) |
 | `BRAID_CURSOR_AGENT_ARGS` | Cursor: the flags both halves take (`--force`) |
 | `BRAID_CURSOR_AGENT_HEADLESS_ARGS` | Cursor: flags only its print-mode half takes (`--trust`) |
 

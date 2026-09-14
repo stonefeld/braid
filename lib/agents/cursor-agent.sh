@@ -44,10 +44,9 @@
 #   BRAID_CURSOR_AGENT_ARGS="--force"
 #   BRAID_CURSOR_AGENT_HEADLESS_ARGS="--trust"
 #
-# or drop to the generic adapter and give it the whole command line. Namespaced,
-# unlike Codex's plain BRAID_AGENT_ARGS: that one came first and stays for
-# compatibility, but every adapter from here on takes BRAID_<ADAPTER>_ARGS, so two
-# agents configured on one machine cannot read each other's flags.
+# or drop to the generic adapter and give it the whole command line. Namespaced by
+# adapter, as every adapter's own variables are, so that two agents configured on one
+# machine cannot read each other's flags.
 #
 # Never pass `-w` / `--worktree`: braid already checked out its own worktree and
 # runs the agent inside it. Cursor's own flag would open a second worktree under

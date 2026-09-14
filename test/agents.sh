@@ -270,7 +270,7 @@ PATH="$TMP/bin:$PATH" CURSOR_STUB_HELP="--force --trust --model" \
 # Wired in, not just written: the adapter's name is what resolution looks up.
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent generic" \
     check "usable with the CLI on PATH" with_agent agent_usable cursor-agent
-PATH="/usr/bin:/bin" BRAID_AGENT_CMD='' \
+PATH="/usr/bin:/bin" BRAID_GENERIC_CMD='' \
     refute "unusable without the CLI" with_agent agent_usable cursor-agent
 
 # Cursor's model IDs already carry tiers, but its CLI exposes no independent effort
@@ -356,11 +356,11 @@ done
 # An adapter may declare a default; the variable overrides it; a level that says nothing
 # falls through to the work seat, which is the only place BRAID_EFFORT_WORK can mean what
 # BRAID_MODEL_WORK means.
-OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_EFFORT_WORK=high \
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_GENERIC_CMD=true BRAID_EFFORT_WORK=high \
     with_engine agent_complexity_effort standard)
 is "a level with no effort falls through to BRAID_EFFORT_WORK" "high" "$OUT"
 
-OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_EFFORT_WORK=high \
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_GENERIC_CMD=true BRAID_EFFORT_WORK=high \
     BRAID_EFFORT_STANDARD=low with_engine agent_complexity_effort standard)
 is "and the level still wins wherever it says something" "low" "$OUT"
 
@@ -420,11 +420,11 @@ check "while still naming where unattended mode lives" \
 # same question for it that "is it on PATH" is for the others — and the adapter answers
 # it, so an adapter added later can answer differently without the engine learning its
 # name. None of this was covered; the engine's own copy of the answer was.
-BRAID_AGENT_CMD=true \
+BRAID_GENERIC_CMD=true \
     check "generic is usable once it has a command" with_agent agent_usable generic
-BRAID_AGENT_CMD='' \
+BRAID_GENERIC_CMD='' \
     refute "and unusable with none" with_agent agent_usable generic
-BRAID_AGENT_CMD='no-such-binary-anywhere' \
+BRAID_GENERIC_CMD='no-such-binary-anywhere' \
     refute "or with one that is not installed" with_agent agent_usable generic
 refute "an adapter braid does not ship is never usable" with_agent agent_usable no-such-agent
 
@@ -467,11 +467,11 @@ has "and with no hook the adapter's headless form still runs" "cursor-agent" "$O
 # makes it the last link in the complexity chain rather than a rival to it. It matters
 # for an adapter that maps no models — Codex is one — where every level otherwise
 # resolves to nothing and a repository has to set three variables to say one thing.
-OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_MODEL_WORK=zebra \
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_GENERIC_CMD=true BRAID_MODEL_WORK=zebra \
     with_engine agent_complexity standard)
 is "a level that maps nothing falls through to BRAID_MODEL_WORK" "zebra" "$OUT"
 
-OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_MODEL_WORK=zebra \
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_GENERIC_CMD=true BRAID_MODEL_WORK=zebra \
     BRAID_MODEL_STANDARD=quagga with_engine agent_complexity standard)
 is "and the level still wins wherever it says something" "quagga" "$OUT"
 

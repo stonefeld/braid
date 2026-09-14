@@ -125,9 +125,10 @@ fourth argument.
 
 An adapter may take its own settings from the environment, always with
 `: "${VAR:=default}"` so that a repository and a person can still override them. Namespace
-them by adapter — `BRAID_<ADAPTER>_ARGS` — because the bare `BRAID_AGENT_*` prefix belongs
-to the engine, where `BRAID_AGENT`, `BRAID_AGENT_WORK` and `BRAID_AGENT_CMD` already mean
-three unrelated things.
+them by adapter — `BRAID_CODEX_ARGS`, `BRAID_CLAUDE_PERMISSION_MODE` — because the bare
+`BRAID_AGENT_*` prefix belongs to the engine, where `BRAID_AGENT` names a preference and
+`BRAID_AGENT_WORK` pins a seat, and a third meaning under the same prefix is a collision
+waiting for whoever reads it next.
 
 Every such variable belongs in `docs/configuration.md`. A setting nobody can find is a
 setting nobody has.

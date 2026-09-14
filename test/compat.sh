@@ -326,6 +326,10 @@ fi
 
 # --- the three kinds of name --------------------------------------------------
 
+# Read positions only — `$NAME` and `${NAME}`. A name the engine merely *mentions* is not
+# a name it reads: braid doctor lists the ones a rename retired, and a report about dead
+# names must not itself have to be documented as live configuration.
+#
 # A variable that looks like configuration and is not is the quiet kind of wrong:
 # BRAID_RUN_FEATURE decides which slices resolve, and somebody who exports it changes
 # that without being told. The prefixes are the whole rule — BRAID_* is configuration and
@@ -342,7 +346,7 @@ while read -r name; do
     # a loose match is exactly how it hid.
     grep -qE "(^|[^A-Za-z0-9_])$name([^A-Za-z0-9_]|\$)" docs/configuration.md ||
         UNDOCUMENTED="$UNDOCUMENTED $name"
-done < <(grep -rhoE '(^|[^A-Za-z0-9_])BRAID_[A-Z0-9_]+' lib bin 2>/dev/null |
+done < <(grep -rhoE '\$\{?BRAID_[A-Z0-9_]+' lib bin 2>/dev/null |
     grep -oE 'BRAID_[A-Z0-9_]+' | sort -u)
 if [[ -z "$UNDOCUMENTED" ]]; then
     ok "every BRAID_* the engine reads is in the configuration reference"

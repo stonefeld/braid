@@ -60,24 +60,24 @@
 # portable effort setting is translated to this config key per session; the raw form is
 # still available for Codex-only levels or other configuration:
 #
-#   BRAID_AGENT_ARGS="--sandbox workspace-write -c model_reasoning_effort=high"
+#   BRAID_CODEX_ARGS="--sandbox workspace-write -c model_reasoning_effort=high"
 #
 # Flags move between versions — `--full-auto` was the right answer and is gone from
 # 0.151. `braid doctor` probes whichever flags are set here against the installed CLI's
 # own help, so a rename is reported before a wave rather than discovered as eight
 # workers that died at launch. When yours disagrees:
 #
-#   BRAID_AGENT_ARGS="-s danger-full-access"
+#   BRAID_CODEX_ARGS="-s danger-full-access"
 #
 # or drop to the generic adapter and give it the whole command line.
 
-: "${BRAID_AGENT_ARGS:=--sandbox workspace-write}"
+: "${BRAID_CODEX_ARGS:=--sandbox workspace-write}"
 
 # What a seat with a terminal does about approvals. `codex exec` never asks anybody
 # anything, so the flag exists only on the interactive CLI — and without it a worker
 # in a pane stops on the first approval prompt with nobody sitting in front of it.
 # Set it to `on-request` for a seat you intend to babysit.
-: "${BRAID_APPROVAL_POLICY:=never}"
+: "${BRAID_CODEX_APPROVAL_POLICY:=never}"
 
 agent_available() { command -v codex >/dev/null 2>&1; }
 
@@ -127,13 +127,13 @@ agent_skill_prefix() { printf '$'; }
 # already confined to its own worktree, and its dependencies were installed by
 # braid_provision before it started, so the sandbox costs it nothing it needs — and a
 # default whose own name says "dangerously" is not a default.
-agent_auto_mode() { printf '%s --ask-for-approval %s' "$BRAID_AGENT_ARGS" "$BRAID_APPROVAL_POLICY"; }
+agent_auto_mode() { printf '%s --ask-for-approval %s' "$BRAID_CODEX_ARGS" "$BRAID_CODEX_APPROVAL_POLICY"; }
 # Both spellings, because braid launches both: the TUI for a seat with a terminal and
 # `codex exec` for a detached one, and they do not accept the same flags —
 # --ask-for-approval is rejected outright by exec, which has nobody to ask.
 agent_auto_mode_probe() {
     local flag
-    for flag in $BRAID_AGENT_ARGS; do
+    for flag in $BRAID_CODEX_ARGS; do
         [[ "$flag" == -* ]] || continue
         codex --help 2>/dev/null | grep -q -- "$flag" || return 1
         codex exec --help 2>/dev/null | grep -q -- "$flag" || return 1
@@ -157,8 +157,8 @@ agent_effort_probe() {
 agent_command() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
-    command="codex $BRAID_AGENT_ARGS --ask-for-approval $(
-        printf '%q' "$BRAID_APPROVAL_POLICY"
+    command="codex $BRAID_CODEX_ARGS --ask-for-approval $(
+        printf '%q' "$BRAID_CODEX_APPROVAL_POLICY"
     )"
     [[ -z "$model" ]] || command="$command --model $(printf '%q' "$model")"
     [[ -z "$effort" ]] || command="$command -c $(printf '%q' "model_reasoning_effort=$effort")"
@@ -170,7 +170,7 @@ agent_command() {
 agent_command_headless() {
     # shellcheck disable=SC2034  # the adapter signature is fixed; this agent needs no worktree
     local worktree="$1" model="$2" prompt="$3" effort="${4:-}" command
-    command="codex exec $BRAID_AGENT_ARGS"
+    command="codex exec $BRAID_CODEX_ARGS"
     [[ -z "$model" ]] || command="$command --model $(printf '%q' "$model")"
     [[ -z "$effort" ]] || command="$command -c $(printf '%q' "model_reasoning_effort=$effort")"
     printf '%s %q' "$command" "$prompt"

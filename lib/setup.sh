@@ -201,7 +201,7 @@ agents_ask() {
         meh "none of braid's agents are on your PATH"
     fi
     info "braid has an adapter for:  $shipped"
-    info "'generic' is any CLI at all, through BRAID_AGENT_CMD — see braid doctor"
+    info "'generic' is any CLI at all, through BRAID_GENERIC_CMD — see braid doctor"
     info "a decision, not a detection: a coworker's agent belongs here too"
 
     while :; do

@@ -150,6 +150,38 @@ elif declare -F braid_agent_command >/dev/null; then
     meh "braid_agent_command replaces both launches — add braid_agent_command_headless if it opens a TUI"
 fi
 
+# A rename here is a rename: nothing is aliased, because an alias is a name people come
+# to depend on and then cannot be taken away — you end up maintaining both. What a removed
+# name gets instead is this. The list is data and deletes in one block; an alias is
+# behaviour and never does.
+#
+# Only names somebody plausibly wrote. The ones that became BRAID_RUN_* were outputs
+# nobody set, and reporting those would cost this report the thing that makes it worth
+# reading.
+# `env` rather than the shell: braid.sh has already been sourced by the time this runs,
+# and its `:=` assignments would otherwise read as somebody's environment. Only an export
+# survives into env, which is exactly the distinction being reported.
+EXPORTED=$(env)
+while IFS='|' read -r gone instead; do
+    [[ -n "$gone" ]] || continue
+    where=""
+    grep -q "^$gone=" <<<"$EXPORTED" && where="the environment"
+    if [[ -f "$_BRAID_PROJECT_FILE" ]] &&
+        grep -qE "(^|[^A-Za-z0-9_])$gone([^A-Za-z0-9_]|$)" "$_BRAID_PROJECT_FILE"; then
+        where="${where:+$where and }$(basename "$_BRAID_PROJECT_FILE")"
+    fi
+    [[ -n "$where" ]] || continue
+    meh "$gone is set in $where, and nothing reads it — $instead"
+done <<'DEAD'
+BRAID_PERMISSION_MODE|it is BRAID_CLAUDE_PERMISSION_MODE now
+BRAID_AGENT_ARGS|it is BRAID_CODEX_ARGS now
+BRAID_APPROVAL_POLICY|it is BRAID_CODEX_APPROVAL_POLICY now
+BRAID_AGENT_CMD|it is BRAID_GENERIC_CMD now
+BRAID_PORT_BASE|braid assigns no ports; braid_provision derives what it needs from worker_suffix
+BRAID_PORT_RANGE|braid assigns no ports; braid_provision derives what it needs from worker_suffix
+BRAID_NAME|nothing read it, so nothing replaces it
+DEAD
+
 # Which of the three states this repository's worker contract is in. A replacement is
 # not wrong, but it is the one state where nothing braid ships afterwards reaches the
 # workers here, and that is worth saying out loud once a release.

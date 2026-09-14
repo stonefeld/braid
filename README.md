@@ -103,7 +103,7 @@ BRAID_AGENT_ORCHESTRATE=claude       # the seat that can push and open PRs
 BRAID_AGENT_WORK=codex               # the workers
 
 BRAID_AGENT=generic                  # anything else
-BRAID_AGENT_CMD='my-agent run --model {model} --prompt {prompt}'
+BRAID_GENERIC_CMD='my-agent run --model {model} --prompt {prompt}'
 ```
 
 ### Which model and reasoning effort run what
