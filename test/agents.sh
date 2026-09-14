@@ -128,6 +128,21 @@ exit 0
 SH
 chmod +x "$TMP/bin/cursor-agent"
 
+# Every CLI an assertion below needs is stubbed, and $TMP/bin goes first on PATH so the
+# stub is what answers even where the real one is installed. A suite that resolves an
+# agent off the machine running it passes for a reason that is not the code: the model
+# name checks were green on every laptop with Claude Code on it and failed on the first
+# push, which is the only place nobody had one.
+cat >"$TMP/bin/claude" <<'SH'
+#!/bin/sh
+case "${1:-}" in
+    --help) printf '%s\n' "--permission-mode --effort -p, --print --model" ;;
+    --version) echo "0.0-test (Claude Code)" ;;
+esac
+exit 0
+SH
+chmod +x "$TMP/bin/claude"
+
 # --- every adapter honours the same interface ---------------------------------
 
 # What the engine calls without checking first, and nothing else: an adapter that omits
