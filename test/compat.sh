@@ -237,15 +237,25 @@ fi
 
 # --- the runner knows about every suite ---------------------------------------
 
-# ./test.sh is what a person runs; CI runs the files. A suite added to test/ and not to
-# the runner passes locally by never running, which is the failure this whole file is
-# about.
+# ./test.sh is what a person runs; CI runs the files one step at a time so a red build
+# names which suite. A suite added to test/ and reached by neither passes by never
+# running, which is the failure this whole file is about — and it is the CI half that
+# nothing watched: test/agents.sh, the largest suite there is, was green locally and
+# never ran on a push.
 declared=$(./test.sh --list | LC_ALL=C sort | tr '\n' ' ')
 present=$(for f in test/*.sh; do basename "$f" .sh; done | LC_ALL=C sort | tr '\n' ' ')
 if [[ "$declared" == "$present" ]]; then
     ok "./test.sh runs every suite in test/"
 else
     bad "./test.sh runs [$declared] but test/ holds [$present]"
+fi
+
+workflow=$(sed -n 's|.*run: bash test/\([a-z0-9_-]*\)\.sh.*|\1|p' .github/workflows/ci.yml |
+    LC_ALL=C sort | tr '\n' ' ')
+if [[ "$workflow" == "$present" ]]; then
+    ok "and so does the workflow, on every push"
+else
+    bad "the workflow runs [$workflow] but test/ holds [$present]"
 fi
 
 # --- names that were renamed --------------------------------------------------
