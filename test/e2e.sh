@@ -102,12 +102,43 @@ git commit -qm "initial"
 "$BRAID" init --no-learn >/dev/null 2>&1
 check "init wrote braid.sh" test -f braid.sh
 check "gitignored .braid/" grep -qx '.braid/' .gitignore
-# The glob, not just the directory: an agent that writes beside the checkout — which is
-# what they did before the seats had a .braid/ — leaves .braid-verify-<slug>.log, and
-# `.braid/` does not match it. One real feature left forty of them, 1.1 MB, one `git add
-# -A` away from the branch.
-check "and the stray logs an agent writes beside it" grep -qx '.braid-\*.log' .gitignore
-has "registered hooks by name, not by path" "braid hook guard-remote" "$(cat .claude/settings.json)"
+# `.braid/` is braid's own and is written without asking. Nothing else is: this
+# repository names no agent with hooks, so it is handed no settings.json it did not ask
+# for, and a .env pattern is proposed rather than committed on its behalf.
+refute "and nothing else without being asked" test -d .claude
+OUT=$("$BRAID" init --no-learn 2>&1)
+has "proposing the one it did not write" ".env" "$OUT"
+
+# The hooks belong to one agent, so they are installed where that agent was named and
+# nowhere else. A repository that answered codex used to be handed them anyway, by the
+# command that then told it the file was reviewed and committed.
+HOOKED="$TMP/hooked"
+mkdir -p "$HOOKED"
+(
+    cd "$HOOKED" || exit 1
+    git init -q -b main && git commit -q --allow-empty -m "chore: init"
+    BRAID_AGENTS="claude codex" "$BRAID" init --no-learn >/dev/null 2>&1
+)
+has "registered hooks by name, not by path" "braid hook guard-remote" \
+    "$(cat "$HOOKED/.claude/settings.json" 2>/dev/null)"
+(
+    cd "$HOOKED" || exit 1
+    rm -rf .claude
+    BRAID_AGENTS="codex cursor-agent" "$BRAID" init --no-learn >/dev/null 2>&1
+)
+refute "and not where no agent uses them" test -d "$HOOKED/.claude"
+
+# A re-run that adds nothing writes nothing. It used to rewrite the file to indent=2
+# whatever it found and report that nothing had been added.
+(
+    cd "$HOOKED" || exit 1
+    BRAID_AGENTS=claude "$BRAID" init --no-learn >/dev/null 2>&1
+    python3 -c "import json,pathlib; p=pathlib.Path('.claude/settings.json'); d=json.loads(p.read_text()); p.write_text(json.dumps(d))"
+    BEFORE=$(cat .claude/settings.json)
+    BRAID_AGENTS=claude "$BRAID" init --no-learn >/dev/null 2>&1
+    [[ "$BEFORE" == "$(cat .claude/settings.json)" ]]
+)
+check "a re-run that adds no hook rewrites no file" test "$?" -eq 0
 
 # The one command somebody runs before they know anything about braid. It used to open
 # whatever tier the adapter names for `design` — for Claude that is the most expensive
@@ -312,7 +343,7 @@ mkdir -p "$ASKED"
 # Agents, then yes to the table, then a model for design and nothing for the remaining
 # ten model/effort prompts, then no to opening a session. Built instead of counted as a
 # run of pipes: adding a row to the table should make this intention obvious to edit.
-SETUP_ANSWERS='generic|y|zebra'
+SETUP_ANSWERS='generic|files|y|zebra'
 for _ in 1 2 3 4 5 6 7 8 9 10; do SETUP_ANSWERS="$SETUP_ANSWERS|"; done
 SETUP_ANSWERS="$SETUP_ANSWERS|n"
 OUT=$(cd "$ASKED" && python3 "$SOURCE/test/ask.py" "$SETUP_ANSWERS" -- "$BRAID" init 2>&1)

@@ -164,6 +164,31 @@ agents_ask() {
     printf '%s' "${reply# }"
 }
 
+# --- where slices come from -----------------------------------------------------
+
+# Asked once, when braid.sh is created, for the same reason the agent list is: it decides
+# what gets made, and a decision made after the making is a decision about nothing.
+source_ask() {
+    local answer
+    echo >&2
+    note "where do this repository's slices live?"
+    info "files    markdown under $BRAID_FEATURES_DIR/<feature>/ — needs nothing else"
+    info "github   sub-issues of a PRD issue — needs the gh CLI, authenticated"
+    info "the braid block is parsed the same from either, so a slice can move later"
+    while :; do
+        printf '\n  [files]: ' >&2
+        read -r answer || answer=""
+        [[ -n "$answer" ]] || answer=files
+        case "$answer" in
+            files | github)
+                printf '%s' "$answer"
+                return 0
+                ;;
+            *) warn "'$answer' is neither — files or github" ;;
+        esac
+    done
+}
+
 # --- the deterministic half ---------------------------------------------------
 
 # Said before anything is written, and it names the branch as well as the directory:
@@ -220,6 +245,19 @@ if [[ -z "${_BRAID_AGENTS_ENV:-}" ]]; then
         "  braid init --agents '<best first>'     say what this repository uses")"
 fi
 
+# Where slices come from, asked beside which agents run here: both are what this
+# repository *is*, and the cost table below is what it spends. It has to be asked here
+# rather than by the session, because it decides what gets made a few lines down — an
+# answer arriving after the thing it decides is not an answer, it is a note.
+if [[ "$FRESH" -eq 1 && "$NO_LEARN" -eq 0 && "$ASSUME_YES" -eq 0 && -t 0 ]]; then
+    CHOSEN_SOURCE=$(source_ask) || CHOSEN_SOURCE=""
+    if [[ -n "$CHOSEN_SOURCE" ]]; then
+        braid_sh_set BRAID_SLICE_SOURCE "$CHOSEN_SOURCE"
+        export BRAID_SLICE_SOURCE="$CHOSEN_SOURCE"
+        ok "braid.sh reads slices from: $CHOSEN_SOURCE"
+    fi
+fi
+
 # Which model and effort each seat and each complexity level gets. Under the same
 # conditions as the question above, and immediately after it, because it is the same
 # conversation: you have just said which agents run here, and this is what they cost.
@@ -227,35 +265,51 @@ if [[ "$FRESH" -eq 1 && "$NO_LEARN" -eq 0 && "$ASSUME_YES" -eq 0 && -t 0 ]]; the
     seats_ask || true
 fi
 
-mkdir -p "$BRAID_FEATURES_DIR"
-# No placeholder file. The directory is empty only between now and the first slice, and
-# nothing depends on it existing in the meantime: plan and next both say what to do when
-# it is missing. A README here would be braid's own documentation copied into somebody
-# else's repository, where it would drift.
-ok "$BRAID_FEATURES_DIR/"
-
-# `.braid/` is where everything braid and its agents write is supposed to go. The glob
-# beside it is for when an agent writes beside the checkout anyway — which is what
-# happened for a whole feature before the seats had a .braid/ of their own, and `.braid/`
-# does not match `.braid-verify-<slug>.log`.
-for pattern in '.braid/' '.braid-*.log' '.env'; do
-    touch .gitignore
-    grep -qxF "$pattern" .gitignore || {
-        printf '%s\n' "$pattern" >>.gitignore
-        ok ".gitignore + $pattern"
-    }
-done
-
-# Claude Code's hooks, registered whatever the workers run: they fire in any Claude Code
-# session here, which is usually the orchestrator's seat — the one that can actually
-# push and open pull requests. Registered by name, never by path, which is what lets the
-# engine live outside this repository.
-mkdir -p .claude
-# Checked directly rather than through $?: the registration refuses to touch a
-# settings.json it cannot parse, and setup used to report success over that refusal.
-if ! python3 "$BRAID_HOME/lib/hooks/register.py"; then
-    die "could not register the hooks — nothing was changed"
+# Only in files mode. Every reader of this directory is already gated on the same
+# answer — a repository whose slices are issues would get an empty directory nothing
+# looks in, which is braid leaving a mark to prove it was here.
+#
+# No placeholder file either. It is empty only between now and the first slice, and
+# nothing depends on it existing meanwhile: plan and next both say what to do when it is
+# missing. A README here would be braid's own documentation copied into somebody else's
+# repository, where it would drift.
+if [[ "$BRAID_SLICE_SOURCE" == files ]]; then
+    mkdir -p "$BRAID_FEATURES_DIR"
+    ok "$BRAID_FEATURES_DIR/"
 fi
+
+# `.braid/` is braid's own, in every repository, whatever else is true — so it is the one
+# pattern written without asking. Everything else is proposed: lib/learn.md already
+# forbids the session from editing this file silently, and a rule that binds the agent
+# and not the engine is not a rule.
+if [[ -f .gitignore ]] && grep -qxF '.braid/' .gitignore; then
+    :
+else
+    touch .gitignore
+    printf '%s
+' '.braid/' >>.gitignore
+    ok ".gitignore + .braid/"
+fi
+if ! grep -qxF '.env' .gitignore 2>/dev/null; then
+    info "this repository does not ignore .env — worth adding if provisioning writes one"
+fi
+
+# Claude Code's hooks, and only where this repository named the agent they belong to.
+# They are Claude Code's alone: codex and cursor-agent take their contract from the
+# prompt and write their status from .braid/finish.sh, which is why braid installs
+# nothing into their hook files. A repository that answered `codex` and found a
+# .claude/settings.json it never asked for was being told, by the command that wrote it,
+# that the file was reviewed and committed.
+case " $BRAID_AGENTS " in
+    *" claude "*)
+        mkdir -p .claude
+        # Checked directly rather than through $?: the registration refuses to touch a
+        # settings.json it cannot parse, and this used to report success over that.
+        if ! python3 "$BRAID_HOME/lib/hooks/register.py"; then
+            die "could not register the hooks — nothing was changed"
+        fi
+        ;;
+esac
 
 echo
 if [[ "$NO_LEARN" -eq 1 ]]; then

@@ -25,7 +25,7 @@ if path.exists():
     except json.JSONDecodeError:
         # Never clobber a file we cannot parse. Somebody hand-edited it, and losing
         # their configuration to a setup command is not forgiven.
-        print("  .claude/settings.json is not valid JSON — fix it and run setup again", file=sys.stderr)
+        print("  .claude/settings.json is not valid JSON — fix it and run braid init again", file=sys.stderr)
         raise SystemExit(1)
 
 hooks = settings.setdefault("hooks", {})
@@ -38,8 +38,12 @@ for event, entries in want.items():
             existing.append(entry)
             added.append(f"{event}: {command}")
 
-path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
-for line in added:
-    print(f"  hook {line}")
-if not added:
+# Only when something changed. Writing regardless reformatted whoever's file to
+# indent=2 on every run and reported that nothing had been added — a diff in a committed
+# file for a command that did nothing.
+if added:
+    path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    for line in added:
+        print(f"  hook {line}")
+else:
     print("  hooks already registered")
