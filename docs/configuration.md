@@ -126,6 +126,13 @@ project `braid_agent_command` may still implement the fourth argument itself.
 | `BRAID_EFFORT_LOW` | effort for a `complexity: low` worker |
 | `BRAID_EFFORT_STANDARD` | effort for a `complexity: standard` worker |
 | `BRAID_EFFORT_HIGH` | effort for a `complexity: high` worker |
+| `BRAID_EFFORT_WORK` | a worker's effort when no level says |
+
+It resolves exactly as a model does: the level's own variable, then whatever the adapter
+names, then `BRAID_EFFORT_WORK`, then nothing — and nothing means the CLI keeps the effort
+the person configured for it. No adapter braid ships names one, because effort costs money
+and upgrading the engine must not change what a repository already spends. `braid doctor`
+prints the resolved value beside the model, in one table.
 
 ```bash
 : "${BRAID_EFFORT_DESIGN:=high}"       # in braid.sh — committed, for everyone

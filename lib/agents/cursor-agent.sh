@@ -128,7 +128,8 @@ agent_auto_mode_probe() {
 
 agent_command() {
     # shellcheck disable=SC2034  # fixed adapter signature; no worktree needed here
-    local worktree="$1" model="$2" prompt="$3"
+    # shellcheck disable=SC2034  # declared because the signature is the contract's
+    local worktree="$1" model="$2" prompt="$3" effort="${4:-}"
     # shellcheck disable=SC2086  # BRAID_CURSOR_AGENT_ARGS is a flag list on purpose
     if [[ -n "$model" ]]; then
         printf 'cursor-agent %s --model %q %q' \
@@ -143,7 +144,8 @@ agent_command() {
 # adapter launch Cursor's interactive half without handing it an invalid flag.
 agent_command_headless() {
     # shellcheck disable=SC2034  # fixed adapter signature; no worktree needed here
-    local worktree="$1" model="$2" prompt="$3"
+    # shellcheck disable=SC2034  # declared because the signature is the contract's
+    local worktree="$1" model="$2" prompt="$3" effort="${4:-}"
     # shellcheck disable=SC2086  # both variables are flag lists on purpose
     if [[ -n "$model" ]]; then
         printf 'cursor-agent -p %s %s --model %q %q' \

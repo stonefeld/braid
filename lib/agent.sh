@@ -214,27 +214,45 @@ agent_complexity() {
     printf '%s' "$model"
 }
 
-# How hard a seat is allowed to reason, independently of which model runs it. Empty is
-# meaningful: do not pass an override, and let the agent CLI keep the user's configured
-# default. That is what makes this addition invisible to repositories whose braid.sh
-# predates it.
+# How hard a seat is allowed to reason, independently of which model runs it. Resolved
+# the way a model is, because the two are presented as a matched pair and were not:
+#
+#   BRAID_EFFORT_<SEAT>    this repository, or this session
+#   the adapter's default  where it has one. Optional, and no adapter ships a value:
+#                          effort costs money, and upgrading the engine must not change
+#                          what a repository already spends
+#   nothing                the CLI keeps whatever the person configured, which is what
+#                          makes all of this invisible to a braid.sh that predates it
 agent_effort() {
     local seat="${1:?seat}" var
     var=$(seat_var EFFORT "$seat")
-    printf '%s' "${!var:-}"
+    if [[ -n "${!var:-}" ]]; then
+        printf '%s' "${!var}"
+    elif declare -F agent_seat_effort >/dev/null; then
+        agent_seat_effort "$seat"
+    fi
 }
 
 # A worker gets effort from the same complexity tier that selects its model. Keeping the
 # slice agent-agnostic means it still declares one judgement level, rather than learning
-# a second vendor-shaped field.
+# a second vendor-shaped field — and the chain below it is the model's chain exactly,
+# down to BRAID_EFFORT_WORK being where a level that says nothing lands.
 agent_complexity_effort() {
-    local level="${1:-standard}" var
+    local level="${1:-standard}" var effort
     case "$level" in
         low | standard | high) ;;
         *) die "unknown complexity '$level' (expected: low, standard, high)" ;;
     esac
     var=$(seat_var EFFORT "$level")
-    printf '%s' "${!var:-}"
+    if [[ -n "${!var:-}" ]]; then
+        printf '%s' "${!var}"
+        return 0
+    fi
+    if declare -F agent_level_effort >/dev/null; then
+        effort=$(agent_level_effort "$level")
+    fi
+    [[ -n "${effort:-}" ]] || effort=$(agent_effort work)
+    printf '%s' "$effort"
 }
 
 # The portable intersection supported by the bundled Codex and Claude Code adapters.

@@ -83,6 +83,21 @@ with_agent() {
     )
 }
 
+# The engine with one adapter loaded and $1 defined on top of it, for the cases where
+# what is under test is what the engine does when a function exists — or does not.
+# cursor-agent because it is the adapter that defines a headless command, which one of
+# those cases needs; the others do not care which is loaded.
+with_hook() {
+    (
+        # shellcheck disable=SC1090  # BRAID_HOME is this checkout
+        source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
+        # shellcheck disable=SC1091  # one adapter, resolved at runtime
+        source "$BRAID_HOME/lib/agents/cursor-agent.sh"
+        eval "$1"
+        "${@:2}"
+    )
+}
+
 # The engine with an adapter loaded through resolution, which is the path a model
 # check actually travels: agent_check_model asks the adapter what it accepts.
 with_engine() {
@@ -268,6 +283,51 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- the fourth argument ------------------------------------------------------
+
+# agent_command takes four arguments whether or not an adapter uses the fourth. One
+# declaring three still runs and silently drops whatever the engine passes in the
+# position it did not declare, and a dropped argument has no symptom of its own — so it
+# is checked in the source, which is where the contract can be read.
+for file in lib/agents/*.sh; do
+    name=$(basename "$file" .sh)
+    for fn in agent_command agent_command_headless; do
+        grep -q "^$fn()" "$file" || continue
+        # shellcheck disable=SC2016  # a literal pattern, not an expansion
+        if sed -n "/^$fn()/,/^}/p" "$file" | grep -q 'effort="${4:-}"'; then
+            ok "$name $fn declares the fourth argument"
+        else
+            bad "$name $fn declares the fourth argument"
+        fi
+    done
+done
+
+# --- the effort chain ---------------------------------------------------------
+
+# Effort resolves the way a model does, or the pair braid presents as matched is not.
+# An adapter may declare a default; the variable overrides it; a level that says nothing
+# falls through to the work seat, which is the only place BRAID_EFFORT_WORK can mean what
+# BRAID_MODEL_WORK means.
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_EFFORT_WORK=high \
+    with_engine agent_complexity_effort standard)
+is "a level with no effort falls through to BRAID_EFFORT_WORK" "high" "$OUT"
+
+OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_AGENT_CMD=true BRAID_EFFORT_WORK=high \
+    BRAID_EFFORT_STANDARD=low with_engine agent_complexity_effort standard)
+is "and the level still wins wherever it says something" "low" "$OUT"
+
+OUT=$(with_hook 'agent_seat_effort() { printf high; }' agent_effort design)
+is "an adapter may name an effort for a seat" "high" "$OUT"
+
+OUT=$(BRAID_EFFORT_DESIGN=low with_hook 'agent_seat_effort() { printf high; }' agent_effort design)
+is "and the repository overrides it" "low" "$OUT"
+
+OUT=$(with_hook 'agent_level_effort() { printf medium; }' agent_complexity_effort high)
+is "an adapter may name an effort for a complexity level" "medium" "$OUT"
+
+OUT=$(with_hook ':' agent_effort design)
+is "an adapter that names none is not an error" "" "$OUT"
+
 # --- the rule about naming a model --------------------------------------------
 
 # An adapter may name a model only where the name is an alias that outlives the model
@@ -336,16 +396,6 @@ refute "and refuses an adapter braid does not ship" with_agent agent_file no-suc
 # and the detached worker is the path most launches take. An adapter defining
 # agent_command_headless must not quietly outrank it, or the override covers the seat you
 # watch and not the workers you do not.
-with_hook() {
-    (
-        # shellcheck disable=SC1090  # BRAID_HOME is this checkout
-        source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
-        # shellcheck disable=SC1091  # one adapter that defines a headless form
-        source "$BRAID_HOME/lib/agents/cursor-agent.sh"
-        eval "$1"
-        "${@:2}"
-    )
-}
 
 OUT=$(with_hook 'braid_agent_command() { printf PROJECT; }' \
     agent_cmd_headless /tmp/wt a-model a-prompt "")

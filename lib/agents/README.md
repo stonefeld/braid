@@ -83,6 +83,8 @@ expected asymmetry rather than a surprise.
 | `agent_loads_skills` | a skill is handed over as markdown rather than by name |
 | `agent_skill_prefix` | required **only** when `agent_loads_skills` succeeds — `/` or `$`, whatever the CLI uses to invoke one |
 | `agent_transcript_dir` | this agent contributes no liveness signal, so `BRAID_STALE_SECONDS` has nothing to measure here |
+| `agent_seat_effort <seat>` | the seat's effort comes from `BRAID_EFFORT_<SEAT>` or from nothing |
+| `agent_level_effort <level>` | the level's effort comes from `BRAID_EFFORT_<LEVEL>`, then `BRAID_EFFORT_WORK`, or from nothing |
 | `agent_auto_mode_probe` | `braid doctor` says nothing about unattended mode for this agent |
 | `agent_effort_probe` | `braid doctor` reports that effort support cannot be probed |
 
@@ -91,6 +93,15 @@ flags this adapter sets still exist. Flags move between versions, and a probe is
 turns that into a line in `braid doctor` rather than into eight workers that died at
 launch. A probe that returns success without asking anything is worse than no probe: it
 reports a green check for a thing nobody verified.
+
+No adapter braid ships names an effort, and the reason is not that they have nothing to
+say. Effort costs money, and an engine upgrade that silently raised what a repository
+spends would be a worse failure than the gap it closed. The hooks are here for an adapter
+whose CLI has a default worth stating; `braid config` is where a repository says what it
+wants.
+
+`<level>` is a complexity level — `low`, `standard`, `high` — spelled that way because
+`agent_complexity_effort` is the engine's own resolver and the names would collide.
 
 ### Optional — refused
 
