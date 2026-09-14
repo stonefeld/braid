@@ -50,12 +50,13 @@ braid init       # scaffolds braid.sh and the hooks, then opens a session to fil
 braid doctor     # confirms this machine can run a wave
 ```
 
-The first run asks two things before it opens anything: which agents this repository
-uses, and which model and reasoning effort each seat and complexity level gets. Both
-have to come first — a repo whose people run Codex should not have its setup session
-opened by Claude, and that session's model and effort are already one row in the table.
-`braid learn` is what you run again when the project changes; `braid config` reopens the
-agent/model/effort table on its own, with no scaffolding and no session.
+The first run asks three things before it opens anything: which agents this repository
+uses, where its slices come from, and which model and reasoning effort each seat and
+complexity level gets. All three have to come first — a repo whose people run Codex
+should not have its setup session opened by Claude, that session's model and effort are
+already a row in the table, and where slices live decides what gets scaffolded a few
+lines later. `braid learn` is what you run again when the project changes; `braid config`
+reopens the agent/model/effort table on its own, with no scaffolding and no session.
 
 ## Requirements
 
@@ -282,7 +283,7 @@ whether it may delete something.
 # preparing a repository
 braid init                 scaffold it, then learn what it is   (--agents, --no-learn)
 braid learn                open the session that works out what it is
-braid config               the agent/model/effort table, or get and set one value
+braid config               the agent/model/effort table   (list, get, set, --machine)
 braid doctor               check this machine can run a wave
 
 # you run these
@@ -307,10 +308,10 @@ braid upgrade              update the engine, keeping what you changed
 
 ## What you write
 
-**`braid.sh`** — five hooks, all optional, all no-ops by default. braid has to work in a
-repository created twenty minutes ago that has no tests, no build and no `.env`, and this
-file is where that stops being true. If a project cannot be expressed in these, the seam
-is in the wrong place.
+**`braid.sh`** — the project's hooks, all optional and all no-ops by default. braid has to
+work in a repository created twenty minutes ago that has no tests, no build and no `.env`,
+and this file is where that stops being true. If a project cannot be expressed in these,
+the seam is in the wrong place.
 
 ```bash
 braid_provision() {                  # $1 worktree  $2 slug  $3 base  $4 needs-setup
@@ -336,8 +337,10 @@ the part braid owns. Replacing it whole is possible and costs exactly that.
 
 ## Configuration
 
-The environment wins over `braid.sh`, which wins over the defaults. The ones most people
-set:
+The environment wins over `~/.config/braid/config`, which wins over `braid.sh`, which
+wins over the defaults. That middle layer is one computer's facts — how many workers it
+survives, which launcher it has, what its owner is willing to spend — and it may not
+overrule what the repository decided for everyone. The ones most people set:
 
 | | |
 |---|---|
@@ -350,9 +353,16 @@ set:
 | `BRAID_SLICE_SOURCE` | `files` \| `github` |
 | `BRAID_WORKER_IGNORE` | what a worker's own build output leaves behind |
 
+```bash
+braid config list                     # every name, and which layer answered it
+braid config set BRAID_MAX_WORKERS 8  # into braid.sh — committed, for everyone
+braid config set BRAID_LAUNCHER tmux --machine    # into ~/.config/braid/config
+```
+
 **[`docs/reference/configuration.md`](docs/reference/configuration.md) is the whole
 surface** — every variable, every hook, how a seat and a slice each resolve a model, and
-what `~/.config/braid/` can shadow. `braid doctor` prints all of it resolved, for this machine and this repository.
+what a machine may and may not shadow. `braid doctor` prints all of it resolved, for
+this machine and this repository.
 
 ## Skills
 
