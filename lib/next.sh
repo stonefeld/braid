@@ -208,7 +208,7 @@ for line in "${WAVES[@]}"; do
         esac
     done
     summary=$(printf '%s' "$counts" | tr ' ' '\n' | grep -v '^$' | sort | uniq -c |
-        awk '{printf "%s %s  ", $1, $2}')
+        awk 'NR > 1 { printf "  " } { printf "%s %s", $1, $2 }')
     printf '  %-8s %s\n' "$label" "$summary" >&2
 done
 
