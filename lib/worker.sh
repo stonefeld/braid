@@ -13,8 +13,8 @@
 [[ -n "${_BRAID_WORKER_SH:-}" ]] && return 0
 _BRAID_WORKER_SH=1
 
-# shellcheck source=config.sh
-source "$BRAID_HOME/lib/config.sh"
+# shellcheck source=agent.sh
+source "$BRAID_HOME/lib/agent.sh"
 
 worker_field() {
     local worktree="${1:?worktree}" key="${2:?key}"
@@ -31,12 +31,13 @@ worker_status_field() {
 # rather than from the current configuration: a wave may mix agents, and the worker
 # recorded which one it got.
 worker_transcript_dir() {
-    local worktree="${1:?worktree}" agent
+    local worktree="${1:?worktree}" agent file
     agent=$(worker_field "$worktree" agent) || return 0
-    [[ -n "$agent" && -f "$BRAID_HOME/lib/agents/$agent.sh" ]] || return 0
+    [[ -n "$agent" ]] || return 0
+    file=$(agent_file "$agent") || return 0
     (
         # shellcheck disable=SC1090
-        source "$BRAID_HOME/lib/agents/$agent.sh"
+        source "$file"
         declare -F agent_transcript_dir >/dev/null && agent_transcript_dir
     )
 }

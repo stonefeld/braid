@@ -214,7 +214,7 @@ agents_ask() {
         }
         reply=""
         for name in $answer; do
-            if [[ ! -f "$BRAID_HOME/lib/agents/$name.sh" ]]; then
+            if ! agent_file "$name" >/dev/null; then
                 warn "no adapter for '$name' — braid has: $shipped"
                 reply=""
                 break
@@ -453,7 +453,7 @@ fi
 # --- --add-agent --------------------------------------------------------------
 
 if [[ -n "$ADD_AGENT" ]]; then
-    [[ -f "$BRAID_HOME/lib/agents/$ADD_AGENT.sh" ]] ||
+    agent_file "$ADD_AGENT" >/dev/null ||
         die "no adapter for '$ADD_AGENT' (have: $(agents_shipped))"
     [[ -f braid.sh ]] || die "no braid.sh yet — run braid setup first"
     # What the file says, or — when it says nothing — what this repository effectively
@@ -505,7 +505,7 @@ fi
 CHOSEN=""
 if [[ -n "$AGENTS_ARG" ]]; then
     for name in $AGENTS_ARG; do
-        [[ -f "$BRAID_HOME/lib/agents/$name.sh" ]] ||
+        agent_file "$name" >/dev/null ||
             die "no adapter for '$name' (have: $(agents_shipped))"
     done
     CHOSEN="$AGENTS_ARG"

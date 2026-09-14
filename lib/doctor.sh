@@ -259,7 +259,7 @@ for name in $BRAID_AGENTS; do
     agent_usable "$name" || continue
     (
         # shellcheck disable=SC1090
-        source "$BRAID_HOME/lib/agents/$name.sh"
+        source "$(agent_file "$name")"
         declare -F agent_auto_mode_probe >/dev/null || exit 0
         if agent_auto_mode_probe; then
             ok "$name unattended mode: $(agent_auto_mode)"

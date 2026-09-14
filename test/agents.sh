@@ -282,6 +282,16 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- where an adapter lives ---------------------------------------------------
+
+# One function rather than the path repeated at every call site, so the override branch
+# shadowing will need has one place to be added.
+for name in claude codex cursor-agent generic; do
+    is "agent_file finds $name" "$BRAID_HOME/lib/agents/$name.sh" \
+        "$( ( with_agent agent_file "$name" ) )"
+done
+refute "and refuses an adapter braid does not ship" with_agent agent_file no-such-agent
+
 # --- the project's launch hook, on both paths ---------------------------------
 
 # braid_agent_command is documented as the way to replace the launch command wholesale,

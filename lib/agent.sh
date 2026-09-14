@@ -43,7 +43,7 @@ agent_installed() {
 # same question for it that "is it on PATH" is for the others.
 agent_usable() {
     local name="${1:?agent}"
-    [[ -f "$BRAID_HOME/lib/agents/$name.sh" ]] || return 1
+    agent_file "$name" >/dev/null || return 1
     if [[ "$name" == generic ]]; then
         [[ -n "${BRAID_AGENT_CMD:-}" ]] && agent_installed "${BRAID_AGENT_CMD%% *}"
     else
@@ -137,6 +137,19 @@ agents_shipped() {
     printf '%s' "${found# }"
 }
 
+# Where an adapter lives. One place rather than eight, matching launcher_file, which
+# answers the same question about the same kind of file. Non-zero when there is no such
+# adapter, so a caller tests the status rather than repeating the path to test it.
+#
+# launcher_file resolves an override from ~/.config/braid/ first; adapters do not yet,
+# and this is the one function that has to learn it when they do.
+agent_file() {
+    local name="${1:?name}" file
+    file="$BRAID_HOME/lib/agents/$name.sh"
+    [[ -f "$file" ]] || return 1
+    printf '%s' "$file"
+}
+
 # Source the adapter for a seat. After this the agent_* functions below are the
 # adapter's, and BRAID_AGENT_RESOLVED says which one answered.
 agent_load() {
@@ -148,7 +161,7 @@ agent_load() {
     BRAID_AGENT_RESOLVED="${resolved%% *}"
     BRAID_AGENT_REASON="${resolved#* }"
     # shellcheck disable=SC1090
-    source "$BRAID_HOME/lib/agents/$BRAID_AGENT_RESOLVED.sh"
+    source "$(agent_file "$BRAID_AGENT_RESOLVED")"
     export BRAID_AGENT_RESOLVED BRAID_AGENT_REASON
 }
 
