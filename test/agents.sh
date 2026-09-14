@@ -282,6 +282,20 @@ has "cursor-agent refuses unsupported reasoning effort" \
 PATH="$TMP/bin:$PATH" BRAID_AGENTS="cursor-agent" BRAID_AGENT="cursor-agent" \
     check "cursor-agent accepts an unset effort" with_engine agent_check_effort ""
 
+# --- who decides whether an adapter can run -----------------------------------
+
+# `generic` is available exactly when it has been given a command to run, which is the
+# same question for it that "is it on PATH" is for the others — and the adapter answers
+# it, so an adapter added later can answer differently without the engine learning its
+# name. None of this was covered; the engine's own copy of the answer was.
+BRAID_AGENT_CMD=true \
+    check "generic is usable once it has a command" with_agent agent_usable generic
+BRAID_AGENT_CMD='' \
+    refute "and unusable with none" with_agent agent_usable generic
+BRAID_AGENT_CMD='no-such-binary-anywhere' \
+    refute "or with one that is not installed" with_agent agent_usable generic
+refute "an adapter braid does not ship is never usable" with_agent agent_usable no-such-agent
+
 # --- where an adapter lives ---------------------------------------------------
 
 # One function rather than the path repeated at every call site, so the override branch

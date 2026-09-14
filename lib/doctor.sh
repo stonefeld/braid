@@ -202,7 +202,21 @@ echo
 
 echo "agents"
 info "supported here: $BRAID_AGENTS   ($BRAID_PROJECT_FILE)"
-info "installed:      $(agents_installed || echo none)"
+# Versions, not only names. The flag probes further down compare what an adapter sets
+# against the installed CLI's own --help, and when one disagrees the CLI's version is the
+# first thing worth knowing — every other dependency on this report already carries one.
+# Asked of the adapter in a subshell, which is where a CLI's own spelling of `--version`
+# belongs.
+doctor_agent_versions() {
+    local name version out=""
+    for name in $(agents_installed); do
+        # shellcheck disable=SC1090  # one adapter, resolved at runtime
+        version=$( ( source "$(agent_file "$name")" && agent_version ) 2>/dev/null )
+        out="$out, $name${version:+ $version}"
+    done
+    printf '%s' "${out:-, none}"
+}
+info "installed:      $(doctor_agent_versions | cut -c3-)"
 
 # Print a cost row only after checking it exactly as a launch would. Kept in a command
 # substitution because agent_load sources one adapter's generic function names; loading

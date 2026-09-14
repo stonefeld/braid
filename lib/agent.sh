@@ -39,16 +39,21 @@ agent_installed() {
     command -v "${1:?agent}" >/dev/null 2>&1
 }
 
-# `generic` is available exactly when it has been given a command to run, which is the
-# same question for it that "is it on PATH" is for the others.
+# Whether this machine could run an adapter — asked of the adapter, which is the only
+# thing that knows. For most it is "is my binary on PATH"; for `generic` it is "have I
+# been given a command", which is the same question wearing different clothes.
+#
+# In a subshell, because sourcing an adapter brings its agent_* names and its own
+# `: "${VAR:=…}"` defaults with it, and this is asked of every candidate in BRAID_AGENTS
+# before one of them is chosen.
 agent_usable() {
-    local name="${1:?agent}"
-    agent_file "$name" >/dev/null || return 1
-    if [[ "$name" == generic ]]; then
-        [[ -n "${BRAID_AGENT_CMD:-}" ]] && agent_installed "${BRAID_AGENT_CMD%% *}"
-    else
-        agent_installed "$name"
-    fi
+    local name="${1:?agent}" file
+    file=$(agent_file "$name") || return 1
+    (
+        # shellcheck disable=SC1090  # one adapter, resolved at runtime
+        source "$file"
+        agent_available
+    )
 }
 
 agent_supported() {
