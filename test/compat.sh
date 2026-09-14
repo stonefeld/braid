@@ -266,7 +266,7 @@ fi
 
 # Every command's usage is its own header comment, printed by line number. Add a flag to
 # the list and the range no longer covers it; add nothing and the range quietly runs past
-# the block into the code — `braid setup --help` ended with `set -uo pipefail`, and three
+# the block into the code — three --help outputs once ended with `set -uo pipefail`, and
 # commands were doing it. Nothing fails, so nobody finds out except the person reading it.
 if drift=$(python3 - <<'PY'
 import pathlib

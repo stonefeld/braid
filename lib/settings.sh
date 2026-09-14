@@ -261,7 +261,7 @@ braid_config() {
     fi
 
     # Which agents this repository supports, best first. A committed decision, narrowed
-    # by `braid setup`; until then braid accepts any adapter it has, because before
+    # by `braid init`; until then braid accepts any adapter it has, because before
     # setup the repository has not decided anything for a preference to contradict.
     : "${BRAID_AGENTS:=claude codex cursor-agent generic}"
     : "${BRAID_BRANCH_PREFIX:=agent}"

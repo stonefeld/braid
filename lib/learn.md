@@ -74,7 +74,7 @@ mapping in the same file. Do not invent labels.
 
 ## 3. Which agents this repository supports, and what each seat costs
 
-**The list is already answered.** `braid setup` asked for it before it opened this
+**The list is already answered.** `braid init` asked for it before it opened this
 session — it had to, because you are the first agent on it. Read `BRAID_AGENTS` out of
 `braid.sh`, say it back in one line, and only re-open the question if they want it
 changed. Do not ask it again from scratch.
@@ -83,11 +83,11 @@ What is worth adding, once, if the list holds one name: a coworker running a dif
 agent needs to appear here, and that costs something — an agent without hooks braid
 installs into takes its contract from the prompt instead of from a session hook, and its
 status from `.braid/finish.sh` instead of a stop hook. Both work.
-`braid setup --add-agent <name>` is how it gets added later.
+`braid config set BRAID_AGENTS` is how it changes later.
 
 ### What each seat and each complexity costs
 
-**Also already asked.** `braid setup` showed the resolved model and reasoning effort and
+**Also already asked.** `braid init` showed the resolved model and reasoning effort and
 offered to change them before this session opened — it had to, because this session is
 already spending one of the rows. Run `braid doctor`, show them where it landed, and
 confirm it in one line. In a repository created by an older braid, the values remain the

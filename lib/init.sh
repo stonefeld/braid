@@ -1,73 +1,50 @@
 #!/usr/bin/env bash
-# Teach braid about this repository.
+# Scaffold this repository, then hand over to `braid learn`.
 #
-#   braid setup                  scaffold, then open an agent session to learn the repo
-#   braid setup --scaffold       the deterministic half only, no agent, no questions
-#   braid setup --add-agent NAME add an agent to the ones this repository supports
+#   braid init
+#   braid init --no-learn        the scaffolding only, and stop
 #
 #     --agents LIST  which agents this repository supports, best first
-#     --model NAME   which model runs the session   (default: the `design` tier)
-#     --effort LEVEL reasoning effort for the session
-#     --agent NAME   which agent runs it            (default: this repository's first)
-#     --yes          do not ask before opening the session
+#     --yes          take the answers it can and ask nothing
 #
-# Two halves, deliberately separated. The scaffolding — hooks registered, .gitignore,
-# a braid.sh from the right preset — is mechanical and asks nothing. Learning what this
-# repository *is* is a conversation: the right answer to "what is your verify command"
-# comes from reading the Makefile and the CI, and you need to be able to say "not that
-# one, it takes forty minutes."
+# Everything here is mechanical: a braid.sh, the directories this repository's answers
+# call for, and the hooks of whichever agents it named. It asks what it cannot work out
+# and refuses to detect what it must not decide — which agents a team supports is not a
+# fact about whose binary happens to be on this PATH.
 #
-# That is also why the agent is not invoked from `curl | sh`. A pipe that calls a model
-# is a pipe nobody should run, and the installer has to work on a machine with no agent
-# installed at all.
+# Re-running it reconciles: it makes what the configuration now calls for, and says
+# nothing about what already matches. So adding an agent in six months is `braid config
+# set BRAID_AGENTS …` and then this, which is the same pair as the first day.
+#
+# Working out what this repository *is* — what its gate runs, what a worker needs before
+# its first turn — is `braid learn`, because that is a conversation rather than a
+# procedure.
 
 set -uo pipefail
 
 # shellcheck source=seats.sh
 source "$BRAID_HOME/lib/seats.sh"
 
-SCAFFOLD_ONLY=0
-ADD_AGENT=""
+NO_LEARN=0
 AGENTS_ARG=""
-MODEL=""
-EFFORT=""
 ASSUME_YES=0
-AGENT_ARG=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --scaffold)
-            SCAFFOLD_ONLY=1
+        --no-learn)
+            NO_LEARN=1
             shift
-            ;;
-        --add-agent)
-            ADD_AGENT="${2:?--add-agent needs a name}"
-            shift 2
             ;;
         --agents)
             AGENTS_ARG="${2:?--agents needs a list, best first}"
-            shift 2
-            ;;
-        --model)
-            MODEL="${2:?--model needs a name}"
-            shift 2
-            ;;
-        --effort)
-            EFFORT="${2:?--effort needs a level}"
             shift 2
             ;;
         -y | --yes)
             ASSUME_YES=1
             shift
             ;;
-        --agent)
-            # Read back by agent_resolve through indirect expansion of the seat name.
-            AGENT_ARG="${2:?--agent needs a name}"
-            export BRAID_AGENT_DESIGN="$AGENT_ARG"
-            shift 2
-            ;;
         -h | --help)
-            sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' >&2
+            sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' >&2
             exit 0
             ;;
         *) die "unknown argument: $1" ;;
@@ -187,28 +164,6 @@ agents_ask() {
     printf '%s' "${reply# }"
 }
 
-# --- --add-agent --------------------------------------------------------------
-
-if [[ -n "$ADD_AGENT" ]]; then
-    agent_file "$ADD_AGENT" >/dev/null ||
-        die "no adapter for '$ADD_AGENT' (have: $(agents_shipped))"
-    [[ -f braid.sh ]] || die "no braid.sh yet — run braid setup first"
-    # What the file says, or — when it says nothing — what this repository effectively
-    # supports today. The old code appended to a hardcoded "claude", which quietly
-    # narrowed a repository that had never narrowed itself.
-    _BRAID_AGENTS_LISTED=$(agents_listed)
-    [[ -n "$_BRAID_AGENTS_LISTED" ]] || _BRAID_AGENTS_LISTED="$BRAID_AGENTS"
-    for listed in $_BRAID_AGENTS_LISTED; do
-        [[ "$listed" == "$ADD_AGENT" ]] || continue
-        note "braid.sh already lists $ADD_AGENT"
-        exit 0
-    done
-    agents_write "$_BRAID_AGENTS_LISTED $ADD_AGENT"
-    note "braid.sh now supports $ADD_AGENT"
-    warn "commit this — it is a decision about the repository, not about your machine"
-    exit 0
-fi
-
 # --- the deterministic half ---------------------------------------------------
 
 # Said before anything is written, and it names the branch as well as the directory:
@@ -236,7 +191,7 @@ if [[ -n "$AGENTS_ARG" ]]; then
             die "no adapter for '$name' (have: $(agents_shipped))"
     done
     CHOSEN="$AGENTS_ARG"
-elif [[ "$FRESH" -eq 1 && "$SCAFFOLD_ONLY" -eq 0 && "$ASSUME_YES" -eq 0 && -t 0 ]]; then
+elif [[ "$FRESH" -eq 1 && "$NO_LEARN" -eq 0 && "$ASSUME_YES" -eq 0 && -t 0 ]]; then
     CHOSEN=$(agents_ask) || CHOSEN=""
 fi
 
@@ -262,13 +217,13 @@ if [[ -z "${_BRAID_AGENTS_ENV:-}" ]]; then
     [[ -z "$LISTED" ]] || warn "$(printf '%s\n' \
         "braid.sh supports '$LISTED', and none of those is installed here." \
         "  installed:  $(agents_installed || echo none)" \
-        "  braid setup --agents '<best first>'    say what this repository uses")"
+        "  braid init --agents '<best first>'     say what this repository uses")"
 fi
 
 # Which model and effort each seat and each complexity level gets. Under the same
 # conditions as the question above, and immediately after it, because it is the same
 # conversation: you have just said which agents run here, and this is what they cost.
-if [[ "$FRESH" -eq 1 && "$SCAFFOLD_ONLY" -eq 0 && "$ASSUME_YES" -eq 0 && -t 0 ]]; then
+if [[ "$FRESH" -eq 1 && "$NO_LEARN" -eq 0 && "$ASSUME_YES" -eq 0 && -t 0 ]]; then
     seats_ask || true
 fi
 
@@ -298,59 +253,20 @@ done
 mkdir -p .claude
 # Checked directly rather than through $?: the registration refuses to touch a
 # settings.json it cannot parse, and setup used to report success over that refusal.
-if ! python3 "$BRAID_HOME/lib/setup/hooks.py"; then
+if ! python3 "$BRAID_HOME/lib/hooks/register.py"; then
     die "could not register the hooks — nothing was changed"
 fi
 
 echo
-if [[ "$SCAFFOLD_ONLY" -eq 1 ]]; then
-    note "scaffolded. braid.sh still has to be filled in — run braid setup without --scaffold"
+if [[ "$NO_LEARN" -eq 1 ]]; then
+    note "scaffolded. what this repository is has not been worked out yet — braid learn"
     exit 0
 fi
 
-# --- the half that needs judgement --------------------------------------------
-
-agent_load design || exit 1
-MODEL="${MODEL:-$(agent_model design)}"
-agent_check_model "$MODEL"
-EFFORT="${EFFORT:-$(agent_effort design)}"
-agent_check_effort "$EFFORT"
-
-# Said before the session opens, and it names the escape hatch. This is the one command
-# a person runs before they know anything about braid, so "it opened an expensive model
-# and nobody told me I could change it" is a real way to lose someone — and the tier is a
-# default from the adapter, which is a guess about somebody else's budget.
-# Asked, not announced. Everything above scrolls past the instant the agent takes the
-# terminal, so a line saying which model is about to run is a line nobody reads until
-# they are already in the session and it is already running. A prompt is the only form
-# of this that arrives before the thing it describes.
-note "about to open a session to learn about this repository:"
-info "agent:  $BRAID_RUN_AGENT${MODEL:+  model: $MODEL   (the tier this repository calls 'design')}${EFFORT:+  effort: $EFFORT}"
-info "it will ask a handful of questions and write braid.sh and docs/agents/"
-info "another:  braid setup --model <name>  |  --effort <level>  |  --agent <name>"
-info "the whole table: braid doctor  |  change it: braid config"
-
-# Only where somebody is there to answer. Piped, or run from a script, it proceeds:
-# blocking on a prompt nobody can see is worse than the thing the prompt guards against.
-if [[ "$ASSUME_YES" -eq 0 && -t 0 ]]; then
-    printf '\n  open it? [Y/n] ' >&2
-    read -r ANSWER || ANSWER=""
-    case "$ANSWER" in
-        [nN]*)
-            echo >&2
-            note "nothing opened. the scaffolding above is done and committable."
-            note "when you want the rest:  braid setup${MODEL:+ --model $MODEL}${EFFORT:+ --effort $EFFORT}"
-            exit 0
-            ;;
-    esac
+# Handed over rather than reimplemented, so that the first run is one command and the
+# second is the one that has a name.
+if [[ "$ASSUME_YES" -eq 1 ]]; then
+    exec bash "$BRAID_HOME/lib/learn.sh" --yes
 fi
-echo
+exec bash "$BRAID_HOME/lib/learn.sh"
 
-PROMPT="$(
-    cat "$BRAID_HOME/lib/setup/SETUP.md"
-    printf '\n\n---\n\nThe scaffolding is already done: braid.sh exists with every value commented out, the hooks are registered, and %s/ was created. Read the repository to work out what it is — the template names no stack. Start at section 1.\n' \
-        "$BRAID_FEATURES_DIR"
-)"
-
-# In this terminal, not a panel. You are sitting here, and this is a conversation.
-eval "$(agent_cmd "$CHECKOUT" "$MODEL" "$PROMPT" "$EFFORT")"

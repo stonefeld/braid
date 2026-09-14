@@ -30,25 +30,37 @@ export BRAID_HOME
 # command:blurb. The dispatcher is the only place that knows the full surface, so this
 # table is also what `braid help` prints and what an unknown command is measured
 # against. A command is here once lib/<name>.sh exists.
+# section:name:blurb. The dispatcher is the only place that knows the full surface, so
+# this table is also what `braid help` prints and what an unknown command is measured
+# against. A command is here once lib/<name>.sh exists.
+#
+# Sectioned by who types it. A first screen that mixes the four commands a person runs
+# with the seven the orchestrator's seat runs answers a question nobody asked — and the
+# third heading describes rather than forbids: `braid status` is something you read all
+# day.
+#
+# `hook` is deliberately absent. A settings.json invokes it, no person does, and it was
+# taking a line on the first screen anybody sees.
 COMMANDS=(
-    "next:what to run now, and why"
-    "design:open the design seat, at the right tier"
-    "orchestrate:open the orchestrator seat on this feature"
-    "plan:derive a feature's wave schedule from its slices"
-    "wave:launch a wave, at most BRAID_MAX_WORKERS at a time"
-    "spawn:launch a worker on one slice, in its own worktree"
-    "status:what every worker is doing"
-    "wait:block until this wave settles"
-    "integrate:rebase a worker onto the feature branch and fast-forward"
-    "reap:tear a worker down once its commits have landed, or the whole feature"
-    "verify:run the project's mechanical gate"
-    "setup:teach braid about this repository"
-    "config:read and write what this repository and this machine decided"
-    "doctor:check this machine can run a wave"
-    "hook:run an agent hook (registered in .claude/settings.json)"
-    "upgrade:update the engine, keeping what you changed"
-    "version:print the engine version"
-    "help:print this"
+    "Preparing a repository:init:scaffold this repository, then learn what it is"
+    "Preparing a repository:learn:open the session that works out what this repository is"
+    "Preparing a repository:config:read and write what this repository and this machine decided"
+    "Preparing a repository:doctor:check this machine can run a wave"
+    "You run these:next:what to run now, and why"
+    "You run these:design:open the design seat, at the right tier"
+    "You run these:plan:derive a feature's wave schedule from its slices"
+    "You run these:orchestrate:open the orchestrator seat on this feature"
+    "The orchestrator seat runs these:wave:launch a wave, at most BRAID_MAX_WORKERS at a time"
+    "The orchestrator seat runs these:spawn:launch a worker on one slice, in its own worktree"
+    "The orchestrator seat runs these:status:what every worker is doing"
+    "The orchestrator seat runs these:wait:block until this wave settles"
+    "The orchestrator seat runs these:verify:run the project's mechanical gate"
+    "The orchestrator seat runs these:integrate:rebase a worker onto the feature branch and fast-forward"
+    "The orchestrator seat runs these:reap:tear a worker down once its commits have landed, or the whole feature"
+    "The engine:upgrade:update the engine, keeping what you changed"
+    "The engine:version:print the engine version"
+    "The engine:help:print this"
+    ":hook:run an agent hook (registered in .claude/settings.json)"
 )
 
 usage() {
@@ -57,12 +69,17 @@ usage() {
 braid — run coding agents in parallel, then weave their work into one branch
 
 usage: braid <command> [options]
-
 TXT
+    local section last=""
     for entry in "${COMMANDS[@]}"; do
-        name="${entry%%:*}"
-        blurb="${entry#*:}"
-        printf '  %-12s %s\n' "$name" "$blurb" >&2
+        section="${entry%%:*}"
+        name="${entry#*:}"
+        blurb="${name#*:}"
+        name="${name%%:*}"
+        [[ -n "$section" ]] || continue
+        [[ "$section" == "$last" ]] || printf '\n  %s\n' "$section" >&2
+        last="$section"
+        printf '    %-12s %s\n' "$name" "$blurb" >&2
     done
     cat >&2 <<'TXT'
 
@@ -84,6 +101,7 @@ case "$command" in
         # A command in the table with no file behind it means a broken install, not a
         # typo, and saying so saves reading shell to find out.
         for entry in "${COMMANDS[@]}"; do
+            entry="${entry#*:}"
             if [[ "$command" == "${entry%%:*}" ]]; then
                 [[ "$command" == wait || -f "$BRAID_HOME/lib/$command.sh" ]] ||
                     {

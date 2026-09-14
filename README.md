@@ -46,7 +46,7 @@ the one that shipped with the engine it installs. `braid doctor` says which rele
 are on, or warns when you are not on one. Then, once per repository:
 
 ```bash
-braid setup      # scaffolds braid.sh and the hooks, then opens a session to fill them in
+braid init       # scaffolds braid.sh and the hooks, then opens a session to fill them in
 braid doctor     # confirms this machine can run a wave
 ```
 
@@ -54,7 +54,7 @@ The first run asks two things before it opens anything: which agents this reposi
 uses, and which model and reasoning effort each seat and complexity level gets. Both
 have to come first — a repo whose people run Codex should not have its setup session
 opened by Claude, and that session's model and effort are already one row in the table.
-`braid setup` is re-runnable when the project changes; `braid config` reopens the
+`braid learn` is what you run again when the project changes; `braid config` reopens the
 agent/model/effort table on its own, with no scaffolding and no session.
 
 ## Requirements
@@ -127,12 +127,12 @@ changed:
 : "${BRAID_MODEL_DESIGN:=sonnet}"     # in braid.sh — committed, for everyone
 : "${BRAID_EFFORT_DESIGN:=high}"      # effort for the design seat
 : "${BRAID_EFFORT_STANDARD:=medium}"  # effort for standard workers
-braid setup --model sonnet            # or just this session
+braid learn --model sonnet           # or just this session
 braid design --effort high            # or just this session
 braid spawn 04-migration --effort high # or just this slice
 ```
 
-`braid setup` puts that table in front of you the first time it writes a `braid.sh` —
+`braid init` puts that table in front of you the first time it writes a `braid.sh` —
 every seat, every complexity level, and what each model and effort resolves to — and
 writes down only what you change. Existing repositories keep their current CLI defaults
 until somebody opts in with `braid config`. `braid doctor` prints the resolved
@@ -146,15 +146,15 @@ Which agents are installed is a fact about a machine; which agents a repository 
 is a committed decision. A preference outside the repository's list is an error rather
 than a silent fallback — adding one means confirming the table above holds *here*.
 
-`braid setup` asks the question the first time it writes a `braid.sh`, before it opens
+`braid init` asks the question the first time it writes a `braid.sh`, before it opens
 anything: it shows what is on your PATH and what braid has an adapter for, and you say
 which of them this repository uses, best first. That has to come first, because the
 session that fills in the rest of `braid.sh` is itself opened by the first agent on that
 list. Afterwards:
 
 ```bash
-braid setup --agents "codex claude"   # say it outright, or re-decide it
-braid setup --add-agent codex         # add one to what is already there
+braid init --agents "codex claude"    # say it outright
+braid config set BRAID_AGENTS "claude codex"
 ```
 
 ### Where workers run
@@ -280,7 +280,8 @@ whether it may delete something.
 
 ```
 braid next                 what to run now, and why
-braid setup                teach braid about this repository
+braid init                 scaffold this repository, then learn what it is
+braid learn                open the session that works out what it is
 braid config              the agent/model/effort table, or get and set one value
 braid design               open the design seat, at the right tier
 braid orchestrate          open the orchestrator seat on this feature

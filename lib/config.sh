@@ -155,7 +155,7 @@ PY
             WHERE="$MACHINE"
         else
             [[ -f "$_BRAID_PROJECT_FILE" ]] ||
-                die "no braid.sh on this branch — run braid setup, or use --machine"
+                die "no braid.sh on this branch — run braid init, or use --machine"
             ( cd "$(dirname "$_BRAID_PROJECT_FILE")" &&
                 braid_sh_set "$NAME" "$VALUE" "" "$(basename "$_BRAID_PROJECT_FILE")" )
             WHERE="$_BRAID_PROJECT_FILE"
@@ -172,7 +172,7 @@ PY
         fi
         case "$NAME" in
             BRAID_AGENTS | BRAID_SLICE_SOURCE)
-                note "what braid scaffolds follows this — run braid setup --scaffold to reconcile it"
+                note "what braid scaffolds follows this — run braid init --no-learn to reconcile it"
                 ;;
         esac
         ;;

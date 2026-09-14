@@ -2,7 +2,7 @@
 # The one question braid asks that costs money.
 #
 # Which agent, which model and how hard it reasons, for each seat and each complexity
-# level. It is asked in two places — once by `braid setup`, at the only moment somebody
+# level. It is asked in two places — once by `braid init`, at the only moment somebody
 # is certain to be looking, and any time afterwards by `braid config` — so it lives in
 # neither of them.
 #

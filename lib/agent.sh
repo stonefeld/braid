@@ -95,8 +95,10 @@ agent_resolve() {
                 "'$want' (from $source) is not supported by this repository." \
                 "  supported here: $BRAID_AGENTS" \
                 "" \
-                "  braid setup --add-agent $want    decide it, and commit the decision" \
-                "  braid <cmd> --agent <supported>  just this once"
+                "  braid config set BRAID_AGENTS '$BRAID_AGENTS $want'" \
+                "      decide it here, and commit the decision" \
+                "  braid <cmd> --agent <supported>" \
+                "      just this once"
         )"
         agent_usable "$want" ||
             die "'$want' (from $source) is not installed on this machine"

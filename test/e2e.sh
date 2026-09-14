@@ -99,8 +99,8 @@ printf 'one\ntwo\nthree\n' >app.txt
 git add -A
 git commit -qm "initial"
 
-"$BRAID" setup --scaffold >/dev/null 2>&1
-check "setup wrote braid.sh" test -f braid.sh
+"$BRAID" init --no-learn >/dev/null 2>&1
+check "init wrote braid.sh" test -f braid.sh
 check "gitignored .braid/" grep -qx '.braid/' .gitignore
 # The glob, not just the directory: an agent that writes beside the checkout — which is
 # what they did before the seats had a .braid/ — leaves .braid-verify-<slug>.log, and
@@ -113,10 +113,10 @@ has "registered hooks by name, not by path" "braid hook guard-remote" "$(cat .cl
 # whatever tier the adapter names for `design` — for Claude that is the most expensive
 # model there is — with no flag to change it and nothing on screen saying you could.
 OUT=$(BRAID_GENERIC_CMD='echo model={model} effort={effort}' \
-    "$BRAID" setup --model haiku --effort medium </dev/null 2>&1)
+    "$BRAID" learn --model haiku --effort medium </dev/null 2>&1)
 has "setup takes a model, like the seats that always could" "model=haiku" "$OUT"
 has "setup takes reasoning effort for its session" "effort=medium" "$OUT"
-has "and names the escape hatch before opening anything" "braid setup --model" "$OUT"
+has "and names the escape hatch before opening anything" "braid learn --model" "$OUT"
 has "and points at where the whole table is" "braid doctor" "$OUT"
 # With nobody there to answer, it proceeds. Blocking on a prompt that cannot be seen is
 # worse than the thing the prompt guards against — it would hang every CI run.
@@ -131,23 +131,23 @@ listed() {
     # shellcheck disable=SC2016  # the braid.sh line is literal text, not an expansion
     printf ': "${BRAID_AGENTS:=%s}"' "$*"
 }
-"$BRAID" setup --scaffold --agents "codex claude" >/dev/null 2>&1
+"$BRAID" init --no-learn --agents "codex claude" >/dev/null 2>&1
 has "setup takes the repository's agents, best first" "$(listed codex claude)" "$(cat braid.sh)"
-OUT=$("$BRAID" setup --scaffold --agents "gpt9000" 2>&1)
+OUT=$("$BRAID" init --no-learn --agents "gpt9000" 2>&1)
 has "and refuses a name it has no adapter for" "no adapter for 'gpt9000'" "$OUT"
 has "naming the ones it has" "codex" "$OUT"
 has "and wrote nothing over the answer it already had" "$(listed codex claude)" "$(cat braid.sh)"
 # --add-agent appends to what the file says. It used to append to a hardcoded "claude",
 # so adding an agent to a repository that ran two others quietly dropped one of them.
-"$BRAID" setup --add-agent generic >/dev/null 2>&1
+"$BRAID" config set BRAID_AGENTS "codex claude generic" >/dev/null 2>&1
 has "--add-agent appends to the list that is there" "$(listed codex claude generic)" "$(cat braid.sh)"
-"$BRAID" setup --scaffold --agents generic >/dev/null 2>&1
+"$BRAID" init --no-learn --agents generic >/dev/null 2>&1
 
 # --- the two halves of an agent CLI -------------------------------------------
 
 # `codex exec` is documented as "run Codex non-interactively": it reads the prompt,
 # works until it decides it is done, and has no way to ask anything. Every seat used to
-# launch it, so `braid setup` under Codex did things to the repository and never reached
+# launch it, so `braid learn` under Codex did things to the repository and never reached
 # the conversation it exists to have. The halves are not interchangeable, and the flags
 # they accept are not the same either — exec rejects --ask-for-approval outright.
 CODEX=$(BRAID_HOME="$XDG_DATA_HOME/braid" /bin/bash -c '
@@ -207,7 +207,7 @@ cp "$BS" "$TMP/braid.sh.keep"
 # One writer under all of it — the agents question, --agents, --add-agent, and the seat
 # table. Rewritten in place where the line exists, so a repository never ends up holding
 # two BRAID_AGENTS lines that disagree.
-"$BRAID" setup --scaffold --agents "codex" >/dev/null 2>&1
+"$BRAID" init --no-learn --agents "codex" >/dev/null 2>&1
 is "the list is rewritten in place, never duplicated" "1" \
     "$(grep -c 'BRAID_AGENTS:=' "$BS" | tr -d ' ')"
 
@@ -215,7 +215,7 @@ is "the list is rewritten in place, never duplicated" "1" \
 # asked, reaching it meant knowing that `braid doctor` prints a table and that the
 # variables behind it exist. Nothing here is asked without a terminal, though: this
 # command runs in CI, and a prompt nobody can see is worse than the default it guards.
-OUT=$("$BRAID" setup </dev/null 2>&1)
+OUT=$("$BRAID" init </dev/null 2>&1)
 hasnt "the seat table is not asked about with nobody there" "change any of it?" "$OUT"
 
 # What setup writes has to be what braid reads. These are the two layers that outrank
@@ -262,10 +262,13 @@ hasnt "which opens no setup agent" "about to open a session" "$OUT"
 has "and records design effort" 'BRAID_EFFORT_DESIGN:=high' "$(cat "$BS")"
 has "and records orchestrator effort" 'BRAID_EFFORT_ORCHESTRATE:=xhigh' "$(cat "$BS")"
 has "and records standard-slice effort" 'BRAID_EFFORT_STANDARD:=medium' "$(cat "$BS")"
-# It was a flag on setup, which had to refuse every other option on the command it
-# belonged to — the shape of a command wearing somebody else's name.
-OUT=$(cd "$REPO" && "$BRAID" setup --costs </dev/null 2>&1)
-has "and is no longer a flag on setup" "unknown argument: --costs" "$OUT"
+# It was a flag on a command that did three jobs. That command is gone outright — not an
+# alias, and not a line in the table saying where it went, because the table is what
+# somebody reads to learn the surface.
+OUT=$("$BRAID" setup 2>&1)
+has "the command it was a flag on is unknown" "unknown command 'setup'" "$OUT"
+has "and the error shows what the commands are" "Preparing a repository" "$OUT"
+hasnt "without naming the one that went" "setup " "$(printf '%s' "$OUT" | sed 1d)"
 
 cp "$TMP/braid.sh.keep" "$BS"
 
@@ -312,7 +315,7 @@ mkdir -p "$ASKED"
 SETUP_ANSWERS='generic|y|zebra'
 for _ in 1 2 3 4 5 6 7 8 9 10; do SETUP_ANSWERS="$SETUP_ANSWERS|"; done
 SETUP_ANSWERS="$SETUP_ANSWERS|n"
-OUT=$(cd "$ASKED" && python3 "$SOURCE/test/ask.py" "$SETUP_ANSWERS" -- "$BRAID" setup 2>&1)
+OUT=$(cd "$ASKED" && python3 "$SOURCE/test/ask.py" "$SETUP_ANSWERS" -- "$BRAID" init 2>&1)
 has "it asks which agents this repository uses" "best first" "$OUT"
 has "showing what is installed rather than deciding it" "installed here:" "$OUT"
 has "then what each seat and each level costs" "change any of it?" "$OUT"

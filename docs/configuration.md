@@ -54,9 +54,9 @@ checkout, so a hook a feature adds mid-flight governs that feature's own run.
 
 | | |
 |---|---|
-| `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex cursor-agent generic`). A committed decision: `braid setup` asks for it when it first writes `braid.sh`, `braid setup --agents "codex claude"` restates it, `braid setup --add-agent NAME` appends to it |
+| `BRAID_AGENTS` | which agents this repository supports, best first (`claude codex cursor-agent generic`). A committed decision: `braid init` asks for it when it first writes `braid.sh`, `braid init --agents "codex claude"` restates it, `braid config set BRAID_AGENTS` restates it |
 | `BRAID_AGENT` | one machine's or one session's preference |
-| `BRAID_AGENT_DESIGN`<br>`BRAID_AGENT_ORCHESTRATE`<br>`BRAID_AGENT_WORK` | pin one seat. In `braid.sh` it is a repository decision — the orchestrator on the agent with hooks, workers on another — and `braid setup` offers to write them |
+| `BRAID_AGENT_DESIGN`<br>`BRAID_AGENT_ORCHESTRATE`<br>`BRAID_AGENT_WORK` | pin one seat. In `braid.sh` it is a repository decision — the orchestrator on the agent with hooks, workers on another — and `braid config` offers to write them |
 | `BRAID_GENERIC_CMD` | for `BRAID_AGENT=generic`: the command line, with `{worktree}`, `{model}`, `{effort}` and `{prompt}` |
 
 Resolution, highest priority first:
@@ -94,12 +94,12 @@ stale, and a stale name does not degrade: the CLI refuses it.
 
 Those defaults come from the agent adapters, which are the one place a vendor's model
 names are allowed to appear in code. They are a guess about somebody else's budget, and
-they are the largest lever on what a wave costs, so `braid setup` puts the resolved table
+they are the largest lever on what a wave costs, so `braid init` puts the resolved table
 in front of you on a first run and writes down whatever you change:
 
 ```bash
 : "${BRAID_MODEL_DESIGN:=sonnet}"      # in braid.sh — committed, for everyone
-braid setup --model sonnet             # this session
+braid learn --model sonnet             # this session
 braid spawn 04-migration --model opus  # this one slice
 ```
 

@@ -11,7 +11,7 @@
 #
 # This half is deterministic and asks nothing: it puts the engine on the machine and
 # tells you what it found. Teaching braid about a *repository* — its tracker, its test
-# command, the language it writes issues in — is `braid setup`, which is a conversation
+# command, the language it writes issues in — is `braid learn`, which is a conversation
 # with an agent and is deliberately not in this pipe.
 #
 # **It is two programs in one file.** Piped from curl it is a bootstrapper: it checks the
@@ -329,7 +329,7 @@ fi
 # --- what is on this machine --------------------------------------------------
 
 # Reported, not decided. Which agents a *repository* supports is a committed decision
-# made in `braid setup`; what happens to be on this PATH is not it.
+# made in `braid init`; what happens to be on this PATH is not it.
 # From what was just installed, never a list typed here: one written by hand is a
 # second answer to "which agents does braid know about", and it was already missing
 # one. `generic` is not a binary, so asking PATH about it excludes it for free.
@@ -362,7 +362,7 @@ esac
 
 say "  next: from inside a repository you want to use braid in, run"
 say ""
-say "      braid setup"
+say "      braid init"
 say ""
 say "  it asks a handful of questions and writes braid.sh. Everything above this line"
 say "  was mechanical; that part has to read your code."

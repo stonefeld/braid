@@ -85,7 +85,7 @@ agent_version() { codex --version 2>/dev/null | head -1; }
 
 agent_seat_model() { :; }
 
-# Left to the repository. `braid setup` asks which model each complexity level means
+# Left to the repository. `braid config` asks which model each complexity level means
 # here, because that is the moment somebody with the CLI installed can answer it.
 agent_complexity_model() { :; }
 
@@ -148,10 +148,10 @@ agent_effort_probe() {
 }
 
 # The interactive CLI, not `codex exec`. This is the seat somebody is sitting in front
-# of — `braid setup` asking what the verify command is, `braid design` grilling a spec,
+# of — `braid learn` asking what the verify command is, `braid design` grilling a spec,
 # an orchestrator judging a branch — and `codex exec` is documented as "run Codex
 # non-interactively": it reads the prompt, works until it decides it is finished, and
-# has no way to ask a question. `braid setup` under it looked like an agent doing
+# has no way to ask a question. `braid learn` under it looked like an agent doing
 # things to the repository and never getting to the conversation, because that is
 # exactly what it was.
 agent_command() {

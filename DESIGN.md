@@ -47,7 +47,7 @@ become carrying.
 
 | Seat | Who | Runs |
 |---|---|---|
-| **Human** | you | `braid setup`, `braid doctor`, `braid upgrade`, `braid next` |
+| **Human** | you | `braid init`, `braid doctor`, `braid upgrade`, `braid next` |
 | **Design** | agent, top tier | grilling → PRD → slices → `braid plan` |
 | **Orchestrator** | agent, mid tier | `braid wave`, `status`, `wait`, `verify`, `integrate`, `reap` |
 | **Worker** | agent, low tier | **nothing** |
@@ -93,7 +93,7 @@ discarding it would make the cost table false.
 Empty is a decision too. When no effort is configured, braid passes no effort flag and
 the CLI keeps the user's existing default. That preserves every repository created
 before this setting existed. New repositories see model and effort together during
-setup; existing ones opt in explicitly with `braid setup --costs`, which opens no agent
+setup; existing ones opt in explicitly with `braid config`, which opens no agent
 session and changes only the cost table.
 
 ---
@@ -108,7 +108,7 @@ The single most important structural decision. Three kinds of artifact, three ho
 |---|---|---|---|
 | **Engine** | `lib/`, adapters, hooks, skills, docs | `~/.local/share/braid`, dispatcher on `PATH` | `braid upgrade` |
 | **Repo config** | `braid.sh`, `docs/agents/`, `docs/worker-rules.md`, supported agents, pinned version | committed, small | a pull request |
-| **Wiring** | `.claude/settings.json`, `AGENTS.md` | committed, tiny, path-free | `braid setup` |
+| **Wiring** | `.claude/settings.json`, `AGENTS.md` | committed, tiny, path-free | `braid init` |
 
 The engine is **not vendored into the user's repository**. Vendoring puts thousands of
 lines of tool into someone else's git history, gives five repositories five different
@@ -156,7 +156,7 @@ that calls a model in the middle of the pipe is a `curl | sh` nobody should run:
 genre is trusted because it is auditable and offline. It must also work on a machine
 with no agent installed at all.
 
-**Half two — `braid setup`, in an agent session.** Learning about *this* repository is a
+**Half two — `braid learn`, in an agent session.** Learning about *this* repository is a
 conversation, not a questionnaire: what the tracker is, what the label vocabulary is,
 what `braid verify` should run, what language artifacts are written in. The right
 answer to "what is your verify command" comes from reading the Makefile and CI, and
@@ -291,7 +291,7 @@ priority first:
 agent is a decision, not a discovery: neither Codex nor Cursor has hooks braid installs
 into, so the contract moves into the prompt and status comes from `finish.sh` — someone
 has to confirm that is enough *here*. So it says so, and points at
-`braid setup --add-agent codex`, which commits.
+`braid config set BRAID_AGENTS "claude codex"`, which commits.
 
 Agents are also selectable per seat, for the reason that matters: the orchestrator is
 the only seat that can push or open pull requests, and it is the only place where a
@@ -344,7 +344,7 @@ which model and reasoning effort that means here.
 | `standard` | the default — an ordinary vertical slice | `sonnet` |
 | `high` | cross-module, ambiguous, architectural judgement, a migration over real rows | `opus` |
 
-An adapter that is not confident maps nothing and lets its CLI choose; `braid setup`
+An adapter that is not confident maps nothing and lets its CLI choose; `braid config`
 asks what each level means there, which is the moment somebody with that CLI installed
 can answer. `BRAID_MODEL_LOW` / `_STANDARD` / `_HIGH` and `BRAID_EFFORT_LOW` /
 `_STANDARD` / `_HIGH` override either way. `braid spawn --model` and `--effort` are the
@@ -591,7 +591,7 @@ puts them on the branch, and every integration afterwards carries them.
   linked worktree's own, so it cannot be scoped to one worker.
 - **Not braid guessing per ecosystem.** A table of "what npm leaves behind" is glue: it
   would exist only because braid exists, it rots, and every Node repository already
-  ignores what it needs to. `braid setup` reads the `.gitignore` and the CI and
+  ignores what it needs to. `braid learn` reads the `.gitignore` and the CI and
   *proposes*; a human says yes. Proposing is judgement, generating is a table.
 
 Empty by default, so a repository that never mentions it keeps the git configuration it
