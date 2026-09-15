@@ -177,11 +177,24 @@ do not take the same flags.
 
 | | |
 |---|---|
-| `BRAID_CODEX_ARGS` | Codex: the flags both halves take (`--sandbox workspace-write`) |
+| `BRAID_CODEX_ARGS` | Codex: the flags both halves take (`--sandbox danger-full-access`) |
 | `BRAID_CODEX_APPROVAL_POLICY` | Codex: what the interactive half does about approvals (`never`). `codex exec` has nobody to ask and rejects the flag outright |
 | `BRAID_CLAUDE_PERMISSION_MODE` | Claude Code: `--permission-mode` (`bypassPermissions`) |
 | `BRAID_CURSOR_AGENT_ARGS` | Cursor: the flags both halves take (`--force`) |
 | `BRAID_CURSOR_AGENT_HEADLESS_ARGS` | Cursor: flags only its print-mode half takes (`--trust`) |
+
+Every agent is launched with the same access to the machine, and the defaults above are
+the spelling each CLI uses for it. That is deliberate: a worker is confined by its
+worktree, which git gives it before any sandbox is consulted, and a second confinement on
+top of that only makes a slice finishable or not depending on which agent drew it — which
+is the one thing an orchestrator judging the branch cannot see. Codex's `workspace-write`
+in particular leaves the worktree exactly as it found it and takes away the network, so a
+worker under it cannot reach `gh`, a database over TCP, or a dependency that was not
+installed before it started. Narrow it per repository if you want that trade:
+
+```bash
+braid config set BRAID_CODEX_ARGS "-s workspace-write"
+```
 
 `braid doctor` probes these against the installed CLI's own `--help` and says so when a
 flag has been renamed — before a wave, rather than as eight workers that died at launch.

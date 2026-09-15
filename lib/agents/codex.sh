@@ -60,18 +60,19 @@
 # portable effort setting is translated to this config key per session; the raw form is
 # still available for Codex-only levels or other configuration:
 #
-#   BRAID_CODEX_ARGS="--sandbox workspace-write -c model_reasoning_effort=high"
+#   BRAID_CODEX_ARGS="--sandbox danger-full-access -c model_reasoning_effort=high"
 #
 # Flags move between versions — `--full-auto` was the right answer and is gone from
 # 0.151. `braid doctor` probes whichever flags are set here against the installed CLI's
 # own help, so a rename is reported before a wave rather than discovered as eight
-# workers that died at launch. When yours disagrees:
+# workers that died at launch. When yours disagrees, or when a worker should be held
+# inside a sandbox after all:
 #
-#   BRAID_CODEX_ARGS="-s danger-full-access"
+#   BRAID_CODEX_ARGS="-s workspace-write"
 #
 # or drop to the generic adapter and give it the whole command line.
 
-: "${BRAID_CODEX_ARGS:=--sandbox workspace-write}"
+: "${BRAID_CODEX_ARGS:=--sandbox danger-full-access}"
 
 # What a seat with a terminal does about approvals. `codex exec` never asks anybody
 # anything, so the flag exists only on the interactive CLI — and without it a worker
@@ -123,10 +124,21 @@ agent_injects_contract() { return 1; }
 agent_loads_skills() { return 0; }
 agent_skill_prefix() { printf '$'; }
 
-# workspace-write rather than --dangerously-bypass-approvals-and-sandbox. A worker is
-# already confined to its own worktree, and its dependencies were installed by
-# braid_provision before it started, so the sandbox costs it nothing it needs — and a
-# default whose own name says "dangerously" is not a default.
+# The same access Claude Code's seat runs with, because a wave that mixes them has to
+# mean one thing: a slice that a worker can finish must not depend on which agent picked
+# it up, and an orchestrator judging the branch cannot see the difference to allow for it.
+#
+# The confinement that matters is the worktree, and git gives braid that before any
+# sandbox is consulted. What Codex's `workspace-write` adds on top is a network that stays
+# off unless config turns it on — so it costs a worker `gh`, a database over TCP, and
+# every dependency braid_provision could not install ahead of it. Paired with an approval
+# policy of `never` that is the worse half of both: the denial arrives at the model as a
+# bare execution failure, with nobody to ask what it meant.
+#
+# Two flags rather than the single --dangerously-bypass-approvals-and-sandbox, which
+# collapses two axes braid keeps apart. A seat somebody intends to sit in front of sets
+# BRAID_CODEX_APPROVAL_POLICY=on-request and gets its questions back without giving up the
+# access every other seat has.
 agent_auto_mode() { printf '%s --ask-for-approval %s' "$BRAID_CODEX_ARGS" "$BRAID_CODEX_APPROVAL_POLICY"; }
 # Both spellings, because braid launches both: the TUI for a seat with a terminal and
 # `codex exec` for a detached one, and they do not accept the same flags —

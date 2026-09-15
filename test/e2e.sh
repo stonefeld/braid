@@ -210,12 +210,23 @@ hasnt "the codex seat somebody sits in front of is not codex exec" "seat:codex e
 has "it is the CLI that can ask a question" "seat:codex " "$CODEX"
 has "told not to stop for approvals nobody is there to give" "--ask-for-approval never" "$CODEX"
 has "while a detached worker still gets exec" "headless:codex exec" "$CODEX"
-hasnt "which is never handed the flag it rejects" "exec --sandbox workspace-write --ask" "$CODEX"
+hasnt "which is never handed the flag it rejects" "--ask-for-approval" \
+    "$(printf '%s\n' "$CODEX" | grep '^headless:')"
 has "codex receives a per-session effort" "-c model_reasoning_effort=high" "$CODEX"
 is "codex passes effort to interactive and headless commands" "2" \
     "$(printf '%s' "$CODEX" | grep -c 'model_reasoning_effort=high' | tr -d ' ')"
 hasnt "codex omits an unset effort" "model_reasoning_effort" \
     "$(printf '%s\n' "$CODEX" | grep '^seat:')"
+
+# Every agent in a wave runs with the same access, so that a slice is finishable or not
+# on its own terms rather than on which agent drew it. Codex's workspace-write sandbox
+# reads as the cautious choice and is not one: it leaves the worktree — the confinement
+# that actually holds — exactly as git already had it, and takes away the network, which
+# is `gh`, a database over TCP, and anything braid_provision could not install first.
+has "codex is sandboxed no further than the worktree already sandboxes it" \
+    "danger-full-access" "$CODEX"
+hasnt "and not by a flag that would take the approval policy with it" \
+    "dangerously-bypass-approvals-and-sandbox" "$CODEX"
 
 CLAUDE=$(BRAID_HOME="$XDG_DATA_HOME/braid" /bin/bash -c '
     # shellcheck disable=SC1091
