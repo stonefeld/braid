@@ -84,7 +84,7 @@ read -r LAUNCHER CERTAINTY < <(launcher_resolve)
 launcher_load "$LAUNCHER"
 note "$BRAID_RUN_AGENT${MODEL:+ ($MODEL)}${EFFORT:+, effort $EFFORT} — orchestrating $(current_branch) in $LAUNCHER ($CERTAINTY)"
 
-COMMAND="cd $(printf '%q' "$WORKTREE") && BRAID_RUN_SEAT=orchestrate $(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT" "$EFFORT")"
+COMMAND="cd $(shell_quote "$WORKTREE") && BRAID_RUN_SEAT=orchestrate $(agent_cmd "$WORKTREE" "$MODEL" "$PROMPT" "$EFFORT")"
 if ! launcher_launch "$WORKTREE" "braid-$(branch_slug "$(current_branch)")" "$COMMAND"; then
     warn "$(printf '%s\n' \
         "could not open a window in $LAUNCHER." \

@@ -70,6 +70,19 @@ progress_done() {
     printf '\r\033[K' >&2
 }
 
+# One word, quoted for a shell, in ASCII whatever it contains.
+#
+# The C locale is the whole point. Under a UTF-8 one, bash 3.2's `%q` keeps the first
+# byte of a three-byte character and escapes the rest, so the line it prints is not valid
+# UTF-8 any more. A shell reads it back byte for byte and never notices; anything that
+# decodes it on the way — an environment's CLI taking the command as an argument —
+# replaces the stray byte, and the agent is started on a prompt it may refuse outright.
+# Byte by byte there is nothing to split: every byte above 127 leaves as an octal escape.
+shell_quote() {
+    local LC_ALL=C
+    printf '%q' "${1-}"
+}
+
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || die "${2:-$1 is required but not installed}"
 }

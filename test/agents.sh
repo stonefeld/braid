@@ -507,6 +507,81 @@ OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_GENERIC_CMD=true BRAID_MODE
     BRAID_MODEL_STANDARD=quagga with_engine agent_complexity standard)
 is "and the level still wins wherever it says something" "quagga" "$OUT"
 
+# --- a prompt that is not ASCII -----------------------------------------------
+
+# The contract is full of em dashes and a slice is written in whatever language its
+# project speaks, so the prompt is the one argument certain to carry multibyte text. Under
+# a UTF-8 locale bash 3.2 quotes a three-byte character as one raw byte and two escapes,
+# which a shell reads back intact and anything that decodes the line on the way does
+# not: the launch environment's CLI replaces the stray byte, and Codex refuses the
+# argument it is handed as invalid UTF-8. Every worker on it died at launch.
+#
+# So two things are held, for every adapter and for a project's own hook: the command
+# line is ASCII, and what the CLI receives is the prompt byte for byte.
+UTF8=$(locale -a 2>/dev/null | grep -i -m1 -E '^en_US\.utf-?8$' ||
+    locale -a 2>/dev/null | grep -i -m1 -E 'utf-?8$' || true)
+SPOKEN='Implementá el alta — “usuarios” y contraseñas…
+second line, with a '"'"'quote'"'"' and a $dollar'
+mkdir -p "$TMP/said"
+for name in claude codex cursor-agent said; do
+    cat >"$TMP/said/$name" <<'SH'
+#!/bin/sh
+for last; do :; done
+printf '%s' "$last" >"$SAID"
+SH
+    chmod +x "$TMP/said/$name"
+done
+export SAID="$TMP/said/received"
+
+# The engine's own entry points, with one adapter loaded and the locale a person's
+# terminal has. $1 is the adapter, $2 anything to define on top of it.
+with_launch() {
+    (
+        [[ -z "$UTF8" ]] || export LC_ALL="$UTF8"
+        # shellcheck disable=SC1090  # BRAID_HOME is this checkout
+        source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
+        # shellcheck disable=SC1090  # one adapter, resolved at runtime
+        source "$BRAID_HOME/lib/agents/$1.sh"
+        eval "$2"
+        "${@:3}"
+    )
+}
+
+survives() {
+    local label="$1" command="$2" stray
+    stray=$(printf '%s' "$command" | LC_ALL=C tr -d '\11\12\15\40-\176' | wc -c | tr -d ' ')
+    is "$label: the command line is ASCII" "0" "$stray"
+    rm -f "$SAID"
+    PATH="$TMP/said:$PATH" bash -c "$command" >/dev/null 2>&1
+    if [[ "$(cat "$SAID" 2>/dev/null)" == "$SPOKEN" ]]; then
+        ok "$label: and the prompt arrives byte for byte"
+    else
+        bad "$label: the prompt did not survive — got: $(cat "$SAID" 2>/dev/null)"
+    fi
+}
+
+for file in lib/agents/*.sh; do
+    name=$(basename "$file" .sh)
+    for fn in agent_cmd agent_cmd_headless; do
+        CMD=$(BRAID_GENERIC_CMD='said {prompt}' \
+            with_launch "$name" ':' "$fn" /tmp/wt a-model "$SPOKEN" "")
+        survives "$name $fn" "$CMD"
+    done
+done
+
+# shellcheck disable=SC2016  # the hook is defined in the subshell that runs it
+CMD=$(with_launch generic 'braid_agent_command() { printf "said %q" "$3"; }' \
+    agent_cmd /tmp/wt a-model "$SPOKEN" "")
+survives "a project's launch hook" "$CMD"
+
+CMD=$(
+    [[ -z "$UTF8" ]] || export LC_ALL="$UTF8"
+    # shellcheck disable=SC1090,SC1091  # BRAID_HOME is this checkout
+    source "$BRAID_HOME/lib/core.sh"
+    printf 'said %s' "$(shell_quote "$SPOKEN")"
+)
+survives "the engine's own quoting" "$CMD"
+
 echo
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 echo

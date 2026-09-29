@@ -316,7 +316,13 @@ agent_skill_prompt() {
 # Overridable from braid.sh, the same escape hatch every other seam has: a project can
 # replace the launch command wholesale without editing an adapter that braid upgrade
 # will replace.
+#
+# Both run in the C locale, for the reason shell_quote gives. Set here rather than asked
+# of each adapter, because the command line is built by whoever wrote the adapter or the
+# project's hook, with `printf %q` — and the prompt it quotes is the one argument certain
+# to carry an em dash.
 agent_cmd() {
+    local LC_ALL=C
     if declare -F braid_agent_command >/dev/null; then
         braid_agent_command "$@"
     else
@@ -334,6 +340,7 @@ agent_cmd() {
 # A project whose replacement is itself a TUI needs the second hook, because braid cannot
 # tell one command line from another. `braid doctor` says which of the two it found.
 agent_cmd_headless() {
+    local LC_ALL=C
     if declare -F braid_agent_command_headless >/dev/null; then
         braid_agent_command_headless "$@"
     elif declare -F braid_agent_command >/dev/null; then

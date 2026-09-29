@@ -281,7 +281,8 @@ build_command() {
     fi
     # finish.sh runs whatever happened to the agent — a clean exit, a crash, a CLI that
     # was never installed. It is what makes the control plane independent of hooks.
-    printf 'cd %q && { %s; }; bash .braid/finish.sh %q' "$WORKTREE" "$agent_command" "$WORKTREE"
+    printf 'cd %s && { %s; }; bash .braid/finish.sh %s' \
+        "$(shell_quote "$WORKTREE")" "$agent_command" "$(shell_quote "$WORKTREE")"
 }
 
 try_launch() {
