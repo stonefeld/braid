@@ -1026,8 +1026,12 @@ mv "$D/42.md" "$D/42-with-a-long-title.md"
 is "the branch takes the readable name" "agent/42-with-a-long-title" \
     "$(git -C "$(W 42-with-a-long-title)" rev-parse --abbrev-ref HEAD)"
 work 42-with-a-long-title done.txt "done" "Did it."
-"$BRAID" integrate 42-with-a-long-title >/dev/null 2>&1
-"$BRAID" reap 42-with-a-long-title >/dev/null 2>&1
+# next prints the id, so the id is what gets pasted into the commands it suggests — and
+# verify and integrate looked for a worktree called agent-42, which never existed.
+check "verify takes the id next printed" "$BRAID" verify 42
+check "and still the whole slug" "$BRAID" verify 42-with-a-long-title
+check "integrate takes the id" "$BRAID" integrate 42
+check "reap takes the id" "$BRAID" reap 42
 check "and the landed marker uses the id the plan knows" \
     git show-ref --verify --quiet "refs/braid/landed/42-with-a-long-title"
 

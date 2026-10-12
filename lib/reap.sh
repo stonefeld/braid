@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tear a worker down, once its work is somewhere safe.
 #
-#   braid reap <slug>
+#   braid reap <slug|id>
 #   braid reap --merged          every worker whose commits are in the branch it was cut from
 #   braid reap --feature [slug]  what the whole feature provisioned, once it has landed
 #
@@ -343,8 +343,8 @@ if [[ "$MERGED" -eq 1 ]]; then
     exit 0
 fi
 
-[[ -n "$SLUG" ]] || die "usage: braid reap <slug> | braid reap --merged | braid reap --feature"
-SLUG="${SLUG#"$BRAID_BRANCH_PREFIX"/}"
+[[ -n "$SLUG" ]] || die "usage: braid reap <slug|id> | braid reap --merged | braid reap --feature"
+SLUG=$(worker_slug_for "$SLUG") || exit 1
 WORKTREE=$(worker_worktree_path "$SLUG")
 [[ -d "$WORKTREE" ]] || die "no worker worktree at $WORKTREE"
 reap_one "$WORKTREE"

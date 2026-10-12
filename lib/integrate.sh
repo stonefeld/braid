@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Weave one worker's branch into the feature branch.
 #
-#   braid integrate <slug>
-#   braid integrate --continue <slug>     after resolving a rebase conflict
-#   braid integrate --abort <slug>        put the worker back where it was
+#   braid integrate <slug|id>
+#   braid integrate --continue <slug|id>     after resolving a rebase conflict
+#   braid integrate --abort <slug|id>        put the worker back where it was
 #
 #     --no-verify     skip the project's gate  (say why in your summary)
 #
@@ -61,10 +61,10 @@ done
 
 braid_config
 refuse_worker_seat
-[[ -n "$SLUG" ]] || die "usage: braid integrate <slug>"
-# Stripped here, not while parsing arguments: the prefix is configuration, and
+[[ -n "$SLUG" ]] || die "usage: braid integrate <slug|id>"
+# Resolved here, not while parsing arguments: the prefix is configuration, and
 # braid_config has not run yet at that point.
-SLUG="${SLUG#"$BRAID_BRANCH_PREFIX"/}"
+SLUG=$(worker_slug_for "$SLUG") || exit 1
 
 FEATURE=$(current_branch)
 BRANCH=$(worker_branch "$SLUG")

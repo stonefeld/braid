@@ -2,7 +2,7 @@
 # Run the project's mechanical gate.
 #
 #   braid verify              the worktree you are standing in
-#   braid verify <slug>       one worker
+#   braid verify <slug|id>    one worker
 #   braid verify --all        every worker off this branch
 #
 # This is only the half of the gate a script can judge. The other half is judgement:
@@ -60,7 +60,7 @@ case "${1:-}" in
         exit 0
         ;;
     *)
-        slug="${1#"$BRAID_BRANCH_PREFIX"/}"
+        slug=$(worker_slug_for "$1") || exit 1
         worktree=$(worker_worktree_path "$slug")
         [[ -d "$worktree" ]] || die "no worker worktree at $worktree"
         verify_one "$worktree"
