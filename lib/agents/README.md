@@ -88,12 +88,19 @@ expected asymmetry rather than a surprise.
 | `agent_level_effort <level>` | the level's effort comes from `BRAID_EFFORT_<LEVEL>`, then `BRAID_EFFORT_WORK`, or from nothing |
 | `agent_auto_mode_probe` | `braid doctor` says nothing about unattended mode for this agent |
 | `agent_effort_probe` | `braid doctor` reports that effort support cannot be probed |
+| `agent_checkout_probe <checkout>` | `braid doctor` says nothing about the CLI's standing with this repository |
 
 A probe's job is to ask the **installed CLI** — usually its own `--help` — whether the
 flags this adapter sets still exist. Flags move between versions, and a probe is what
 turns that into a line in `braid doctor` rather than into eight workers that died at
 launch. A probe that returns success without asking anything is worse than no probe: it
 reports a green check for a thing nobody verified.
+
+`agent_checkout_probe` is for a CLI that stops to ask something of a person the first time
+it runs in a repository — Codex asks whether to trust the folder, and no flag skips it. It
+prints one line about where things stand and exits non-zero when a worker here would wait
+at that question in a panel. `braid doctor` prints the line either way; it is the one
+check that `--help` cannot answer.
 
 `agent_session` is for a CLI that stays open after its turn — the interactive seat finishes
 and waits for the next prompt, so nothing exits and `finish.sh` never runs. It prints one

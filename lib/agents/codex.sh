@@ -155,6 +155,29 @@ agent_auto_mode_probe() {
 }
 
 agent_effort_mode() { printf -- '-c model_reasoning_effort=<level>'; }
+
+# Whether this CLI will start in the repository without stopping to ask. The interactive
+# half asks, on its first screen, whether to trust a folder it has not seen, and records
+# the answer in its own config against the repository root — so every worker of a
+# repository nobody has opened Codex in waits at that screen, in a panel, for a person.
+# No flag skips it: not --ask-for-approval, not -c projects.<path>.trust_level, not even
+# --dangerously-bypass-approvals-and-sandbox (each tried, 0.162). Braid does not write
+# the answer on anybody's behalf either; it says so before the wave instead.
+agent_checkout_probe() {
+    local checkout="${1:?checkout}" config="${CODEX_HOME:-$HOME/.codex}/config.toml" path
+    for path in "$checkout" "$(cd "$checkout" 2>/dev/null && pwd -P)"; do
+        [[ -n "$path" ]] || continue
+        awk -v key="[projects.\"$path\"]" '
+            $0 == key { inside = 1; next }
+            /^\[/ { inside = 0 }
+            inside && /^[[:space:]]*trust_level[[:space:]]*=[[:space:]]*"trusted"/ { found = 1 }
+            END { exit !found }' "$config" 2>/dev/null || continue
+        printf 'trusts this repository (%s)' "$config"
+        return 0
+    done
+    printf 'has not been asked to trust this repository — open codex once in %s and accept its folder prompt, or every worker waits at it' "$checkout"
+    return 1
+}
 agent_effort_probe() {
     codex --help 2>/dev/null | grep -q -- '--config' &&
         codex exec --help 2>/dev/null | grep -q -- '--config'

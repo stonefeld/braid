@@ -507,6 +507,34 @@ OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_GENERIC_CMD=true BRAID_MODE
     BRAID_MODEL_STANDARD=quagga with_engine agent_complexity standard)
 is "and the level still wins wherever it says something" "quagga" "$OUT"
 
+# --- what stands between the CLI and its first turn --------------------------
+
+# Codex asks, on its first screen, whether to trust a folder it has not seen, and no
+# flag skips it — so a worker in a repository nobody has opened Codex in waits there, in
+# a panel, for a person. The answer lives in its own config against the repository root,
+# which is what the probe reads; doctor says it before the wave rather than status
+# twenty minutes into it.
+ADAPTER="$BRAID_HOME/lib/agents/codex.sh"
+mkdir -p "$TMP/codex" "$TMP/repo"
+REPO_REAL=$(cd "$TMP/repo" && pwd -P)
+printf '[projects."/elsewhere"]\ntrust_level = "trusted"\n' >"$TMP/codex/config.toml"
+OUT=$(CODEX_HOME="$TMP/codex" with_adapter agent_checkout_probe "$TMP/repo")
+is "an untrusted repository fails the probe" "1" "$?"
+has "and the line says what to do" "open codex once in" "$OUT"
+printf '[projects."%s"]\ntrust_level = "trusted"\n' "$REPO_REAL" >>"$TMP/codex/config.toml"
+CODEX_HOME="$TMP/codex" check "a trusted one passes, by its real path" \
+    with_adapter agent_checkout_probe "$TMP/repo"
+printf '[projects."%s"]\ntrust_level = "untrusted"\n' "$TMP/other" >>"$TMP/codex/config.toml"
+mkdir -p "$TMP/other"
+CODEX_HOME="$TMP/codex" refute "a repository marked untrusted does not" \
+    with_adapter agent_checkout_probe "$TMP/other"
+CODEX_HOME="$TMP/nowhere" refute "and no config at all is no trust" \
+    with_adapter agent_checkout_probe "$TMP/repo"
+for name in claude cursor-agent generic; do
+    ADAPTER="$BRAID_HOME/lib/agents/$name.sh"
+    refute "$name has no first-run question to probe" with_adapter declare -F agent_checkout_probe
+done
+
 # --- what a session says ------------------------------------------------------
 
 # The interactive CLI never exits, so a Codex worker's state has to be read off its own

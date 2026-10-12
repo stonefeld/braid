@@ -370,6 +370,16 @@ for name in $BRAID_AGENTS; do
         else
             meh "$name does not seem to accept '$(agent_auto_mode)' — workers would die at launch"
         fi
+        # What stands between the CLI and its first turn here, where the adapter knows of
+        # something: a worker that waits for a person in a panel is the slowest failure
+        # a wave has, and the one check that cannot be made by looking at --help.
+        if declare -F agent_checkout_probe >/dev/null; then
+            if standing=$(agent_checkout_probe "$CHECKOUT"); then
+                ok "$name $standing"
+            else
+                meh "$name $standing"
+            fi
+        fi
         if [[ -n "$CONFIGURED_EFFORTS" ]]; then
             if ! declare -F agent_effort_mode >/dev/null; then
                 meh "$name has no reasoning effort support — configured efforts would fail"
