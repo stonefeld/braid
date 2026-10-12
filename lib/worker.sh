@@ -42,20 +42,42 @@ worker_transcript_dir() {
     )
 }
 
+# What the worker's own session says, for an agent whose adapter can read one: when it
+# last moved, whether its latest turn is `running` or `ended`, and since when. Nothing
+# for an agent that cannot say, which is most of them and is not an error.
+#
+# Only sessions written since the worker was made are looked at, so a worktree path that
+# is used twice never answers with the first worker's session.
+worker_session() {
+    local worktree="${1:?worktree}" agent file since
+    agent=$(worker_field "$worktree" agent) || return 0
+    [[ -n "$agent" ]] || return 0
+    file=$(agent_file "$agent") || return 0
+    since=$(stat -c %Y "$worktree/.braid/base" 2>/dev/null ||
+        stat -f %m "$worktree/.braid/base" 2>/dev/null || echo 0)
+    (
+        # shellcheck disable=SC1090
+        source "$file"
+        declare -F agent_session >/dev/null && agent_session "$worktree" "$since"
+    ) 2>/dev/null
+}
+
 # Seconds since anything about this worker last moved, or nothing when no signal
 # resolves. Silence must never read as death: a worktree that cannot be measured is
 # never called stale.
 #
 # Newest signal wins, and each catches something the others miss:
 #   - the agent's transcript, rewritten every turn — the only one that sees an agent
-#     thinking, reading or editing without touching git;
+#     thinking, reading or editing without touching git. Found by the directory it is
+#     filed under, or handed over by an adapter that reads its own sessions;
 #   - .braid/*.log, which grows through a long build or test run;
 #   - the git index, which moves on every add and commit.
 worker_idle_seconds() {
-    local worktree="${1:?worktree}" gitdir transcripts
+    local worktree="${1:?worktree}" gitdir transcripts session
     gitdir=$(git -C "$worktree" rev-parse --git-dir 2>/dev/null || echo "")
     transcripts=$(worker_transcript_dir "$worktree")
-    python3 - "$worktree" "$gitdir" "$transcripts" <<'PY'
+    session=$(worker_session "$worktree")
+    python3 - "$worktree" "$gitdir" "$transcripts" "${session%% *}" <<'PY'
 import os
 import re
 import sys
@@ -63,7 +85,10 @@ import time
 
 worktree, gitdir = sys.argv[1], sys.argv[2]
 transcripts = sys.argv[3] if len(sys.argv) > 3 else ""
-newest = 0.0
+try:
+    newest = float(sys.argv[4])
+except (IndexError, ValueError):
+    newest = 0.0
 
 
 def seen(path):
@@ -114,9 +139,28 @@ PY
 # `stale` is the state a waiting loop must respect. `working` only means "no status
 # file", which a worker that died before its first turn also satisfies — so waiting for
 # everything to reach `done` waits forever on exactly the failure you most need to see.
+#
+# .braid/status is a record of one moment: the agent stopped, and this is what git said.
+# Where the agent's own session can be read and has turned since, the session outranks
+# it. A turn that is running is a worker that is working, whatever it had finished
+# before — that is a worker sent back with a correction. A turn that has ended is
+# settled now, and what it settled as is asked of git now, the way finish.sh asks.
 worker_state() {
-    local worktree="${1:?worktree}" state idle
-    state=$(worker_status_field "$worktree" state) && [[ -n "$state" ]] && {
+    local worktree="${1:?worktree}" state idle recorded turn turned
+    state=$(worker_status_field "$worktree" state) || state=""
+    recorded=$(worker_status_field "$worktree" at) || recorded=""
+    read -r _ turn turned < <(worker_session "$worktree") || true
+    case "${recorded:-0}${turned:-0}" in *[!0-9]*) turn="" ;; esac
+    if [[ -n "${turn:-}" && "${turned:-0}" -gt "${recorded:-0}" ]]; then
+        case "$turn" in
+            running) state="" ;;
+            ended)
+                worker_settled_state "$worktree"
+                return 0
+                ;;
+        esac
+    fi
+    [[ -z "$state" ]] || {
         printf '%s' "$state"
         return 0
     }
@@ -125,6 +169,20 @@ worker_state() {
         printf 'stale'
     else
         printf 'working'
+    fi
+}
+
+# What a worker that has stopped is, read off git at the moment of asking. finish.sh
+# holds the same three lines, because it runs from a copy inside the worktree and cannot
+# source this file; the order is argued there.
+worker_settled_state() {
+    local worktree="${1:?worktree}"
+    if [[ -n "$(git -C "$worktree" status --porcelain -- ':!.braid' 2>/dev/null)" ]]; then
+        printf 'dirty'
+    elif [[ -f "$worktree/.braid/report.md" ]]; then
+        printf 'done'
+    else
+        printf 'done-no-report'
     fi
 }
 

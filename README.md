@@ -91,7 +91,7 @@ command-line template, is a first-class option rather than a fallback.
 | | Contract arrives | Status written by | Remote blocked by | Run for real |
 |---|---|---|---|---|
 | **Claude Code** (`claude`) | `SessionStart` hook | `Stop` hook, which can push back on a dirty tree | `PreToolUse` guard **and** `pre-push` | a whole feature |
-| **Codex** (`codex`) | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | a whole feature |
+| **Codex** (`codex`) | top of the prompt, and on disk | read off its own session while the CLI is open; `.braid/finish.sh` at exit | `pre-push` | a whole feature |
 | **Cursor** (`cursor-agent`) | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | the adapter, against the installed CLI. No feature yet |
 | **`generic`** | top of the prompt, and on disk | `.braid/finish.sh` at exit | `pre-push` | the test suite, every CI run. No real agent |
 
@@ -297,9 +297,9 @@ braid wave <n|slices…>     launch a wave, at most BRAID_MAX_WORKERS at a time
 braid spawn <slice>        launch one worker
 braid status               what every worker is doing   (--reports, --all)
 braid wait                 block until the wave settles (exit 3 = call again)
-braid verify [slug]        run the project's mechanical gate
-braid integrate <slug>     rebase, fast-forward, gate    (--continue, --abort)
-braid reap <slug>          tear a worker down            (--merged, --force)
+braid verify [slug|id]     run the project's mechanical gate
+braid integrate <slug|id>  rebase, fast-forward, gate    (--continue, --abort)
+braid reap <slug|id>       tear a worker down            (--merged, --force)
 braid reap --feature       tear down what the whole feature provisioned, once it lands
 
 # the engine

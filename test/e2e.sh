@@ -955,6 +955,54 @@ refute "the branch is gone" git show-ref --verify --quiet refs/heads/agent/07-gr
 is "and git is not left advertising a worktree that vanished" "0" \
     "$(git worktree list | grep -c 'agent-07-greedy')"
 
+# --- a worker whose CLI never exits -------------------------------------------
+
+phase "a worker whose CLI never exits"
+# The interactive Codex seat finishes its turn and waits for the next prompt, so nothing
+# exits, finish.sh never runs, and a finished worker and a thinking one were the same
+# silence for twenty minutes. Codex writes the difference down in its own session file.
+# This stands one up, shaped like the real ones, and watches status follow it — a real
+# Codex is the one thing that cannot be launched here.
+slice 08-open low no "" "Keep the CLI open."
+"$BRAID" spawn "$D/08-open.md" --no-launch >/dev/null 2>&1
+printf codex >"$(W 08-open)/.braid/agent"
+ROLLOUT="$HOME/.codex/sessions/2026/10/12/rollout-08-open.jsonl"
+mkdir -p "$(dirname "$ROLLOUT")"
+printf '{"type":"session_meta","payload":{"cwd":"%s","thread_source":"user"}}\n' \
+    "$(W 08-open)" >"$ROLLOUT"
+# Stamped ahead of the clock, so each turn is newer than any status written before it.
+turn() {
+    python3 -c 'import json, sys, time
+stamp = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(time.time() + int(sys.argv[2])))
+print(json.dumps({"timestamp": stamp, "type": "event_msg", "payload": {"type": sys.argv[1]}}))' \
+        "$1" "$2" >>"$ROLLOUT"
+}
+turn task_started 10
+has "a turn that started is working" "working         agent/08-open" "$("$BRAID" status 2>&1)"
+"$BRAID" wait --timeout 1 >/dev/null 2>&1
+is "and wait keeps waiting on it" "3" "$?"
+turn task_complete 20
+has "a turn that ended with nothing to show is done-no-report" \
+    "done-no-report  agent/08-open" "$("$BRAID" status 2>&1)"
+printf 'open\n' >"$(W 08-open)/open.txt"
+git -C "$(W 08-open)" add -A
+git -C "$(W 08-open)" commit -qm "08-open"
+printf 'Kept it open.\n' >"$(W 08-open)/.braid/report.md"
+has "and done once it committed and reported, with nothing having exited" \
+    "done            agent/08-open" "$("$BRAID" status 2>&1)"
+check "so wait returns" "$BRAID" wait --timeout 1
+# A correction sent to a finished worker. status says done and would go on saying it.
+bash "$(W 08-open)/.braid/finish.sh" "$(W 08-open)"
+turn task_started 30
+has "a new turn after a recorded done is working again" \
+    "working         agent/08-open" "$("$BRAID" status 2>&1)"
+printf 'more\n' >"$(W 08-open)/open.txt"
+turn turn_aborted 40
+has "an interrupted turn with uncommitted work is dirty" \
+    "dirty           agent/08-open" "$("$BRAID" status 2>&1)"
+"$BRAID" reap 08-open --force >/dev/null 2>&1
+rm -rf "$HOME/.codex"
+
 # --- an id that is not its own slug -------------------------------------------
 
 phase "a slice whose id and branch name differ"

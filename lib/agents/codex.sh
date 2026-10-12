@@ -28,7 +28,8 @@
 # So for now two things arrive by other means, and braid handles both:
 #
 #   the contract   goes into the prompt instead of arriving at session start
-#   status         written by .braid/finish.sh on exit, not by a stop hook
+#   status         written by .braid/finish.sh on exit, not by a stop hook — and read
+#                  off the session file while the CLI is still open, see agent_session
 #
 # What does not carry over is the PreToolUse guard: nothing can deny a `git push`
 # mid-session. The per-worktree pre-push hook replaces it — narrower, but it is the
@@ -188,4 +189,21 @@ agent_command_headless() {
     printf '%s %q' "$command" "$prompt"
 }
 
-agent_transcript_dir() { printf '%s/.codex/sessions' "$HOME"; }
+# What this worker's session says about itself, as one line:
+#
+#   <moved> <turn> <since>
+#
+# when the session was last written, whether its latest turn is `running` or `ended`,
+# and when that was. Nothing at all when no session is found, and `unknown` for a turn
+# that cannot be read — both of which leave the engine exactly where it is without this.
+#
+# It is here because the seat with a terminal never exits. The interactive CLI finishes
+# its turn and waits for the next prompt, so finish.sh has not run and nothing has
+# written .braid/status — a finished worker and one that is still thinking are the same
+# silence, told apart only when the second goes stale. The session file is where Codex
+# itself writes the difference down, one event as each turn starts and one as it ends,
+# and codex_session.py beside this file is what reads it.
+agent_session() {
+    python3 "$BRAID_HOME/lib/agents/codex_session.py" \
+        "${CODEX_HOME:-$HOME/.codex}/sessions" "${1:?worktree}" "${2:-0}"
+}

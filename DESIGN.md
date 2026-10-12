@@ -647,7 +647,7 @@ Claude Code's hooks allow, once by a means that needs nothing of the agent at al
 | | Claude Code | everything else |
 |---|---|---|
 | the contract (§9) | injected at `SessionStart` | at the top of the prompt, and on disk |
-| status | `Stop` hook, which can push back on a dirty tree | `finish.sh` on exit |
+| status | `Stop` hook, which can push back on a dirty tree | `finish.sh` on exit, and the session file while the CLI is open |
 | the remote | `PreToolUse` denies `gh` and `git push` | a per-worktree `pre-push` hook |
 
 The second column is the one that has to be right. It is what "works with any agent CLI"

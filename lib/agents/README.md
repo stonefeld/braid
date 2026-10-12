@@ -83,6 +83,7 @@ expected asymmetry rather than a surprise.
 | `agent_loads_skills` | a skill is handed over as markdown rather than by name |
 | `agent_skill_prefix` | required **only** when `agent_loads_skills` succeeds — `/` or `$`, whatever the CLI uses to invoke one |
 | `agent_transcript_dir` | this agent contributes no liveness signal, so `BRAID_STALE_SECONDS` has nothing to measure here |
+| `agent_session <worktree> <since>` | the engine learns that a turn ended only from `.braid/status` — a worker whose CLI stays open after its turn reads `working` until it goes stale |
 | `agent_seat_effort <seat>` | the seat's effort comes from `BRAID_EFFORT_<SEAT>` or from nothing |
 | `agent_level_effort <level>` | the level's effort comes from `BRAID_EFFORT_<LEVEL>`, then `BRAID_EFFORT_WORK`, or from nothing |
 | `agent_auto_mode_probe` | `braid doctor` says nothing about unattended mode for this agent |
@@ -93,6 +94,17 @@ flags this adapter sets still exist. Flags move between versions, and a probe is
 turns that into a line in `braid doctor` rather than into eight workers that died at
 launch. A probe that returns success without asking anything is worse than no probe: it
 reports a green check for a thing nobody verified.
+
+`agent_session` is for a CLI that stays open after its turn — the interactive seat finishes
+and waits for the next prompt, so nothing exits and `finish.sh` never runs. It prints one
+line, `<moved> <turn> <since>`: when any session of this worker's was last written, whether
+its latest turn is `running` or `ended` (`unknown` when it cannot tell), and when that was.
+Nothing at all means no session was found. The engine lets a turn newer than the recorded
+status outrank it: `running` is a worker that is working whatever it had finished before,
+`ended` is asked of git on the spot. Only sessions written after `<since>` belong to this
+worker. Read your CLI's own session files for this, and fail toward `unknown`: a format
+nobody promised will change, and the safe reading of a line you do not recognise is the one
+braid would have made without you.
 
 Name an effort only where the CLI has a control of its own. `claude` and `codex` do and
 name the same five values; `cursor-agent` has none, and `generic` cannot know whether the

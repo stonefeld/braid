@@ -507,6 +507,33 @@ OUT=$(BRAID_AGENTS=generic BRAID_AGENT=generic BRAID_GENERIC_CMD=true BRAID_MODE
     BRAID_MODEL_STANDARD=quagga with_engine agent_complexity standard)
 is "and the level still wins wherever it says something" "quagga" "$OUT"
 
+# --- what a session says ------------------------------------------------------
+
+# The interactive CLI never exits, so a Codex worker's state has to be read off its own
+# session while it is still open. The reader is its own program, tested against sessions
+# shaped like the real ones; the adapter is checked to hand them over in the one line
+# the engine reads.
+if python3 "$BRAID_HOME/test/codex_session.py" >/dev/null 2>&1; then
+    ok "the codex session reader answers every case"
+else
+    bad "the codex session reader fails — run: python3 test/codex_session.py"
+fi
+ADAPTER="$BRAID_HOME/lib/agents/codex.sh"
+mkdir -p "$TMP/codex/sessions/2026/10/12" "$TMP/wt"
+printf '%s\n' \
+    "{\"type\": \"session_meta\", \"payload\": {\"cwd\": \"$TMP/wt\", \"thread_source\": \"user\"}}" \
+    '{"type": "event_msg", "timestamp": "2026-10-12T10:00:00.000Z", "payload": {"type": "task_started"}}' \
+    >"$TMP/codex/sessions/2026/10/12/rollout-test.jsonl"
+OUT=$(CODEX_HOME="$TMP/codex" with_adapter agent_session "$TMP/wt" 0)
+has "codex reads its session from CODEX_HOME" " running 1791799200" "$OUT"
+is "and says nothing about a worktree with none" "" \
+    "$(CODEX_HOME="$TMP/codex" with_adapter agent_session "$TMP/elsewhere" 0)"
+for name in claude cursor-agent generic; do
+    ADAPTER="$BRAID_HOME/lib/agents/$name.sh"
+    refute "$name does not claim to read a session it cannot" \
+        with_adapter declare -F agent_session
+done
+
 # --- a prompt that is not ASCII -----------------------------------------------
 
 # The contract is full of em dashes and a slice is written in whatever language its
@@ -520,6 +547,7 @@ is "and the level still wins wherever it says something" "quagga" "$OUT"
 # line is ASCII, and what the CLI receives is the prompt byte for byte.
 UTF8=$(locale -a 2>/dev/null | grep -i -m1 -E '^en_US\.utf-?8$' ||
     locale -a 2>/dev/null | grep -i -m1 -E 'utf-?8$' || true)
+# shellcheck disable=SC2016  # the dollar is part of the prompt, not an expansion
 SPOKEN='Implementá el alta — “usuarios” y contraseñas…
 second line, with a '"'"'quote'"'"' and a $dollar'
 mkdir -p "$TMP/said"
@@ -537,6 +565,7 @@ export SAID="$TMP/said/received"
 # terminal has. $1 is the adapter, $2 anything to define on top of it.
 with_launch() {
     (
+        # shellcheck disable=SC2030,SC2031  # local to this subshell on purpose: the launch runs there
         [[ -z "$UTF8" ]] || export LC_ALL="$UTF8"
         # shellcheck disable=SC1090  # BRAID_HOME is this checkout
         source "$BRAID_HOME/lib/agent.sh" >/dev/null 2>&1
@@ -575,6 +604,7 @@ CMD=$(with_launch generic 'braid_agent_command() { printf "said %q" "$3"; }' \
 survives "a project's launch hook" "$CMD"
 
 CMD=$(
+    # shellcheck disable=SC2031  # the same subshell-local locale as with_launch
     [[ -z "$UTF8" ]] || export LC_ALL="$UTF8"
     # shellcheck disable=SC1090,SC1091  # BRAID_HOME is this checkout
     source "$BRAID_HOME/lib/core.sh"
