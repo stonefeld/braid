@@ -572,6 +572,15 @@ COUNT=$(git worktree list | grep -c 'agent-')
 is "one worktree per slice" "3" "$COUNT"
 
 W() { printf '%s/agent-%s' "$BRAID_WORKTREE_ROOT" "$1"; }
+# Three branches standing exactly where they were cut are ancestors of the feature
+# branch, which is also the shape of three branches that were integrated and rebased.
+# next read them as landed and told you to reap a wave that had just been launched.
+# These three exited at once — the simulated agent is `true` — so they are finished and
+# not integrated, which is `ready`; a real one would be `running`. Neither is landed.
+NEXT=$("$BRAID" next 2>&1)
+has "fresh workers are not landed" "3 ready" "$NEXT"
+hasnt "none of them" "landed" "$NEXT"
+has "and next says to judge them, not to reap them" "braid integrate" "$NEXT"
 check "provisioning reaches a worker" test -s "$(W 01-login)/.braid/suffix"
 S1=$(cat "$(W 01-login)/.braid/suffix")
 S2=$(cat "$(W 02-session)/.braid/suffix")

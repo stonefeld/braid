@@ -290,3 +290,43 @@ worker_commits_ahead() {
     [[ -n "$base" ]] || return 1
     git -C "$worktree" rev-list --count "$base..HEAD" 2>/dev/null || printf '0'
 }
+
+# How many commits a worker branch has made of its own, counted from the commit it was
+# cut at rather than from its base, which is a branch and has moved since. Asked of the
+# reflog, whose oldest entry is the branch's creation; non-zero when there is no reflog
+# to ask, so the caller falls back to whatever it would have assumed.
+#
+# A branch still standing on its cut commit is an ancestor of the feature branch by
+# construction, which is also the shape of a branch that was integrated and rebased —
+# and `next` told you to reap three workers that had just been launched.
+worker_branch_commits() {
+    local branch="${1:?branch}" checkout cut
+    checkout=$(primary_checkout)
+    cut=$(git -C "$checkout" reflog show --format=%H "refs/heads/$branch" 2>/dev/null | tail -1)
+    [[ -n "$cut" ]] || return 1
+    git -C "$checkout" rev-list --count "$cut..refs/heads/$branch" 2>/dev/null
+}
+
+# The slug behind whatever a person types: a slug, a branch name, or the id the plan
+# uses — which with a tracker is the issue number alone, while the branch and worktree
+# carry the title too. `next` prints the id, so the id is what gets pasted into verify
+# and integrate, and both used to look for a worktree that was never called that.
+worker_slug_for() {
+    local given="${1:?id or slug}" ref found=""
+    given="${given#"$BRAID_BRANCH_PREFIX"/}"
+    if [[ -d "$(worker_worktree_path "$given")" ]]; then
+        printf '%s' "$given"
+        return 0
+    fi
+    while read -r ref; do
+        ref="${ref#"$BRAID_BRANCH_PREFIX"/}"
+        case "$ref" in "$given"-*) found="$found $ref" ;; esac
+    done < <(git -C "$(primary_checkout)" for-each-ref --format='%(refname:short)' \
+        "refs/heads/$BRAID_BRANCH_PREFIX/")
+    found="${found# }"
+    case "$found" in
+        "") printf '%s' "$given" ;;
+        *" "*) die "'$given' names more than one worker: $found" ;;
+        *) printf '%s' "$found" ;;
+    esac
+}

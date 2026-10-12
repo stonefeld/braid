@@ -144,18 +144,20 @@ done
 # slug is the issue number plus its title, so the id is a prefix rather than the whole
 # name. Matched against what exists rather than recomputed, which needs no network.
 branch_for_id() {
-    local id="${1:?id}" ref
-    while read -r ref; do
-        [[ -n "$ref" ]] || continue
-        case "${ref#"$BRAID_BRANCH_PREFIX"/}" in
-            "$id" | "$id"-*)
-                printf '%s' "$ref"
-                return 0
-                ;;
-        esac
-    done < <(git -C "$CHECKOUT" for-each-ref --format='%(refname:short)' \
-        "refs/heads/$BRAID_BRANCH_PREFIX/")
-    printf '%s' "$(worker_branch "$(slugify "$id")")"
+    local id="${1:?id}" slug
+    slug=$(worker_slug_for "$id") || exit 1
+    [[ "$slug" != "$id" ]] || slug=$(slugify "$id")
+    worker_branch "$slug"
+}
+
+# Integrated means its commits are in the feature branch — and that it has some. A
+# branch still standing where it was cut is an ancestor too, and read as landed before
+# a worker had made its first commit.
+is_landed() {
+    local branch="${1:?branch}" own
+    git -C "$CHECKOUT" merge-base --is-ancestor "$branch" "$BRANCH" 2>/dev/null || return 1
+    own=$(worker_branch_commits "$branch") || own=1
+    [[ "$own" -gt 0 ]]
 }
 
 slice_state() {
@@ -170,7 +172,7 @@ slice_state() {
     }
 
     if git -C "$CHECKOUT" show-ref --verify --quiet "refs/heads/$branch"; then
-        if git -C "$CHECKOUT" merge-base --is-ancestor "$branch" "$BRANCH" 2>/dev/null; then
+        if is_landed "$branch"; then
             printf 'landed'
         elif [[ -d "$worktree" ]] && ! worker_is_terminal "$worktree"; then
             printf 'running'
